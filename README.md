@@ -1,5 +1,8 @@
 # Workday Task Board
 
+[![CI](https://github.com/mahesha-quattr/workday-task-board/actions/workflows/ci.yml/badge.svg)](https://github.com/mahesha-quattr/workday-task-board/actions/workflows/ci.yml)
+[![Deploy to GitHub Pages](https://github.com/mahesha-quattr/workday-task-board/actions/workflows/deploy.yml/badge.svg)](https://github.com/mahesha-quattr/workday-task-board/actions/workflows/deploy.yml)
+
 Kanban-style Workday Task Board with focus timer, quick-add tokens, and simple state stored in `localStorage`.
 
 ## Getting Started
@@ -74,3 +77,14 @@ npm run deploy
 ```
 
 If deploying to a project page (i.e., `https://<user>.github.io/<repo>`), set the Vite `base` in `vite.config.js` to `'/<repo>/'` to handle asset URLs.
+
+### Custom Domain (CNAME)
+
+You can publish to a custom domain. Two supported ways:
+
+- Via repo variable (recommended): Add a repository variable named `GH_PAGES_CNAME` with your domain (e.g., `tasks.example.com`). The deploy workflow will write `dist/CNAME` automatically.
+- Via static file: Add a `public/CNAME` file containing your domain. Vite will copy it into `dist/`.
+
+DNS setup:
+- For a subdomain (e.g., `tasks.example.com`): create a `CNAME` DNS record pointing to `mahesha-quattr.github.io`.
+- For an apex/root domain (e.g., `example.com`): create `A` records pointing to GitHub Pages IPs (see GitHub Pages docs), and optionally an `ALIAS/ANAME` if your DNS supports it.

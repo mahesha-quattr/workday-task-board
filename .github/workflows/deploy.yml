@@ -24,12 +24,11 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: 'workday-task-board/.nvmrc'
+          node-version-file: '.nvmrc'
           cache: 'npm'
-          cache-dependency-path: 'workday-task-board/package-lock.json'
+          cache-dependency-path: 'package-lock.json'
 
       - name: Install dependencies
-        working-directory: workday-task-board
         run: npm ci
 
       - name: Set BASE_PATH for GitHub Pages
@@ -42,15 +41,18 @@ jobs:
           fi
 
       - name: Build
-        working-directory: workday-task-board
         run: npm run build
         env:
           BASE_PATH: ${{ env.BASE_PATH }}
 
+      - name: Add CNAME (optional)
+        if: ${{ vars.GH_PAGES_CNAME != '' }}
+        run: echo "${{ vars.GH_PAGES_CNAME }}" > dist/CNAME
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: workday-task-board/dist
+          path: dist
 
   deploy:
     environment:
