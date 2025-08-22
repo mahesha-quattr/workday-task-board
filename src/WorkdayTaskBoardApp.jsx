@@ -399,6 +399,49 @@ const useStore = create((set, get) => ({
   },
 }));
 
+// ----- Error Boundary -----
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, info: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    this.setState({ hasError: true, error, info });
+  }
+  render() {
+    if (this.state.hasError) {
+      const msg = this.state.error?.message || String(this.state.error || 'Unknown error');
+      const stack = this.state.error?.stack || this.state.info?.componentStack || '';
+      return (
+        <div className="min-h-screen bg-rose-50 text-rose-900 p-4">
+          <div className="max-w-3xl mx-auto">
+            <div className="rounded-2xl border border-rose-300 bg-white shadow p-4">
+              <h1 className="text-lg font-semibold mb-2">Something went wrong</h1>
+              <p className="mb-3 text-sm">An unexpected error occurred in the UI. Try reloading.</p>
+              <div className="mb-3 p-3 rounded bg-rose-50 border border-rose-200 text-xs whitespace-pre-wrap break-words">
+                {msg}
+                {stack ? '\n\n' + stack : ''}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-3 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700"
+                >
+                  Reload
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ----- Quick Add Parser -----
 
 function parseQuickAdd(input) {
@@ -1395,35 +1438,38 @@ export default function WorkdayTaskBoardApp() {
   }, [dark]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-      <div className="max-w-7xl mx-auto px-3 py-4">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-2xl font-bold">Workday Task Board</h1>
-            <p className="text-sm text-slate-500">
-              Keyboard-first board for tasks, meetings, bugs, and AI handoffs.
-            </p>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+        <div className="max-w-7xl mx-auto px-3 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h1 className="text-2xl font-bold">Workday Task Board</h1>
+              <p className="text-sm text-slate-500">
+                Keyboard-first board for tasks, meetings, bugs, and AI handoffs.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setDark((v) => !v)}
+                className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                {dark ? 'Light' : 'Dark'} mode
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setDark((v) => !v)}
-              className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              {dark ? 'Light' : 'Dark'} mode
-            </button>
+          {/* end header */}
+
+          <Toolbar />
+          <WipBanner />
+          <Board />
+
+          <SelfTestResults />
+          <div className="mt-2 text-xs text-slate-500">
+            Drag to any column (left or right). Time chips show running focus time; toggle
+            &quot;Return to Ready on pause&quot; in the toolbar.
           </div>
-        </div>
-
-        <Toolbar />
-        <WipBanner />
-        <Board />
-
-        <SelfTestResults />
-        <div className="mt-2 text-xs text-slate-500">
-          Drag to any column (left or right). Time chips show running focus time; toggle
-          &quot;Return to Ready on pause&quot; in the toolbar.
         </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }
