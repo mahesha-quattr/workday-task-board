@@ -26,5 +26,4 @@ module.exports = {
     'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
   },
   ignorePatterns: ['dist/', 'node_modules/'],
-}
-
+};

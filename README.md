@@ -86,5 +86,6 @@ You can publish to a custom domain. Two supported ways:
 - Via static file: Add a `public/CNAME` file containing your domain. Vite will copy it into `dist/`.
 
 DNS setup:
+
 - For a subdomain (e.g., `tasks.example.com`): create a `CNAME` DNS record pointing to `mahesha-quattr.github.io`.
 - For an apex/root domain (e.g., `example.com`): create `A` records pointing to GitHub Pages IPs (see GitHub Pages docs), and optionally an `ALIAS/ANAME` if your DNS supports it.
