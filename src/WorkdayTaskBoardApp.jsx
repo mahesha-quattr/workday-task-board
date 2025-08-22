@@ -25,6 +25,8 @@ import {
   Flame,
   AlertTriangle,
   GripVertical,
+  Mic,
+  MicOff,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -946,6 +948,83 @@ function Toolbar() {
     useStore.getState().init();
   }, []);
 
+  // Dictation (Chrome Web Speech API)
+  const [isListening, setIsListening] = useState(false);
+  const [interim, setInterim] = useState('');
+  const [speechErr, setSpeechErr] = useState('');
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const recRef = useRef(null);
+  const discardNextRef = useRef(false);
+
+  useEffect(() => {
+    const supported =
+      typeof window !== 'undefined' &&
+      ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+    setSpeechSupported(!!supported);
+  }, []);
+
+  const appendTranscript = (text) => {
+    const t = (text || '').trim();
+    if (!t) return;
+    setInput((prev) => (prev ? prev + ' ' : '') + t);
+    try {
+      inputRef.current?.focus?.();
+    } catch (e) {
+      /* ignore */
+    }
+  };
+
+  const stopDictation = (discard = false) => {
+    discardNextRef.current = discard;
+    try {
+      recRef.current?.stop?.();
+    } catch (e) {
+      /* ignore */
+    }
+  };
+
+  const startDictation = () => {
+    setSpeechErr('');
+    if (!speechSupported) {
+      setSpeechErr('Speech recognition not supported in this browser.');
+      return;
+    }
+    try {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const rec = new SR();
+      recRef.current = rec;
+      rec.interimResults = true;
+      rec.continuous = false;
+      rec.lang = (typeof navigator !== 'undefined' && navigator.language) || 'en-US';
+      let finals = [];
+      rec.onresult = (event) => {
+        let interimText = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i];
+          if (res.isFinal) finals.push(res[0].transcript);
+          else interimText += res[0].transcript;
+        }
+        setInterim(interimText);
+      };
+      rec.onerror = (e) => {
+        setSpeechErr(e?.error ? String(e.error) : 'speech-error');
+      };
+      rec.onend = () => {
+        setIsListening(false);
+        const text = (finals.join(' ') || interim).trim();
+        setInterim('');
+        if (!discardNextRef.current) appendTranscript(text);
+        discardNextRef.current = false;
+      };
+      setIsListening(true);
+      setInterim('');
+      rec.start();
+    } catch (e) {
+      setSpeechErr('Failed to start dictation');
+      setIsListening(false);
+    }
+  };
+
   const onAdd = () => {
     const p = parseQuickAdd(input);
     const base = {
@@ -992,6 +1071,37 @@ function Toolbar() {
             />
             <Plus className="absolute left-2 top-2.5 w-4 h-4 text-slate-400" />
           </div>
+          {/* Mic toggle */}
+          <button
+            type="button"
+            title={
+              speechSupported
+                ? isListening
+                  ? 'Stop dictation'
+                  : 'Start dictation'
+                : 'Dictation not supported'
+            }
+            aria-label={
+              speechSupported
+                ? isListening
+                  ? 'Stop dictation'
+                  : 'Start dictation'
+                : 'Dictation not supported'
+            }
+            onClick={() => {
+              isListening ? stopDictation(false) : startDictation();
+            }}
+            disabled={!speechSupported}
+            className={clsx(
+              'px-3 py-2 rounded-xl border',
+              isListening
+                ? 'bg-rose-600 text-white border-rose-600 hover:bg-rose-700'
+                : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800',
+              !speechSupported && 'opacity-50 cursor-not-allowed',
+            )}
+          >
+            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
           <button
             onClick={onAdd}
             className="px-3 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
@@ -1037,6 +1147,45 @@ function Toolbar() {
           </label>
         </div>
       </div>
+      {(isListening || speechErr) && (
+        <div className="mt-2 flex items-center justify-between rounded-xl border border-indigo-300 bg-indigo-50 text-indigo-900 px-3 py-2">
+          <div className="text-sm flex-1 min-w-0">
+            <span className="font-medium">{isListening ? 'Listening…' : 'Dictation'}</span>
+            {interim && (
+              <span className="ml-2 text-indigo-800 truncate inline-block max-w-full align-bottom">
+                {interim}
+              </span>
+            )}
+            {speechErr && !isListening && <span className="ml-2 text-rose-700">{speechErr}</span>}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {isListening && (
+              <>
+                <button
+                  onClick={() => stopDictation(true)}
+                  className="px-2 py-1.5 text-xs rounded-lg border border-slate-300 bg-white hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => stopDictation(false)}
+                  className="px-2 py-1.5 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+                >
+                  Use
+                </button>
+              </>
+            )}
+            {!isListening && speechErr && (
+              <button
+                onClick={() => startDictation()}
+                className="px-2 py-1.5 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       {selectedIds.length > 0 && (
         <div className="mt-2 flex items-center justify-between rounded-xl border border-rose-300 bg-rose-50 text-rose-900 px-3 py-2">
           <div className="text-sm">{selectedIds.length} selected</div>
