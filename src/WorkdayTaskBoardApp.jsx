@@ -377,7 +377,7 @@ function TaskCard({ task }){
         useStore.getState().clearDrag();
       }}
       className={clsx(
-        "cursor-grab active:cursor-grabbing rounded-xl border p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm",
+        "cursor-grab active:cursor-grabbing rounded-xl border p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden",
         isSelected && "ring-2 ring-rose-400"
       )}
     >
@@ -390,9 +390,13 @@ function TaskCard({ task }){
           onChange={()=>toggleSelected(task.id)}
           title="Select task"
         />
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <button className="text-left font-medium hover:underline" onClick={()=>setOpen(true)}>{task.title}</button>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <button
+              className="text-left font-medium hover:underline truncate min-w-0 max-w-full"
+              title={task.title}
+              onClick={()=>setOpen(true)}
+            >{task.title}</button>
             <Badge className={PRIORITY_COLORS[task.priorityBucket]}>{task.priorityBucket}</Badge>
             {task.ownerType === 'ai' && <Badge className="bg-indigo-100 text-indigo-700 border-indigo-300"><Bot className="w-3.5 h-3.5 mr-1"/>AI</Badge>}
             {task.status === 'blocked' && <Badge className="bg-pink-100 text-pink-700 border-pink-300"><AlertTriangle className="w-3.5 h-3.5 mr-1"/>Blocked</Badge>}
@@ -407,7 +411,7 @@ function TaskCard({ task }){
             {task.dueAt && <span className={clsx("inline-flex items-center gap-1", overdue?"text-red-700":"text-slate-600")}><Clock className="w-3.5 h-3.5"/>{humanDue(task.dueAt)}</span>}
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0 ml-1">
           <button title="Move left" onClick={()=>{
             const order = /** @type{Status[]} */(Object.keys(STATUS_META));
             const idx = order.indexOf(task.status);
