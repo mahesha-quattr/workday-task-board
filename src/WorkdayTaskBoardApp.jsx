@@ -587,8 +587,14 @@ function Toolbar(){
       <div className="flex flex-col lg:flex-row gap-2 items-stretch lg:items-center">
         <div className="flex-1 flex items-center gap-2">
           <div className="relative flex-1">
-            <input ref={inputRef} value={input} onChange={e=>setInput(e.target.value)} placeholder='Quick add: "Ship PR #alpha !p1 due:today 17:00 @me +ui"'
-              className="w-full px-3 pl-9 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"/>
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={e=>setInput(e.target.value)}
+              onKeyDown={e=>{ if (e.key === 'Enter') { e.preventDefault(); onAdd(); } }}
+              placeholder='Quick add: "Ship PR #alpha !p1 due:today 17:00 @me +ui"'
+              className="w-full px-3 pl-9 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            />
             <Plus className="absolute left-2 top-2.5 w-4 h-4 text-slate-400"/>
           </div>
           <button onClick={onAdd} className="px-3 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">Add</button>
