@@ -77,7 +77,6 @@ const PRIORITY_COLORS = {
   P3: 'bg-gray-50 text-gray-600 border-l-4 border-l-gray-400',
 };
 
-
 // ----- Helpers -----
 
 // selection helpers (pure)
@@ -633,7 +632,9 @@ function Column({ status, tasks }) {
         <h3 className="font-semibold text-slate-800 dark:text-slate-100">
           {STATUS_META[status].label}
         </h3>
-        <span className="text-xs text-slate-700 dark:text-slate-400">{STATUS_META[status].hint}</span>
+        <span className="text-xs text-slate-700 dark:text-slate-400">
+          {STATUS_META[status].hint}
+        </span>
       </div>
       <div className="space-y-2 min-h-24">
         {tasks.map((t) => (
@@ -711,7 +712,13 @@ function TaskCard({ task }) {
             </button>
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
               <Badge
-                variant={task.priorityBucket === 'P0' ? 'danger' : task.priorityBucket === 'P1' ? 'warning' : 'default'}
+                variant={
+                  task.priorityBucket === 'P0'
+                    ? 'danger'
+                    : task.priorityBucket === 'P1'
+                      ? 'warning'
+                      : 'default'
+                }
                 className="text-xs"
               >
                 {task.priorityBucket}
@@ -810,7 +817,9 @@ function TaskCard({ task }) {
 function Field({ label, children }) {
   return (
     <div className="flex items-center gap-2 py-1">
-      <div className="w-28 text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">{label}</div>
+      <div className="w-28 text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+        {label}
+      </div>
       <div className="flex-1">{children}</div>
     </div>
   );
@@ -868,192 +877,194 @@ function TaskDrawer({ task, onClose }) {
         exit={{ opacity: 0, x: 40 }}
         className="fixed right-4 top-4 bottom-4 w-[420px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl shadow-xl dark:shadow-2xl p-4 overflow-y-auto z-[9999]"
       >
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Task</h3>
-        <button
-          onClick={onClose}
-          className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="mt-2 space-y-2">
-        <Field label="Title">
-          <input
-            value={local.title}
-            onChange={(e) => setLocal({ ...local, title: e.target.value })}
-            onBlur={() => save({ title: local.title })}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-          />
-        </Field>
-        <Field label="Project">
-          <input
-            value={local.project || ''}
-            placeholder="#project"
-            onChange={(e) => setLocal({ ...local, project: e.target.value })}
-            onBlur={() => save({ project: local.project })}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-          />
-        </Field>
-        <Field label="Status">
-          <select
-            value={local.status}
-            onChange={(e) => {
-              const v = /** @type{Status} */ (e.target.value);
-              setLocal({ ...local, status: v });
-              save({ status: v });
-            }}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Task</h3>
+          <button
+            onClick={onClose}
+            className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            {Object.keys(STATUS_META).map((k) => (
-              <option key={k} value={k}>
-                {STATUS_META[k].label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Owner">
-          <select
-            value={local.ownerType}
-            onChange={(e) => {
-              const v = /** @type{OwnerType} */ (e.target.value);
-              setLocal({ ...local, ownerType: v });
-              save({ ownerType: v });
-            }}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-          >
-            <option value="self">Me</option>
-            <option value="ai">AI Agent</option>
-            <option value="other">Other</option>
-          </select>
-        </Field>
-        {local.ownerType === 'ai' && (
-          <Field label="Expected by">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="mt-2 space-y-2">
+          <Field label="Title">
+            <input
+              value={local.title}
+              onChange={(e) => setLocal({ ...local, title: e.target.value })}
+              onBlur={() => save({ title: local.title })}
+              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+            />
+          </Field>
+          <Field label="Project">
+            <input
+              value={local.project || ''}
+              placeholder="#project"
+              onChange={(e) => setLocal({ ...local, project: e.target.value })}
+              onBlur={() => save({ project: local.project })}
+              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+            />
+          </Field>
+          <Field label="Status">
+            <select
+              value={local.status}
+              onChange={(e) => {
+                const v = /** @type{Status} */ (e.target.value);
+                setLocal({ ...local, status: v });
+                save({ status: v });
+              }}
+              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+            >
+              {Object.keys(STATUS_META).map((k) => (
+                <option key={k} value={k}>
+                  {STATUS_META[k].label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Owner">
+            <select
+              value={local.ownerType}
+              onChange={(e) => {
+                const v = /** @type{OwnerType} */ (e.target.value);
+                setLocal({ ...local, ownerType: v });
+                save({ ownerType: v });
+              }}
+              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+            >
+              <option value="self">Me</option>
+              <option value="ai">AI Agent</option>
+              <option value="other">Other</option>
+            </select>
+          </Field>
+          {local.ownerType === 'ai' && (
+            <Field label="Expected by">
+              <input
+                type="datetime-local"
+                value={
+                  local.expectedBy ? new Date(local.expectedBy).toISOString().slice(0, 16) : ''
+                }
+                onChange={(e) => {
+                  const iso = e.target.value ? new Date(e.target.value).toISOString() : null;
+                  setLocal({ ...local, expectedBy: iso });
+                  save({ expectedBy: iso });
+                }}
+                className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              />
+            </Field>
+          )}
+          <Field label="Due">
             <input
               type="datetime-local"
-              value={local.expectedBy ? new Date(local.expectedBy).toISOString().slice(0, 16) : ''}
+              value={local.dueAt ? new Date(local.dueAt).toISOString().slice(0, 16) : ''}
               onChange={(e) => {
                 const iso = e.target.value ? new Date(e.target.value).toISOString() : null;
-                setLocal({ ...local, expectedBy: iso });
-                save({ expectedBy: iso });
+                setLocal({ ...local, dueAt: iso });
+                save({ dueAt: iso });
               }}
               className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
           </Field>
-        )}
-        <Field label="Due">
-          <input
-            type="datetime-local"
-            value={local.dueAt ? new Date(local.dueAt).toISOString().slice(0, 16) : ''}
-            onChange={(e) => {
-              const iso = e.target.value ? new Date(e.target.value).toISOString() : null;
-              setLocal({ ...local, dueAt: iso });
-              save({ dueAt: iso });
-            }}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-          />
-        </Field>
-        <Field label="Impact / Urgency / Effort">
-          <div className="flex items-center gap-3">
-            <NumberInput
-              value={local.impact}
-              onChange={(v) => {
-                setLocal({ ...local, impact: v });
-                save({ impact: v });
+          <Field label="Impact / Urgency / Effort">
+            <div className="flex items-center gap-3">
+              <NumberInput
+                value={local.impact}
+                onChange={(v) => {
+                  setLocal({ ...local, impact: v });
+                  save({ impact: v });
+                }}
+              />
+              <NumberInput
+                value={local.urgency}
+                onChange={(v) => {
+                  setLocal({ ...local, urgency: v });
+                  save({ urgency: v });
+                }}
+              />
+              <NumberInput
+                value={local.effort}
+                onChange={(v) => {
+                  setLocal({ ...local, effort: v });
+                  save({ effort: v });
+                }}
+              />
+            </div>
+          </Field>
+          <Field label="Priority">
+            <div className="flex items-center gap-2">
+              <Badge className={PRIORITY_COLORS[scoreMath.b]}>{scoreMath.b}</Badge>
+              <button
+                onClick={() => {
+                  const s = priorityScore({
+                    impact: local.impact,
+                    urgency: local.urgency,
+                    effort: local.effort,
+                    dueAt: local.dueAt,
+                  });
+                  const b = scoreToBucket(s);
+                  setLocal({ ...local, priorityBucket: b });
+                  save({ score: s, priorityBucket: b });
+                }}
+                className="px-2 py-1 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 transition-colors"
+              >
+                Rescore
+              </button>
+              <span className="text-xs text-slate-500">
+                score = (2×impact + 1.5×urgency) − effort {local.dueAt ? ' + due boost' : ''}
+              </span>
+            </div>
+          </Field>
+          <Field label="Tags">
+            <input
+              value={local.tags?.join(' ') || ''}
+              placeholder="+tag +another"
+              onChange={(e) => {
+                const arr = e.target.value
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .map((s) => s.replace(/^\+/, ''));
+                setLocal({ ...local, tags: arr });
+                save({ tags: arr });
               }}
+              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
-            <NumberInput
-              value={local.urgency}
-              onChange={(v) => {
-                setLocal({ ...local, urgency: v });
-                save({ urgency: v });
-              }}
+          </Field>
+          <Field label="Notes">
+            <textarea
+              rows={6}
+              value={local.description || ''}
+              onChange={(e) => setLocal({ ...local, description: e.target.value })}
+              onBlur={() => save({ description: local.description })}
+              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
-            <NumberInput
-              value={local.effort}
-              onChange={(v) => {
-                setLocal({ ...local, effort: v });
-                save({ effort: v });
-              }}
-            />
-          </div>
-        </Field>
-        <Field label="Priority">
-          <div className="flex items-center gap-2">
-            <Badge className={PRIORITY_COLORS[scoreMath.b]}>{scoreMath.b}</Badge>
+          </Field>
+          <div className="flex items-center justify-between pt-2">
+            {task.status === 'waiting_ai' && (
+              <button
+                onClick={() =>
+                  useStore
+                    .getState()
+                    .updateTask(task.id, { status: 'ready', ownerType: 'self', expectedBy: null })
+                }
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700"
+              >
+                <Bot className="w-4 h-4" /> Simulate AI Update
+              </button>
+            )}
+            <div className="flex-1" />
             <button
               onClick={() => {
-                const s = priorityScore({
-                  impact: local.impact,
-                  urgency: local.urgency,
-                  effort: local.effort,
-                  dueAt: local.dueAt,
-                });
-                const b = scoreToBucket(s);
-                setLocal({ ...local, priorityBucket: b });
-                save({ score: s, priorityBucket: b });
+                del(task.id);
+                onClose();
               }}
-              className="px-2 py-1 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 transition-colors"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-600 text-white hover:bg-rose-700"
             >
-              Rescore
+              <Trash2 className="w-4 h-4" /> Delete
             </button>
-            <span className="text-xs text-slate-500">
-              score = (2×impact + 1.5×urgency) − effort {local.dueAt ? ' + due boost' : ''}
-            </span>
           </div>
-        </Field>
-        <Field label="Tags">
-          <input
-            value={local.tags?.join(' ') || ''}
-            placeholder="+tag +another"
-            onChange={(e) => {
-              const arr = e.target.value
-                .split(/\s+/)
-                .filter(Boolean)
-                .map((s) => s.replace(/^\+/, ''));
-              setLocal({ ...local, tags: arr });
-              save({ tags: arr });
-            }}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-          />
-        </Field>
-        <Field label="Notes">
-          <textarea
-            rows={6}
-            value={local.description || ''}
-            onChange={(e) => setLocal({ ...local, description: e.target.value })}
-            onBlur={() => save({ description: local.description })}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-          />
-        </Field>
-        <div className="flex items-center justify-between pt-2">
-          {task.status === 'waiting_ai' && (
-            <button
-              onClick={() =>
-                useStore
-                  .getState()
-                  .updateTask(task.id, { status: 'ready', ownerType: 'self', expectedBy: null })
-              }
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700"
-            >
-              <Bot className="w-4 h-4" /> Simulate AI Update
-            </button>
-          )}
-          <div className="flex-1" />
-          <button
-            onClick={() => {
-              del(task.id);
-              onClose();
-            }}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-600 text-white hover:bg-rose-700"
-          >
-            <Trash2 className="w-4 h-4" /> Delete
-          </button>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
     </>,
-    document.body
+    document.body,
   );
 }
 
@@ -1206,172 +1217,172 @@ function Toolbar({ viewMode, onChangeView }) {
                 className="w-full px-4 pl-10 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
               <Plus className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-          </div>
-          {/* Mic toggle */}
-          <button
-            type="button"
-            title={
-              speechSupported
-                ? isListening
-                  ? 'Stop dictation'
-                  : 'Start dictation'
-                : 'Dictation not supported'
-            }
-            aria-label={
-              speechSupported
-                ? isListening
-                  ? 'Stop dictation'
-                  : 'Start dictation'
-                : 'Dictation not supported'
-            }
-            onClick={() => {
-              isListening ? stopDictation(false) : startDictation();
-            }}
-            disabled={!speechSupported}
-            className={clsx(
-              'px-3 py-2 rounded-xl border',
-              isListening
-                ? 'bg-rose-600 text-white border-rose-600 hover:bg-rose-700'
-                : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800',
-              !speechSupported && 'opacity-50 cursor-not-allowed',
-            )}
-          >
-            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-          </button>
-          <button
-            onClick={onAdd}
-            className="px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
-          >
-            Add Task
-          </button>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 justify-end">
-          <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-hidden">
+            </div>
+            {/* Mic toggle */}
             <button
               type="button"
-              onClick={() => onChangeView('board')}
-              aria-pressed={viewMode === 'board'}
+              title={
+                speechSupported
+                  ? isListening
+                    ? 'Stop dictation'
+                    : 'Start dictation'
+                  : 'Dictation not supported'
+              }
+              aria-label={
+                speechSupported
+                  ? isListening
+                    ? 'Stop dictation'
+                    : 'Start dictation'
+                  : 'Dictation not supported'
+              }
+              onClick={() => {
+                isListening ? stopDictation(false) : startDictation();
+              }}
+              disabled={!speechSupported}
               className={clsx(
-                'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-colors',
-                viewMode === 'board'
-                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
+                'px-3 py-2 rounded-xl border',
+                isListening
+                  ? 'bg-rose-600 text-white border-rose-600 hover:bg-rose-700'
+                  : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800',
+                !speechSupported && 'opacity-50 cursor-not-allowed',
               )}
             >
-              <Kanban className="w-4 h-4" /> Board
+              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
             <button
-              type="button"
-              onClick={() => onChangeView('backlog')}
-              aria-pressed={viewMode === 'backlog'}
-              className={clsx(
-                'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-colors',
-                viewMode === 'backlog'
-                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
-              )}
+              onClick={onAdd}
+              className="px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
             >
-              <List className="w-4 h-4" /> Backlog
+              Add Task
             </button>
           </div>
-          <select
-            value={filters.project}
-            onChange={(e) => setFilters({ project: e.target.value })}
-            className="px-2 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-          >
-            <option value="all">All projects</option>
-            <option value="alpha">alpha</option>
-            <option value="beta">beta</option>
-            <option value="gamma">gamma</option>
-          </select>
-          <select
-            value={filters.owner}
-            onChange={(e) => setFilters({ owner: e.target.value })}
-            className="px-2 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-          >
-            <option value="all">Any owner</option>
-            <option value="self">Me</option>
-            <option value="ai">AI</option>
-            <option value="other">Other</option>
-          </select>
-          <input
-            value={filters.q}
-            onChange={(e) => setFilters({ q: e.target.value })}
-            placeholder="Filter text"
-            className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-          />
-          {/* Pref: auto return */}
-          <label className="ml-2 inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 select-none">
+          <div className="flex flex-wrap items-center gap-2 justify-end">
+            <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => onChangeView('board')}
+                aria-pressed={viewMode === 'board'}
+                className={clsx(
+                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-colors',
+                  viewMode === 'board'
+                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
+                )}
+              >
+                <Kanban className="w-4 h-4" /> Board
+              </button>
+              <button
+                type="button"
+                onClick={() => onChangeView('backlog')}
+                aria-pressed={viewMode === 'backlog'}
+                className={clsx(
+                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-colors',
+                  viewMode === 'backlog'
+                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
+                )}
+              >
+                <List className="w-4 h-4" /> Backlog
+              </button>
+            </div>
+            <select
+              value={filters.project}
+              onChange={(e) => setFilters({ project: e.target.value })}
+              className="px-2 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+            >
+              <option value="all">All projects</option>
+              <option value="alpha">alpha</option>
+              <option value="beta">beta</option>
+              <option value="gamma">gamma</option>
+            </select>
+            <select
+              value={filters.owner}
+              onChange={(e) => setFilters({ owner: e.target.value })}
+              className="px-2 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+            >
+              <option value="all">Any owner</option>
+              <option value="self">Me</option>
+              <option value="ai">AI</option>
+              <option value="other">Other</option>
+            </select>
             <input
-              type="checkbox"
-              checked={autoReturnOnStop}
-              onChange={(e) => setAutoReturnOnStop(e.target.checked)}
+              value={filters.q}
+              onChange={(e) => setFilters({ q: e.target.value })}
+              placeholder="Filter text"
+              className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
-            Return to Ready on pause
-          </label>
-        </div>
-      </div>
-      {(isListening || speechErr) && (
-        <div className="mt-2 flex items-center justify-between rounded-xl border border-indigo-300 bg-indigo-50 text-indigo-900 px-3 py-2">
-          <div className="text-sm flex-1 min-w-0">
-            <span className="font-medium">{isListening ? 'Listening…' : 'Dictation'}</span>
-            {interim && (
-              <span className="ml-2 text-indigo-800 truncate inline-block max-w-full align-bottom">
-                {interim}
-              </span>
-            )}
-            {speechErr && !isListening && <span className="ml-2 text-rose-700">{speechErr}</span>}
+            {/* Pref: auto return */}
+            <label className="ml-2 inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 select-none">
+              <input
+                type="checkbox"
+                checked={autoReturnOnStop}
+                onChange={(e) => setAutoReturnOnStop(e.target.checked)}
+              />
+              Return to Ready on pause
+            </label>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {isListening && (
-              <>
+        </div>
+        {(isListening || speechErr) && (
+          <div className="mt-2 flex items-center justify-between rounded-xl border border-indigo-300 bg-indigo-50 text-indigo-900 px-3 py-2">
+            <div className="text-sm flex-1 min-w-0">
+              <span className="font-medium">{isListening ? 'Listening…' : 'Dictation'}</span>
+              {interim && (
+                <span className="ml-2 text-indigo-800 truncate inline-block max-w-full align-bottom">
+                  {interim}
+                </span>
+              )}
+              {speechErr && !isListening && <span className="ml-2 text-rose-700">{speechErr}</span>}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {isListening && (
+                <>
+                  <button
+                    onClick={() => stopDictation(true)}
+                    className="px-2 py-1.5 text-xs rounded-lg border border-slate-300 bg-white hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => stopDictation(false)}
+                    className="px-2 py-1.5 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+                  >
+                    Use
+                  </button>
+                </>
+              )}
+              {!isListening && speechErr && (
                 <button
-                  onClick={() => stopDictation(true)}
-                  className="px-2 py-1.5 text-xs rounded-lg border border-slate-300 bg-white hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => stopDictation(false)}
+                  onClick={() => startDictation()}
                   className="px-2 py-1.5 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800"
                 >
-                  Use
+                  Retry
                 </button>
-              </>
-            )}
-            {!isListening && speechErr && (
+              )}
+            </div>
+          </div>
+        )}
+        {selectedIds.length > 0 && (
+          <div className="mt-2 flex items-center justify-between rounded-xl border border-rose-300 bg-rose-50 text-rose-900 px-3 py-2">
+            <div className="text-sm">{selectedIds.length} selected</div>
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => startDictation()}
-                className="px-2 py-1.5 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+                onClick={onBulkDelete}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700"
               >
-                Retry
+                <Trash2 className="w-4 h-4" />
+                Delete selected
               </button>
-            )}
+              <button onClick={clearSelection} className="text-sm underline">
+                Clear
+              </button>
+            </div>
           </div>
+        )}
+        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          Tokens: #project !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5
+          urgency:0..5 effort:0..5 expect:today|YYYY-MM-DD
         </div>
-      )}
-      {selectedIds.length > 0 && (
-        <div className="mt-2 flex items-center justify-between rounded-xl border border-rose-300 bg-rose-50 text-rose-900 px-3 py-2">
-          <div className="text-sm">{selectedIds.length} selected</div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onBulkDelete}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete selected
-            </button>
-            <button onClick={clearSelection} className="text-sm underline">
-              Clear
-            </button>
-          </div>
-        </div>
-      )}
-      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-        Tokens: #project !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5
-        urgency:0..5 effort:0..5 expect:today|YYYY-MM-DD
       </div>
-    </div>
     </div>
   );
 }
@@ -1421,7 +1432,10 @@ function Board() {
   const grouped = useMemo(() => groupTasksByStatus(filtered), [filtered]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3" style={{ position: 'relative', zIndex: 1 }}>
+    <div
+      className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3"
+      style={{ position: 'relative', zIndex: 1 }}
+    >
       {STATUS_ORDER.map((status) => (
         <Column key={status} status={status} tasks={grouped[status]} />
       ))}
@@ -1479,7 +1493,10 @@ function BacklogView() {
   return (
     <div className="space-y-0">
       {STATUS_ORDER.map((status) => (
-        <div key={status} className="border-b border-slate-200 dark:border-slate-700 last:border-b-0">
+        <div
+          key={status}
+          className="border-b border-slate-200 dark:border-slate-700 last:border-b-0"
+        >
           <BacklogHeader
             status={status}
             count={grouped[status].length}
@@ -1490,7 +1507,7 @@ function BacklogView() {
             <div
               className={clsx(
                 'min-h-[40px] transition-colors rounded-2xl bg-slate-50/40 dark:bg-slate-900/20 p-2',
-                dropTarget?.status === status && draggingTask && 'bg-blue-50 dark:bg-blue-900/20'
+                dropTarget?.status === status && draggingTask && 'bg-blue-50 dark:bg-blue-900/20',
               )}
               onDragOver={(e) => handleDragOver(e, status, 0)}
               onDragLeave={handleDragLeave}
@@ -1500,10 +1517,14 @@ function BacklogView() {
               }}
             >
               {grouped[status].length === 0 ? (
-                <div className={clsx(
-                  'px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400 border border-dashed border-slate-200/80 dark:border-slate-700/60 rounded-xl bg-white/60 dark:bg-slate-900/30',
-                  dropTarget?.status === status && draggingTask && 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
-                )}>
+                <div
+                  className={clsx(
+                    'px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400 border border-dashed border-slate-200/80 dark:border-slate-700/60 rounded-xl bg-white/60 dark:bg-slate-900/30',
+                    dropTarget?.status === status &&
+                      draggingTask &&
+                      'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+                  )}
+                >
                   {dropTarget?.status === status && draggingTask ? 'Drop here' : 'No tasks'}
                 </div>
               ) : (
@@ -1541,8 +1562,12 @@ function BacklogHeader({ status, count, collapsed, onToggle }) {
               collapsed ? '-rotate-90' : 'rotate-0',
             )}
           />
-          <span className="font-semibold text-slate-800 dark:text-slate-100">{STATUS_META[status].label}</span>
-          <span className="text-xs text-slate-600 dark:text-slate-400">{STATUS_META[status].hint}</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-100">
+            {STATUS_META[status].label}
+          </span>
+          <span className="text-xs text-slate-600 dark:text-slate-400">
+            {STATUS_META[status].hint}
+          </span>
         </div>
         <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
           {count} task{count === 1 ? '' : 's'}
