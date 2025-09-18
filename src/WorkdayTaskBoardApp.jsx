@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { create } from 'zustand';
 import {
   format,
@@ -70,11 +71,12 @@ const STATUS_META = /** @type{Record<Status,{label:string, key:string, hint:stri
 const STATUS_ORDER = /** @type{Status[]} */ (Object.keys(STATUS_META));
 
 const PRIORITY_COLORS = {
-  P0: 'bg-red-100 text-red-700 border-red-300',
-  P1: 'bg-orange-100 text-orange-700 border-orange-300',
-  P2: 'bg-amber-100 text-amber-700 border-amber-300',
-  P3: 'bg-slate-100 text-slate-700 border-slate-300',
+  P0: 'bg-red-50 text-red-600 border-l-4 border-l-red-500',
+  P1: 'bg-orange-50 text-orange-600 border-l-4 border-l-orange-500',
+  P2: 'bg-amber-50 text-amber-600 border-l-4 border-l-amber-500',
+  P3: 'bg-gray-50 text-gray-600 border-l-4 border-l-gray-400',
 };
+
 
 // ----- Helpers -----
 
@@ -358,6 +360,63 @@ const useStore = create((set, get) => ({
     set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, status } : t)) }));
     get().persist();
   },
+  reorderTask(id, status, fromIndex, toIndex) {
+    set((s) => {
+      const newTasks = [...s.tasks];
+
+      // Get indices of all tasks in this status
+      const statusTaskIndices = [];
+      newTasks.forEach((task, idx) => {
+        if (task.status === status) {
+          statusTaskIndices.push(idx);
+        }
+      });
+
+      // Get the actual array indices
+      const fromArrayIndex = statusTaskIndices[fromIndex];
+      const toArrayIndex = statusTaskIndices[toIndex];
+
+      if (fromArrayIndex === undefined || toArrayIndex === undefined) return s;
+
+      // Remove task from original position and insert at new position
+      const [taskToMove] = newTasks.splice(fromArrayIndex, 1);
+
+      // Recalculate target index after removal
+      const adjustedToIndex = fromArrayIndex < toArrayIndex ? toArrayIndex - 1 : toArrayIndex;
+      newTasks.splice(adjustedToIndex, 0, taskToMove);
+
+      return { tasks: newTasks };
+    });
+    get().persist();
+  },
+  setTasksForStatus(status, reorderedTasks) {
+    set((s) => {
+      // Get all tasks not in this status
+      // Combine reordered tasks with tasks from other statuses
+      const newTasks = [];
+      let statusTasksAdded = false;
+
+      for (const task of s.tasks) {
+        if (task.status === status) {
+          if (!statusTasksAdded) {
+            // Add all reordered tasks at once
+            newTasks.push(...reorderedTasks);
+            statusTasksAdded = true;
+          }
+          // Skip individual status tasks as we've added them all
+        } else {
+          newTasks.push(task);
+        }
+      }
+
+      return { tasks: newTasks };
+    });
+    get().persist();
+  },
+  setAllTasks(reorderedTasks) {
+    set({ tasks: reorderedTasks });
+    get().persist();
+  },
   setFilters(patch) {
     set((s) => ({ filters: { ...s.filters, ...patch } }));
   },
@@ -536,11 +595,19 @@ function parseQuickAdd(input) {
 
 // ----- UI Components -----
 
-function Badge({ children, className }) {
+function Badge({ children, className, variant = 'default' }) {
+  const variants = {
+    default: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+    primary: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+    success: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+    warning: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+    danger: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+  };
   return (
     <span
       className={clsx(
-        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs',
+        'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium',
+        variants[variant] || variants.default,
         className,
       )}
     >
@@ -557,7 +624,7 @@ function Column({ status, tasks }) {
       data-col={status}
       className={clsx(
         'flex-1 min-w-[280px] max-w-[520px] rounded-2xl p-3 border shadow-sm transition-colors',
-        'bg-white/60 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700',
+        'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600',
         highlight && 'ring-2 ring-indigo-400 border-indigo-300',
       )}
     >
@@ -566,7 +633,7 @@ function Column({ status, tasks }) {
         <h3 className="font-semibold text-slate-800 dark:text-slate-100">
           {STATUS_META[status].label}
         </h3>
-        <span className="text-xs text-slate-500">{STATUS_META[status].hint}</span>
+        <span className="text-xs text-slate-700 dark:text-slate-400">{STATUS_META[status].hint}</span>
       </div>
       <div className="space-y-2 min-h-24">
         {tasks.map((t) => (
@@ -617,82 +684,87 @@ function TaskCard({ task }) {
         useStore.getState().clearDrag();
       }}
       className={clsx(
-        'cursor-grab active:cursor-grabbing rounded-xl border p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden',
+        'cursor-grab active:cursor-grabbing rounded-xl border p-3',
+        'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600',
+        'shadow-sm hover:shadow-md transition-shadow overflow-hidden',
         isSelected && 'ring-2 ring-rose-400',
+        PRIORITY_COLORS[task.priorityBucket].split(' ')[2],
       )}
     >
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          className="mt-0.5"
-          checked={isSelected}
-          onClick={(e) => e.stopPropagation()}
-          onChange={() => toggleSelected(task.id)}
-          title="Select task"
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 min-w-0">
+      <div className="group">
+        <div className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            checked={isSelected}
+            onClick={(e) => e.stopPropagation()}
+            onChange={() => toggleSelected(task.id)}
+            title="Select task"
+          />
+          <div className="flex-1 min-w-0">
             <button
-              className="text-left font-medium hover:underline truncate min-w-0 max-w-full"
+              className="text-left font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate block w-full"
               title={task.title}
               onClick={() => setOpen(true)}
             >
               {task.title}
             </button>
-            <Badge className={PRIORITY_COLORS[task.priorityBucket]}>{task.priorityBucket}</Badge>
-            {task.ownerType === 'ai' && (
-              <Badge className="bg-indigo-100 text-indigo-700 border-indigo-300">
-                <Bot className="w-3.5 h-3.5 mr-1" />
-                AI
-              </Badge>
-            )}
-            {task.status === 'blocked' && (
-              <Badge className="bg-pink-100 text-pink-700 border-pink-300">
-                <AlertTriangle className="w-3.5 h-3.5 mr-1" />
-                Blocked
-              </Badge>
-            )}
-            {/* Time chip */}
-            <Badge className="bg-slate-100 text-slate-700 border-slate-300">
-              <TimerIcon className="w-3.5 h-3.5 mr-1" />
-              {elapsedLabel}
-              {isRunning ? ' • running' : ''}
-            </Badge>
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-            {task.project && (
-              <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
-                #{task.project}
-              </span>
-            )}
-            {task.tags?.map((t) => (
-              <span key={t} className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
-                +{t}
-              </span>
-            ))}
-            {task.dueAt && (
-              <span
-                className={clsx(
-                  'inline-flex items-center gap-1',
-                  overdue ? 'text-red-700' : 'text-slate-600',
-                )}
+            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+              <Badge
+                variant={task.priorityBucket === 'P0' ? 'danger' : task.priorityBucket === 'P1' ? 'warning' : 'default'}
+                className="text-xs"
               >
-                <Clock className="w-3.5 h-3.5" />
-                {humanDue(task.dueAt)}
-              </span>
-            )}
+                {task.priorityBucket}
+              </Badge>
+              {task.ownerType === 'ai' && (
+                <Badge variant="primary" className="text-xs">
+                  <Bot className="w-3 h-3 mr-0.5" />
+                  AI
+                </Badge>
+              )}
+              {(elapsedSecs > 0 || isRunning) && (
+                <Badge variant={isRunning ? 'success' : 'default'} className="text-xs">
+                  <TimerIcon className="w-3 h-3 mr-0.5" />
+                  {elapsedLabel}
+                  {isRunning && ' •'}
+                </Badge>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+              {task.project && (
+                <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
+                  #{task.project}
+                </span>
+              )}
+              {task.tags?.map((t) => (
+                <span key={t} className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
+                  +{t}
+                </span>
+              ))}
+              {task.dueAt && (
+                <span
+                  className={clsx(
+                    'inline-flex items-center gap-0.5',
+                    overdue ? 'text-red-600 font-medium' : 'text-gray-500',
+                  )}
+                >
+                  <Clock className="w-3 h-3" />
+                  {humanDue(task.dueAt)}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0 ml-1">
+        <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             title="Move left"
+            className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
             onClick={() => {
               const order = /** @type{Status[]} */ (Object.keys(STATUS_META));
               const idx = order.indexOf(task.status);
               if (idx > 0)
                 useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx - 1]));
             }}
-            className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -700,7 +772,7 @@ function TaskCard({ task }) {
             <button
               title="Pause"
               onClick={() => stopTimer(task.id)}
-              className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <Pause className="w-4 h-4" />
             </button>
@@ -708,7 +780,7 @@ function TaskCard({ task }) {
             <button
               title="Start focus timer"
               onClick={() => startTimer(task.id)}
-              className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <Play className="w-4 h-4" />
             </button>
@@ -721,7 +793,7 @@ function TaskCard({ task }) {
               if (idx < order.length - 1)
                 useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx + 1]));
             }}
-            className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -738,7 +810,7 @@ function TaskCard({ task }) {
 function Field({ label, children }) {
   return (
     <div className="flex items-center gap-2 py-1">
-      <div className="w-28 text-xs text-slate-500 uppercase tracking-wide">{label}</div>
+      <div className="w-28 text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">{label}</div>
       <div className="flex-1">{children}</div>
     </div>
   );
@@ -752,7 +824,7 @@ function NumberInput({ value, onChange, min = 0, max = 5 }) {
       min={min}
       max={max}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="w-20 px-2 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+      className="w-20 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
     />
   );
 }
@@ -778,13 +850,24 @@ function TaskDrawer({ task, onClose }) {
     return { s, b };
   }, [local.impact, local.urgency, local.effort, local.dueAt]);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 40 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 40 }}
-      className="fixed right-4 top-4 bottom-4 w-[420px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-4 overflow-y-auto z-50"
-    >
+  return ReactDOM.createPortal(
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-[9998]"
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      {/* Modal */}
+      <motion.div
+        initial={{ opacity: 0, x: 40 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 40 }}
+        className="fixed right-4 top-4 bottom-4 w-[420px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl shadow-xl dark:shadow-2xl p-4 overflow-y-auto z-[9999]"
+      >
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">Task</h3>
         <button
@@ -800,7 +883,7 @@ function TaskDrawer({ task, onClose }) {
             value={local.title}
             onChange={(e) => setLocal({ ...local, title: e.target.value })}
             onBlur={() => save({ title: local.title })}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           />
         </Field>
         <Field label="Project">
@@ -809,7 +892,7 @@ function TaskDrawer({ task, onClose }) {
             placeholder="#project"
             onChange={(e) => setLocal({ ...local, project: e.target.value })}
             onBlur={() => save({ project: local.project })}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           />
         </Field>
         <Field label="Status">
@@ -820,7 +903,7 @@ function TaskDrawer({ task, onClose }) {
               setLocal({ ...local, status: v });
               save({ status: v });
             }}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           >
             {Object.keys(STATUS_META).map((k) => (
               <option key={k} value={k}>
@@ -837,7 +920,7 @@ function TaskDrawer({ task, onClose }) {
               setLocal({ ...local, ownerType: v });
               save({ ownerType: v });
             }}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           >
             <option value="self">Me</option>
             <option value="ai">AI Agent</option>
@@ -854,7 +937,7 @@ function TaskDrawer({ task, onClose }) {
                 setLocal({ ...local, expectedBy: iso });
                 save({ expectedBy: iso });
               }}
-              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
           </Field>
         )}
@@ -867,7 +950,7 @@ function TaskDrawer({ task, onClose }) {
               setLocal({ ...local, dueAt: iso });
               save({ dueAt: iso });
             }}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           />
         </Field>
         <Field label="Impact / Urgency / Effort">
@@ -910,7 +993,7 @@ function TaskDrawer({ task, onClose }) {
                 setLocal({ ...local, priorityBucket: b });
                 save({ score: s, priorityBucket: b });
               }}
-              className="px-2 py-1 text-sm rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+              className="px-2 py-1 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 transition-colors"
             >
               Rescore
             </button>
@@ -931,7 +1014,7 @@ function TaskDrawer({ task, onClose }) {
               setLocal({ ...local, tags: arr });
               save({ tags: arr });
             }}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           />
         </Field>
         <Field label="Notes">
@@ -940,7 +1023,7 @@ function TaskDrawer({ task, onClose }) {
             value={local.description || ''}
             onChange={(e) => setLocal({ ...local, description: e.target.value })}
             onBlur={() => save({ description: local.description })}
-            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           />
         </Field>
         <div className="flex items-center justify-between pt-2">
@@ -969,6 +1052,8 @@ function TaskDrawer({ task, onClose }) {
         </div>
       </div>
     </motion.div>
+    </>,
+    document.body
   );
 }
 
@@ -1102,24 +1187,25 @@ function Toolbar({ viewMode, onChangeView }) {
   };
 
   return (
-    <div className="sticky top-0 z-10 -mx-1 mb-3 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-900/60 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
-      <div className="flex flex-col lg:flex-row gap-2 items-stretch lg:items-center">
-        <div className="flex-1 flex items-center gap-2">
-          <div className="relative flex-1">
-            <input
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  onAdd();
-                }
-              }}
-              placeholder='Quick add: "Ship PR #alpha !p1 due:today 17:00 @me +ui"'
-              className="w-full px-3 pl-9 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
-            />
-            <Plus className="absolute left-2 top-2.5 w-4 h-4 text-slate-400" />
+    <div className="sticky top-0 z-10 mb-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
+      <div className="px-4 py-3">
+        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
+          <div className="flex-1 flex items-center gap-2">
+            <div className="relative flex-1 max-w-2xl">
+              <input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    onAdd();
+                  }
+                }}
+                placeholder="Add a task... (type @ for assignment, # for project, ! for priority)"
+                className="w-full px-4 pl-10 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+              <Plus className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
           </div>
           {/* Mic toggle */}
           <button
@@ -1154,13 +1240,13 @@ function Toolbar({ viewMode, onChangeView }) {
           </button>
           <button
             onClick={onAdd}
-            className="px-3 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+            className="px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
           >
-            Add
+            Add Task
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-2 justify-end">
-          <div className="inline-flex overflow-hidden rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
+          <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-hidden">
             <button
               type="button"
               onClick={() => onChangeView('board')}
@@ -1191,7 +1277,7 @@ function Toolbar({ viewMode, onChangeView }) {
           <select
             value={filters.project}
             onChange={(e) => setFilters({ project: e.target.value })}
-            className="px-2 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="px-2 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           >
             <option value="all">All projects</option>
             <option value="alpha">alpha</option>
@@ -1201,7 +1287,7 @@ function Toolbar({ viewMode, onChangeView }) {
           <select
             value={filters.owner}
             onChange={(e) => setFilters({ owner: e.target.value })}
-            className="px-2 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="px-2 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           >
             <option value="all">Any owner</option>
             <option value="self">Me</option>
@@ -1212,7 +1298,7 @@ function Toolbar({ viewMode, onChangeView }) {
             value={filters.q}
             onChange={(e) => setFilters({ q: e.target.value })}
             placeholder="Filter text"
-            className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           />
           {/* Pref: auto return */}
           <label className="ml-2 inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 select-none">
@@ -1281,10 +1367,11 @@ function Toolbar({ viewMode, onChangeView }) {
           </div>
         </div>
       )}
-      <div className="mt-2 text-xs text-slate-500">
+      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
         Tokens: #project !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5
         urgency:0..5 effort:0..5 expect:today|YYYY-MM-DD
       </div>
+    </div>
     </div>
   );
 }
@@ -1334,7 +1421,7 @@ function Board() {
   const grouped = useMemo(() => groupTasksByStatus(filtered), [filtered]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3" style={{ position: 'relative', zIndex: 1 }}>
       {STATUS_ORDER.map((status) => (
         <Column key={status} status={status} tasks={grouped[status]} />
       ))}
@@ -1344,8 +1431,41 @@ function Board() {
 
 function BacklogView() {
   const filtered = useFilteredTasks();
-  const grouped = useMemo(() => groupTasksByStatus(filtered), [filtered]);
   const [collapsed, setCollapsed] = useState(() => new Set(['done']));
+  const [draggingTask, setDraggingTask] = useState(null);
+  const [dropTarget, setDropTarget] = useState(null);
+  const updateTask = useStore((s) => s.updateTask);
+  const grouped = useMemo(() => groupTasksByStatus(filtered), [filtered]);
+
+  const handleDragStart = (e, task) => {
+    setDraggingTask(task);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    if (draggingTask && dropTarget) {
+      const targetStatus = dropTarget.status;
+      // Update the task's status
+      updateTask(draggingTask.id, { status: targetStatus });
+    }
+    setDraggingTask(null);
+    setDropTarget(null);
+  };
+
+  const handleDragOver = (e, status, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggingTask) {
+      setDropTarget({ status, index });
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    // Only clear if we're leaving the drop zone entirely
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDropTarget(null);
+    }
+  };
 
   const toggle = (status) => {
     setCollapsed((prev) => {
@@ -1357,58 +1477,87 @@ function BacklogView() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-0">
       {STATUS_ORDER.map((status) => (
-        <BacklogSection
-          key={status}
-          status={status}
-          tasks={grouped[status]}
-          collapsed={collapsed.has(status)}
-          onToggle={() => toggle(status)}
-        />
+        <div key={status} className="border-b border-slate-200 dark:border-slate-700 last:border-b-0">
+          <BacklogHeader
+            status={status}
+            count={grouped[status].length}
+            collapsed={collapsed.has(status)}
+            onToggle={() => toggle(status)}
+          />
+          {!collapsed.has(status) && (
+            <div
+              className={clsx(
+                'min-h-[40px] transition-colors rounded-2xl bg-slate-50/40 dark:bg-slate-900/20 p-2',
+                dropTarget?.status === status && draggingTask && 'bg-blue-50 dark:bg-blue-900/20'
+              )}
+              onDragOver={(e) => handleDragOver(e, status, 0)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleDragEnd();
+              }}
+            >
+              {grouped[status].length === 0 ? (
+                <div className={clsx(
+                  'px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400 border border-dashed border-slate-200/80 dark:border-slate-700/60 rounded-xl bg-white/60 dark:bg-slate-900/30',
+                  dropTarget?.status === status && draggingTask && 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                )}>
+                  {dropTarget?.status === status && draggingTask ? 'Drop here' : 'No tasks'}
+                </div>
+              ) : (
+                grouped[status].map((task) => (
+                  <BacklogRow
+                    key={task.id}
+                    task={task}
+                    status={status}
+                    isDragging={draggingTask?.id === task.id}
+                    onDragStart={(e) => handleDragStart(e, task)}
+                    onDragEnd={handleDragEnd}
+                  />
+                ))
+              )}
+            </div>
+          )}
+        </div>
       ))}
     </div>
   );
 }
 
-function BacklogSection({ status, tasks, collapsed, onToggle }) {
+function BacklogHeader({ status, count, collapsed, onToggle }) {
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-900/40 shadow-sm overflow-hidden">
+    <div className="bg-slate-50/95 dark:bg-slate-900/50 shadow-sm backdrop-blur-sm overflow-hidden transition-all sticky top-0 z-20 border-b border-slate-200/70 dark:border-slate-800/60">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
       >
         <div className="flex items-center gap-2">
           <ChevronDown
-            className={clsx('w-4 h-4 transition-transform', collapsed ? '-rotate-90' : 'rotate-0')}
+            className={clsx(
+              'w-4 h-4 transition-transform text-slate-500 dark:text-slate-300',
+              collapsed ? '-rotate-90' : 'rotate-0',
+            )}
           />
-          <span className="font-semibold">{STATUS_META[status].label}</span>
-          <span className="text-xs text-slate-500">{STATUS_META[status].hint}</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-100">{STATUS_META[status].label}</span>
+          <span className="text-xs text-slate-600 dark:text-slate-400">{STATUS_META[status].hint}</span>
         </div>
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-          {tasks.length} task{tasks.length === 1 ? '' : 's'}
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+          {count} task{count === 1 ? '' : 's'}
         </span>
       </button>
-      {!collapsed && (
-        <div className="divide-y divide-slate-200 dark:divide-slate-800">
-          {tasks.length === 0 ? (
-            <div className="px-6 py-4 text-sm text-slate-500">No tasks in this lane yet.</div>
-          ) : (
-            tasks.map((task) => <BacklogRow key={task.id} task={task} />)
-          )}
-        </div>
-      )}
     </div>
   );
 }
 
-function BacklogRow({ task }) {
+function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
   const toggleSelected = useStore((s) => s.toggleSelected);
   const selectedIds = useStore((s) => s.selectedIds);
-  const moveTask = useStore((s) => s.moveTask);
   const startTimer = useStore((s) => s.startTimer);
   const stopTimer = useStore((s) => s.stopTimer);
+  const moveTask = useStore((s) => s.moveTask);
   const [open, setOpen] = useState(false);
   const isSelected = selectedIds.includes(task.id);
   const isRunning = !!task.timerStartedAt;
@@ -1417,14 +1566,19 @@ function BacklogRow({ task }) {
 
   return (
     <div
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       className={clsx(
-        'px-4 py-3 bg-white dark:bg-slate-900 transition-colors',
-        isSelected && 'bg-rose-50 dark:bg-rose-900/40',
+        'mt-2 first:mt-0 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 transition-colors cursor-grab active:cursor-grabbing relative border border-slate-200/80 dark:border-slate-800/70 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800/60',
+        isSelected && 'bg-rose-50 dark:bg-rose-900/40 border-rose-200 dark:border-rose-800',
+        isDragging && 'opacity-60 ring-2 ring-blue-200 dark:ring-blue-900/40',
       )}
     >
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2 min-w-0">
+            <GripVertical className="w-4 h-4 mt-1 text-slate-400 cursor-grab flex-shrink-0" />
             <input
               type="checkbox"
               className="mt-1"
@@ -1435,7 +1589,7 @@ function BacklogRow({ task }) {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2 min-w-0">
                 <button
-                  className="text-left font-medium hover:underline truncate min-w-0 max-w-full"
+                  className="text-left font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate min-w-0 max-w-full"
                   title={task.title}
                   onClick={() => setOpen(true)}
                 >
@@ -1458,7 +1612,7 @@ function BacklogRow({ task }) {
                   </Badge>
                 )}
               </div>
-              <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
+              <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-400">
                 {task.project && (
                   <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                     #{task.project}
@@ -1478,7 +1632,7 @@ function BacklogRow({ task }) {
                       'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-slate-600 dark:text-slate-300',
                       overdue
                         ? 'border-rose-300 bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200'
-                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900',
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900',
                     )}
                   >
                     <Clock className="w-3 h-3" />
@@ -1491,11 +1645,11 @@ function BacklogRow({ task }) {
                   </span>
                 )}
                 {(elapsedSecs > 0 || isRunning) && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                     <TimerIcon className="w-3 h-3" /> {formatDurationShort(elapsedSecs)}
                   </span>
                 )}
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                   Score {task.score}
                 </span>
               </div>
@@ -1506,7 +1660,7 @@ function BacklogRow({ task }) {
           <select
             value={task.status}
             onChange={(e) => moveTask(task.id, /** @type{Status} */ (e.target.value))}
-            className="px-2 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="px-2 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900"
           >
             {STATUS_ORDER.map((status) => (
               <option key={status} value={status}>
@@ -1517,7 +1671,7 @@ function BacklogRow({ task }) {
           {isRunning ? (
             <button
               onClick={() => stopTimer(task.id)}
-              className="px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+              className="px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800"
               title="Pause timer"
             >
               <Pause className="w-4 h-4" />
@@ -1525,7 +1679,7 @@ function BacklogRow({ task }) {
           ) : (
             <button
               onClick={() => startTimer(task.id)}
-              className="px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+              className="px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800"
               title="Start focus timer"
             >
               <Play className="w-4 h-4" />
@@ -1655,19 +1809,31 @@ export default function WorkdayTaskBoardApp() {
     return () => clearInterval(id);
   }, [persist]);
 
-  // Theme toggle (simple)
-  const [dark, setDark] = useState(
-    typeof window !== 'undefined' &&
-      window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches,
-  );
+  // Theme toggle with persistence
+  const [dark, setDark] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    // First check localStorage
+    const stored = window.localStorage.getItem('theme');
+    if (stored === 'dark') return true;
+    if (stored === 'light') return false;
+    // Fall back to system preference
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
   const [viewMode, setViewMode] = useState(() => {
     if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return 'board';
     const stored = window.localStorage.getItem(VIEW_MODE_KEY);
     return stored === 'backlog' ? 'backlog' : 'board';
   });
   useEffect(() => {
-    if (typeof document !== 'undefined') document.documentElement.classList.toggle('dark', dark);
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('dark', dark);
+      // Persist theme preference
+      try {
+        localStorage.setItem('theme', dark ? 'dark' : 'light');
+      } catch (e) {
+        /* ignore storage errors */
+      }
+    }
   }, [dark]);
   useEffect(() => {
     try {
@@ -1679,35 +1845,42 @@ export default function WorkdayTaskBoardApp() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-        <div className="max-w-7xl mx-auto px-3 py-4">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h1 className="text-2xl font-bold">Workday Task Board</h1>
-              <p className="text-sm text-slate-500">
-                Keyboard-first board for tasks, meetings, bugs, and AI handoffs.
-              </p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-black">
+        <div className="max-w-[1400px] mx-auto">
+          <header className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/70 backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 bg-clip-text text-transparent">
+                  Workday Task Board
+                </h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Streamline your workflow with intelligent task management
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setDark((v) => !v)}
+                  className="p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
+                  {dark ? '☀️' : '🌙'}
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setDark((v) => !v)}
-                className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                {dark ? 'Light' : 'Dark'} mode
-              </button>
-            </div>
-          </div>
-          {/* end header */}
+          </header>
 
           <Toolbar viewMode={viewMode} onChangeView={setViewMode} />
-          <WipBanner />
-          {viewMode === 'board' ? <Board /> : <BacklogView />}
+          <main className="px-6 py-4">
+            <WipBanner />
+            {viewMode === 'board' ? <Board /> : <BacklogView />}
 
-          <SelfTestResults />
-          <div className="mt-2 text-xs text-slate-500">
-            Drag to any column (left or right). Time chips show running focus time; toggle
-            &quot;Return to Ready on pause&quot; in the toolbar.
-          </div>
+            <footer className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-800">
+              <SelfTestResults />
+              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+                💡 Tip: Use keyboard shortcuts and drag tasks between columns for faster workflow
+              </div>
+            </footer>
+          </main>
         </div>
       </div>
     </ErrorBoundary>
