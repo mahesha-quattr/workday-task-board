@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Essential Commands
+
 - `npm install` - Install dependencies (requires Node 18+, check with `.nvmrc`)
 - `npm run dev` - Start Vite dev server with React Fast Refresh (typically http://localhost:5173)
 - `npm run build` - Production build to `dist/` directory
@@ -14,6 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run format:check` - Check formatting without writing changes
 
 ### Deployment
+
 - `npm run deploy` - Build and publish to `gh-pages` branch
 - GitHub Actions automatically deploys to Pages on push to main/master
 
@@ -22,6 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a single-page React application (Kanban-style task board) with the following structure:
 
 ### Core Application
+
 - **`src/WorkdayTaskBoardApp.jsx`** - Main application component (59KB single-file MVP)
   - Contains all business logic, state management, and UI components in one file
   - Uses Zustand for state management (store defined inline)
@@ -29,6 +32,7 @@ This is a single-page React application (Kanban-style task board) with the follo
   - State persists to localStorage under key `workday-board@v1`
 
 ### Key Features & Implementation
+
 - **Columns**: Backlog, Ready, In Progress, Waiting on AI, Waiting on Others, Blocked, In Review, Done
 - **Priority System**: Score-based with buckets (P0-P3) and due date boost
 - **Quick-Add Tokens**: Parse inline tokens (#project, !p0-p3, due:, @ai/@me, +tags, impact:, urgency:, effort:)
@@ -36,6 +40,7 @@ This is a single-page React application (Kanban-style task board) with the follo
 - **Drag-and-Drop**: Custom implementation using pointer events and `elementsFromPoint`
 
 ### Tech Stack
+
 - React 18 + Zustand for state
 - Framer Motion for animations
 - Tailwind CSS for styling (configured with dark mode via class)
@@ -45,6 +50,7 @@ This is a single-page React application (Kanban-style task board) with the follo
 ## Code Conventions
 
 ### From AGENTS.md
+
 - Use Prettier formatting (semicolons, single quotes, 100-char width)
 - Components in `.jsx` with PascalCase naming
 - Hooks use `useThing` pattern
@@ -53,11 +59,13 @@ This is a single-page React application (Kanban-style task board) with the follo
 - Follow Conventional Commits (feat:, fix:, chore:)
 
 ### Testing
+
 - No formal test runner yet - rely on manual QA
 - In-app self-test panel available for validation
 - Always verify: `npm run lint` and `npm run build` before commits
 
 ## GitHub Pages Deployment
+
 - Base path configured in `vite.config.js` as `/workday-task-board/`
 - Deploy workflow in `.github/workflows/deploy.yml`
 - CI workflow in `.github/workflows/ci.yml` runs on all branches

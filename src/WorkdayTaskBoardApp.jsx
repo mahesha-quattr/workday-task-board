@@ -1416,7 +1416,12 @@ function BacklogRow({ task }) {
   const overdue = task.dueAt ? isBefore(new Date(task.dueAt), new Date()) : false;
 
   return (
-    <div className={clsx('px-4 py-3 bg-white dark:bg-slate-900 transition-colors', isSelected && 'bg-rose-50 dark:bg-rose-900/40')}>
+    <div
+      className={clsx(
+        'px-4 py-3 bg-white dark:bg-slate-900 transition-colors',
+        isSelected && 'bg-rose-50 dark:bg-rose-900/40',
+      )}
+    >
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2 min-w-0">
@@ -1436,7 +1441,9 @@ function BacklogRow({ task }) {
                 >
                   {task.title}
                 </button>
-                <Badge className={PRIORITY_COLORS[task.priorityBucket]}>{task.priorityBucket}</Badge>
+                <Badge className={PRIORITY_COLORS[task.priorityBucket]}>
+                  {task.priorityBucket}
+                </Badge>
                 {task.ownerType === 'ai' && (
                   <Badge className="bg-indigo-100 text-indigo-700 border-indigo-300">
                     <Bot className="w-3.5 h-3.5 mr-1" /> AI
