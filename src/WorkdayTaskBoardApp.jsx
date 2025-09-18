@@ -696,7 +696,7 @@ function TaskCard({ task }) {
         <div className="flex items-start gap-2">
           <input
             type="checkbox"
-            className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="mt-1 cursor-pointer accent-blue-600 dark:accent-blue-400"
             checked={isSelected}
             onClick={(e) => e.stopPropagation()}
             onChange={() => toggleSelected(task.id)}
@@ -1606,7 +1606,7 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
             <GripVertical className="w-4 h-4 mt-1 text-slate-400 cursor-grab flex-shrink-0" />
             <input
               type="checkbox"
-              className="mt-1"
+              className="mt-1 cursor-pointer accent-blue-600 dark:accent-blue-400"
               checked={isSelected}
               onChange={() => toggleSelected(task.id)}
               onClick={(e) => e.stopPropagation()}
