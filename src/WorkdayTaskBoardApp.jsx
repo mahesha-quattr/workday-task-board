@@ -20,6 +20,7 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Trash2,
   Play,
   Flame,
@@ -27,6 +28,8 @@ import {
   GripVertical,
   Mic,
   MicOff,
+  Kanban,
+  List,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -49,6 +52,7 @@ import clsx from 'clsx';
 
 /** @typedef {"backlog"|"ready"|"in_progress"|"waiting_ai"|"waiting_other"|"blocked"|"in_review"|"done"} Status */
 /** @typedef {"self"|"ai"|"other"} OwnerType */
+/** @typedef {"board"|"backlog"} ViewMode */
 
 // ----- Constants -----
 
@@ -62,6 +66,8 @@ const STATUS_META = /** @type{Record<Status,{label:string, key:string, hint:stri
   in_review: { label: 'In Review', key: '7', hint: 'PR/review/QA' },
   done: { label: 'Done', key: '8', hint: 'Completed' },
 });
+
+const STATUS_ORDER = /** @type{Status[]} */ (Object.keys(STATUS_META));
 
 const PRIORITY_COLORS = {
   P0: 'bg-red-100 text-red-700 border-red-300',
@@ -189,6 +195,7 @@ function getStatusFromPoint(x, y) {
  * }} Task */
 
 const STORAGE_KEY = 'workday-board@v1';
+const VIEW_MODE_KEY = 'workday-board@view-mode';
 
 const seedTasks = () => {
   const now = new Date();
@@ -976,7 +983,7 @@ function WipBanner() {
   );
 }
 
-function Toolbar() {
+function Toolbar({ viewMode, onChangeView }) {
   const addTask = useStore((s) => s.addTask);
   const setFilters = useStore((s) => s.setFilters);
   const filters = useStore((s) => s.filters);
@@ -1152,7 +1159,35 @@ function Toolbar() {
             Add
           </button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 justify-end">
+          <div className="inline-flex overflow-hidden rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
+            <button
+              type="button"
+              onClick={() => onChangeView('board')}
+              aria-pressed={viewMode === 'board'}
+              className={clsx(
+                'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-colors',
+                viewMode === 'board'
+                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
+              )}
+            >
+              <Kanban className="w-4 h-4" /> Board
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeView('backlog')}
+              aria-pressed={viewMode === 'backlog'}
+              className={clsx(
+                'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-colors',
+                viewMode === 'backlog'
+                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
+              )}
+            >
+              <List className="w-4 h-4" /> Backlog
+            </button>
+          </div>
           <select
             value={filters.project}
             onChange={(e) => setFilters({ project: e.target.value })}
@@ -1254,11 +1289,11 @@ function Toolbar() {
   );
 }
 
-function Board() {
+function useFilteredTasks() {
   const tasks = useStore((s) => s.tasks);
   const filters = useStore((s) => s.filters);
 
-  const filtered = useMemo(() => {
+  return useMemo(() => {
     return tasks
       .filter((t) => {
         if (filters.project !== 'all' && (t.project || '') !== filters.project) return false;
@@ -1275,39 +1310,225 @@ function Board() {
       .sort((a, b) => {
         // Sort by status lane then priority score desc then due date asc
         if (a.status !== b.status)
-          return (
-            Object.keys(STATUS_META).indexOf(a.status) - Object.keys(STATUS_META).indexOf(b.status)
-          );
+          return STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
         if (a.score !== b.score) return b.score - a.score;
         const ad = a.dueAt ? new Date(a.dueAt).getTime() : Infinity;
         const bd = b.dueAt ? new Date(b.dueAt).getTime() : Infinity;
         return ad - bd;
       });
   }, [tasks, filters]);
+}
 
-  const grouped = useMemo(() => {
-    /** @type{Record<Status, Task[]>} */
-    const g = {
-      backlog: [],
-      ready: [],
-      in_progress: [],
-      waiting_ai: [],
-      waiting_other: [],
-      blocked: [],
-      in_review: [],
-      done: [],
-    };
-    for (const t of filtered) g[t.status].push(t);
-    return g;
-  }, [filtered]);
+function groupTasksByStatus(tasks) {
+  /** @type{Record<Status, Task[]>} */
+  const grouped = STATUS_ORDER.reduce((acc, status) => {
+    acc[status] = [];
+    return acc;
+  }, /** @type{Record<Status, Task[]>} */ ({}));
+  for (const t of tasks) grouped[t.status].push(t);
+  return grouped;
+}
+
+function Board() {
+  const filtered = useFilteredTasks();
+  const grouped = useMemo(() => groupTasksByStatus(filtered), [filtered]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-      {
-        /** @type{Status[]} */ (Object.keys(STATUS_META)).map((s) => (
-          <Column key={s} status={/** @type{Status} */ (s)} tasks={grouped[s]} />
-        ))
-      }
+      {STATUS_ORDER.map((status) => (
+        <Column key={status} status={status} tasks={grouped[status]} />
+      ))}
+    </div>
+  );
+}
+
+function BacklogView() {
+  const filtered = useFilteredTasks();
+  const grouped = useMemo(() => groupTasksByStatus(filtered), [filtered]);
+  const [collapsed, setCollapsed] = useState(() => new Set(['done']));
+
+  const toggle = (status) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      {STATUS_ORDER.map((status) => (
+        <BacklogSection
+          key={status}
+          status={status}
+          tasks={grouped[status]}
+          collapsed={collapsed.has(status)}
+          onToggle={() => toggle(status)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function BacklogSection({ status, tasks, collapsed, onToggle }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-900/40 shadow-sm overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <ChevronDown
+            className={clsx('w-4 h-4 transition-transform', collapsed ? '-rotate-90' : 'rotate-0')}
+          />
+          <span className="font-semibold">{STATUS_META[status].label}</span>
+          <span className="text-xs text-slate-500">{STATUS_META[status].hint}</span>
+        </div>
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+          {tasks.length} task{tasks.length === 1 ? '' : 's'}
+        </span>
+      </button>
+      {!collapsed && (
+        <div className="divide-y divide-slate-200 dark:divide-slate-800">
+          {tasks.length === 0 ? (
+            <div className="px-6 py-4 text-sm text-slate-500">No tasks in this lane yet.</div>
+          ) : (
+            tasks.map((task) => <BacklogRow key={task.id} task={task} />)
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BacklogRow({ task }) {
+  const toggleSelected = useStore((s) => s.toggleSelected);
+  const selectedIds = useStore((s) => s.selectedIds);
+  const moveTask = useStore((s) => s.moveTask);
+  const startTimer = useStore((s) => s.startTimer);
+  const stopTimer = useStore((s) => s.stopTimer);
+  const [open, setOpen] = useState(false);
+  const isSelected = selectedIds.includes(task.id);
+  const isRunning = !!task.timerStartedAt;
+  const elapsedSecs = computeElapsedSecs(task);
+  const overdue = task.dueAt ? isBefore(new Date(task.dueAt), new Date()) : false;
+
+  return (
+    <div className={clsx('px-4 py-3 bg-white dark:bg-slate-900 transition-colors', isSelected && 'bg-rose-50 dark:bg-rose-900/40')}>
+      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start gap-2 min-w-0">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={isSelected}
+              onChange={() => toggleSelected(task.id)}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                <button
+                  className="text-left font-medium hover:underline truncate min-w-0 max-w-full"
+                  title={task.title}
+                  onClick={() => setOpen(true)}
+                >
+                  {task.title}
+                </button>
+                <Badge className={PRIORITY_COLORS[task.priorityBucket]}>{task.priorityBucket}</Badge>
+                {task.ownerType === 'ai' && (
+                  <Badge className="bg-indigo-100 text-indigo-700 border-indigo-300">
+                    <Bot className="w-3.5 h-3.5 mr-1" /> AI
+                  </Badge>
+                )}
+                {task.ownerType === 'other' && (
+                  <Badge className="bg-slate-100 text-slate-700 border-slate-300">Shared</Badge>
+                )}
+                {task.status === 'blocked' && (
+                  <Badge className="bg-rose-100 text-rose-700 border-rose-300">
+                    <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Blocked
+                  </Badge>
+                )}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
+                {task.project && (
+                  <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    #{task.project}
+                  </span>
+                )}
+                {task.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+                {task.dueAt && (
+                  <span
+                    className={clsx(
+                      'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-slate-600 dark:text-slate-300',
+                      overdue
+                        ? 'border-rose-300 bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200'
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900',
+                    )}
+                  >
+                    <Clock className="w-3 h-3" />
+                    {humanDue(task.dueAt)}
+                  </span>
+                )}
+                {task.expectedBy && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-500/60 dark:bg-indigo-900/30 dark:text-indigo-200">
+                    <Clock className="w-3 h-3" /> Expect {humanDue(task.expectedBy)}
+                  </span>
+                )}
+                {(elapsedSecs > 0 || isRunning) && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                    <TimerIcon className="w-3 h-3" /> {formatDurationShort(elapsedSecs)}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                  Score {task.score}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={task.status}
+            onChange={(e) => moveTask(task.id, /** @type{Status} */ (e.target.value))}
+            className="px-2 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+          >
+            {STATUS_ORDER.map((status) => (
+              <option key={status} value={status}>
+                {STATUS_META[status].label}
+              </option>
+            ))}
+          </select>
+          {isRunning ? (
+            <button
+              onClick={() => stopTimer(task.id)}
+              className="px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+              title="Pause timer"
+            >
+              <Pause className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={() => startTimer(task.id)}
+              className="px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+              title="Start focus timer"
+            >
+              <Play className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+      <AnimatePresence>
+        {open && <TaskDrawer task={task} onClose={() => setOpen(false)} />}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1433,9 +1654,21 @@ export default function WorkdayTaskBoardApp() {
       window.matchMedia &&
       window.matchMedia('(prefers-color-scheme: dark)').matches,
   );
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return 'board';
+    const stored = window.localStorage.getItem(VIEW_MODE_KEY);
+    return stored === 'backlog' ? 'backlog' : 'board';
+  });
   useEffect(() => {
     if (typeof document !== 'undefined') document.documentElement.classList.toggle('dark', dark);
   }, [dark]);
+  useEffect(() => {
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.setItem(VIEW_MODE_KEY, viewMode);
+    } catch (e) {
+      /* ignore storage errors */
+    }
+  }, [viewMode]);
 
   return (
     <ErrorBoundary>
@@ -1459,9 +1692,9 @@ export default function WorkdayTaskBoardApp() {
           </div>
           {/* end header */}
 
-          <Toolbar />
+          <Toolbar viewMode={viewMode} onChangeView={setViewMode} />
           <WipBanner />
-          <Board />
+          {viewMode === 'board' ? <Board /> : <BacklogView />}
 
           <SelfTestResults />
           <div className="mt-2 text-xs text-slate-500">
