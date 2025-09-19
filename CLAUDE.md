@@ -38,6 +38,7 @@ This is a single-page React application (Kanban-style task board) with the follo
 - **Quick-Add Tokens**: Parse inline tokens (#project, !p0-p3, due:, @ai/@me, +tags, impact:, urgency:, effort:)
 - **Focus Timer**: Start/pause timer on tasks with automatic state transitions
 - **Drag-and-Drop**: Custom implementation using pointer events and `elementsFromPoint`
+- **Projects Module**: (In Development) Multi-project support with Default project, project selector, bulk task moves
 
 ### Tech Stack
 
@@ -70,3 +71,52 @@ This is a single-page React application (Kanban-style task board) with the follo
 - Deploy workflow in `.github/workflows/deploy.yml`
 - CI workflow in `.github/workflows/ci.yml` runs on all branches
 - Custom domain via `GH_PAGES_CNAME` repo variable or `public/CNAME` file
+
+## Current Development: Projects Module
+
+### Feature Branch: 001-projects-i-want
+
+Adding multi-project support to organize tasks by context:
+
+**Data Model Changes**:
+
+- New `Project` entity with id, name, color, isDefault flag
+- Tasks extended with `projectId` field
+- Store extended with projects array and currentProjectId
+
+**Key Implementation Points**:
+
+- Default project always exists, cannot be deleted
+- Project names limited to 15 chars, must be unique
+- Tasks filtered by currentProjectId for display
+- Bulk move tasks between projects supported
+- Timer state preserved across project switches
+
+**Store Actions to Implement**:
+
+- `createProject(name)` - Creates new project with auto color
+- `deleteProject(id)` - Deletes project and all its tasks (except default)
+- `renameProject(id, name)` - Renames project with validation
+- `switchProject(id)` - Changes current project filter
+- `moveTasksToProject(taskIds, targetProjectId)` - Bulk move operation
+
+**UI Components**:
+
+- Project selector dropdown in top-left
+- Project management panel for CRUD operations
+- Project badges on task cards
+- Active timer indicator across projects
+
+**Migration**:
+
+- Automatic v1�v2 migration on first load
+- Existing tasks assigned to default project
+- No data loss during upgrade
+
+### Remember When Implementing
+
+1. Maintain single-file architecture in `WorkdayTaskBoardApp.jsx`
+2. Preserve all existing functionality (8 columns, timers, quick-add)
+3. Use existing Zustand patterns for state management
+4. Test localStorage migration carefully
+5. Ensure <100ms project switching performance

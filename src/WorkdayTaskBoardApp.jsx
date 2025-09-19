@@ -188,21 +188,76 @@ function getStatusFromPoint(x, y) {
 // ----- Store -----
 
 /** @typedef {{
- *  id:string; title:string; description?:string; project?:string; status:Status;
+ *  id:string; title:string; description?:string; project?:string; projectId?:string; status:Status;
  *  impact:number; urgency:number; effort:number; priorityBucket:"P0"|"P1"|"P2"|"P3";
  *  score:number; dueAt?:string|null; ownerType:OwnerType; ownerRef?:string; tags:string[];
  *  dependencies:string[]; createdAt:string; updatedAt:string; expectedBy?:string|null;
  *  timeLogSecs?:number; timerStartedAt?:string|null;
  * }} Task */
 
+/** @typedef {{
+ *  id:string; name:string; color:string; isDefault:boolean; createdAt:number;
+ * }} Project */
+
 const STORAGE_KEY = 'workday-board@v1';
 const VIEW_MODE_KEY = 'workday-board@view-mode';
+const STORAGE_VERSION = 2; // Version for migration tracking
+
+// Project color palette
+const PROJECT_COLORS = [
+  '#EF4444', // red
+  '#F59E0B', // amber
+  '#10B981', // emerald
+  '#3B82F6', // blue
+  '#8B5CF6', // violet
+  '#EC4899', // pink
+  '#14B8A6', // teal
+  '#F97316', // orange
+];
+
+// Migration function for v1 to v2
+function migrateStorageV1toV2(data) {
+  // Add default project if missing
+  if (!data.projects) {
+    data.projects = [
+      {
+        id: 'default',
+        name: 'Default',
+        color: '#6B7280',
+        isDefault: true,
+        createdAt: Date.now(),
+      },
+    ];
+  }
+
+  // Set current project
+  if (!data.currentProjectId) {
+    data.currentProjectId = 'default';
+  }
+
+  // Add projectId to all tasks
+  if (data.tasks) {
+    data.tasks = data.tasks.map((task) => ({
+      ...task,
+      projectId: task.projectId || 'default',
+    }));
+  }
+
+  data.version = STORAGE_VERSION;
+  return data;
+}
+
+// Helper to generate project color
+function generateProjectColor(index) {
+  return PROJECT_COLORS[index % PROJECT_COLORS.length];
+}
 
 const seedTasks = () => {
   const now = new Date();
   return [
     {
       id: uid(),
+      projectId: 'default',
       title: 'Fix login bug for Alpha',
       project: 'alpha',
       status: 'in_progress',
@@ -270,6 +325,7 @@ function finalizeTask(partial) {
     title: partial.title ?? 'Untitled',
     description: partial.description ?? '',
     project: partial.project ?? undefined,
+    projectId: partial.projectId ?? 'default',
     status: partial.status ?? 'backlog',
     impact,
     urgency,
@@ -305,6 +361,13 @@ const useStore = create((set, get) => ({
 
   tasks: /** @type{Task[]} */ ([]),
   filters: { project: 'all', status: 'all', owner: 'all', q: '' },
+
+  // Projects state
+  projects: /** @type{Project[]} */ ([
+    { id: 'default', name: 'Default', color: '#6B7280', isDefault: true, createdAt: Date.now() },
+  ]),
+  currentProjectId: 'default',
+
   // User prefs
   autoReturnOnStop: false,
   setAutoReturnOnStop(v) {
@@ -319,26 +382,89 @@ const useStore = create((set, get) => ({
     try {
       const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
       if (raw) {
-        const parsed = JSON.parse(raw);
-        set({ tasks: parsed.tasks || [], autoReturnOnStop: parsed.autoReturnOnStop ?? false });
+        let parsed = JSON.parse(raw);
+
+        // Migrate if needed
+        if (!parsed.version || parsed.version < STORAGE_VERSION) {
+          console.log('Migrating storage from v1 to v2');
+          parsed = migrateStorageV1toV2(parsed);
+        }
+
+        set({
+          tasks: parsed.tasks || [],
+          autoReturnOnStop: parsed.autoReturnOnStop ?? false,
+          projects: parsed.projects || [
+            {
+              id: 'default',
+              name: 'Default',
+              color: '#6B7280',
+              isDefault: true,
+              createdAt: Date.now(),
+            },
+          ],
+          currentProjectId: parsed.currentProjectId || 'default',
+        });
         return;
       }
     } catch (e) {
       /* ignore storage errors */
+      console.error('Storage error:', e);
     }
-    set({ tasks: seedTasks() });
+    // Initialize with default project and seed tasks
+    set({
+      tasks: seedTasks(),
+      projects: [
+        {
+          id: 'default',
+          name: 'Default',
+          color: '#6B7280',
+          isDefault: true,
+          createdAt: Date.now(),
+        },
+      ],
+      currentProjectId: 'default',
+    });
   },
+  cleanupStorage() {
+    const { projects, tasks } = get();
+    const projectIds = new Set(projects.map((p) => p.id));
+
+    // Remove tasks that belong to non-existent projects
+    const cleanedTasks = tasks.filter((t) => projectIds.has(t.projectId));
+
+    if (cleanedTasks.length !== tasks.length) {
+      set({ tasks: cleanedTasks });
+      console.log(`[cleanup] Removed ${tasks.length - cleanedTasks.length} orphaned tasks`);
+      return true; // Indicates cleanup was performed
+    }
+    return false;
+  },
+
   persist() {
     try {
-      const { tasks, autoReturnOnStop } = get();
-      if (typeof localStorage !== 'undefined')
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, autoReturnOnStop }));
+      // Run cleanup before persisting
+      get().cleanupStorage();
+
+      const { tasks, autoReturnOnStop, projects, currentProjectId } = get();
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            tasks,
+            autoReturnOnStop,
+            projects,
+            currentProjectId,
+            version: STORAGE_VERSION,
+          }),
+        );
+      }
     } catch (e) {
       /* ignore storage errors */
     }
   },
   addTask(partial) {
-    const t = finalizeTask(partial);
+    const { currentProjectId } = get();
+    const t = finalizeTask({ ...partial, projectId: partial.projectId || currentProjectId });
     set((s) => ({ tasks: [...s.tasks, t] }));
     get().persist();
     return t.id;
@@ -462,7 +588,772 @@ const useStore = create((set, get) => ({
   clearDrag() {
     set({ draggingId: null, dragHoverStatus: null });
   },
+
+  // Project management actions
+  createProject(name) {
+    const trimmedName = name.trim();
+    if (!trimmedName || trimmedName.length > 15) {
+      return { error: 'Project name must be 1-15 characters' };
+    }
+
+    const { projects } = get();
+    if (projects.some((p) => p.name.toLowerCase() === trimmedName.toLowerCase())) {
+      return { error: 'Project name already exists' };
+    }
+
+    const newProject = {
+      id: `proj_${Date.now()}`,
+      name: trimmedName,
+      color: generateProjectColor(projects.length),
+      isDefault: false,
+      createdAt: Date.now(),
+    };
+
+    set((s) => ({ projects: [...s.projects, newProject] }));
+    get().persist();
+    return { success: true, projectId: newProject.id };
+  },
+
+  deleteProject(projectId) {
+    const { projects, tasks, currentProjectId } = get();
+    const project = projects.find((p) => p.id === projectId);
+
+    if (!project || project.isDefault) {
+      return { error: 'Cannot delete this project' };
+    }
+
+    // Delete all tasks in this project
+    const remainingTasks = tasks.filter((t) => t.projectId !== projectId);
+
+    // Switch to default if deleting current project
+    const newCurrentId = currentProjectId === projectId ? 'default' : currentProjectId;
+
+    set({
+      projects: projects.filter((p) => p.id !== projectId),
+      tasks: remainingTasks,
+      currentProjectId: newCurrentId,
+    });
+    get().persist();
+    return { success: true };
+  },
+
+  renameProject(projectId, newName) {
+    const trimmedName = newName.trim();
+    if (!trimmedName || trimmedName.length > 15) {
+      return { error: 'Project name must be 1-15 characters' };
+    }
+
+    const { projects } = get();
+    const project = projects.find((p) => p.id === projectId);
+
+    if (!project || project.isDefault) {
+      return { error: 'Cannot rename this project' };
+    }
+
+    if (
+      projects.some((p) => p.id !== projectId && p.name.toLowerCase() === trimmedName.toLowerCase())
+    ) {
+      return { error: 'Project name already exists' };
+    }
+
+    set((s) => ({
+      projects: s.projects.map((p) => (p.id === projectId ? { ...p, name: trimmedName } : p)),
+    }));
+    get().persist();
+    return { success: true };
+  },
+
+  reorderProjects(orderedProjectIds) {
+    const { projects } = get();
+    const reordered = orderedProjectIds
+      .map((id) => projects.find((p) => p.id === id))
+      .filter(Boolean);
+    // Add any projects that weren't in the ordered list (shouldn't happen but safe)
+    const missingProjects = projects.filter((p) => !orderedProjectIds.includes(p.id));
+    set({ projects: [...reordered, ...missingProjects] });
+    get().persist();
+    return { success: true };
+  },
+
+  switchProject(projectId) {
+    const { projects, currentProjectId } = get();
+
+    // Early return if switching to the same project
+    if (currentProjectId === projectId) {
+      return { success: true };
+    }
+
+    if (!projects.some((p) => p.id === projectId)) {
+      return { error: 'Project not found' };
+    }
+
+    set({ currentProjectId: projectId });
+    get().persist();
+    return { success: true };
+  },
+
+  moveTasksToProject(taskIds, targetProjectId) {
+    const { projects } = get();
+    if (!projects.some((p) => p.id === targetProjectId)) {
+      return { error: 'Target project not found' };
+    }
+
+    if (!taskIds || taskIds.length === 0) {
+      return { error: 'No tasks selected' };
+    }
+
+    set((s) => ({
+      tasks: s.tasks.map((t) =>
+        taskIds.includes(t.id)
+          ? { ...t, projectId: targetProjectId, updatedAt: new Date().toISOString() }
+          : t,
+      ),
+    }));
+    get().persist();
+    return { success: true, movedCount: taskIds.length };
+  },
+
+  // Get tasks filtered by current project
+  getVisibleTasks() {
+    const { tasks, currentProjectId } = get();
+    return tasks.filter((t) => t.projectId === currentProjectId);
+  },
+
+  // Get task count for a project
+  getProjectTaskCount(projectId) {
+    const { tasks } = get();
+    return tasks.filter((t) => t.projectId === projectId).length;
+  },
+
+  // Check if timer is active in other projects
+  hasActiveTimerInOtherProject() {
+    const { tasks, currentProjectId } = get();
+    return tasks.some((t) => t.projectId !== currentProjectId && t.timerStartedAt);
+  },
+
+  // Get project with active timer
+  getProjectWithActiveTimer() {
+    const { tasks, projects } = get();
+    const taskWithTimer = tasks.find((t) => t.timerStartedAt);
+    if (taskWithTimer) {
+      return projects.find((p) => p.id === taskWithTimer.projectId);
+    }
+    return null;
+  },
 }));
+
+// ----- Project Components -----
+
+function ProjectSelector() {
+  const projects = useStore((s) => s.projects);
+  const currentProjectId = useStore((s) => s.currentProjectId);
+  const switchProject = useStore((s) => s.switchProject);
+  const hasActiveTimerInOther = useStore((s) => s.hasActiveTimerInOtherProject);
+  const getProjectWithTimer = useStore((s) => s.getProjectWithActiveTimer);
+  const getProjectTaskCount = useStore((s) => s.getProjectTaskCount);
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [showManager, setShowManager] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Cmd/Ctrl + K for project search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsOpen(true);
+        setSearchQuery('');
+      }
+      // Cmd/Ctrl + Shift + N for new project
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'N') {
+        e.preventDefault();
+        setShowManager(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const currentProject = projects.find((p) => p.id === currentProjectId) || projects[0];
+  const timerProject = getProjectWithTimer();
+
+  const handleProjectSwitch = (projectId) => {
+    switchProject(projectId);
+    setIsOpen(false);
+  };
+
+  const handleTimerJump = () => {
+    if (timerProject && timerProject.id !== currentProjectId) {
+      switchProject(timerProject.id);
+    }
+  };
+
+  return (
+    <>
+      <div className="relative">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+        >
+          <span
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: currentProject.color }}
+          />
+          <span className="font-medium">{currentProject.name}</span>
+          {currentProject.isDefault && (
+            <svg className="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+          <ChevronDown className="w-4 h-4 text-gray-500" />
+          {hasActiveTimerInOther() && (
+            <button
+              className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTimerJump();
+              }}
+              title={`Timer active in ${timerProject?.name}`}
+              aria-label={`Timer active in ${timerProject?.name}`}
+            />
+          )}
+        </button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              {/* Mobile overlay backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="md:hidden fixed inset-0 bg-black/50 z-[90]"
+                onClick={() => setIsOpen(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="absolute md:top-full top-0 md:mt-1 mt-0 w-full md:w-64 bg-white dark:bg-gray-800 md:rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-[100] md:left-0 left-0 md:right-auto right-0 md:max-h-96 max-h-screen overflow-auto"
+              >
+                <div className="p-2">
+                  <div className="flex items-center justify-between px-2 py-1 text-xs text-gray-500 dark:text-gray-400 uppercase">
+                    <span>Projects</span>
+                    <button
+                      onClick={() => {
+                        setShowManager(true);
+                        setIsOpen(false);
+                      }}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      title="Manage Projects"
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  {projects.length > 10 && (
+                    <div className="px-2 pb-2">
+                      <input
+                        type="text"
+                        placeholder="Search projects..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                      />
+                    </div>
+                  )}
+                  {projects
+                    .filter(
+                      (p) =>
+                        !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()),
+                    )
+                    .map((project) => {
+                      const taskCount = getProjectTaskCount(project.id);
+                      const isActive = project.id === currentProjectId;
+                      return (
+                        <button
+                          key={project.id}
+                          onClick={() => handleProjectSwitch(project.id)}
+                          className={clsx(
+                            'w-full text-left px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
+                            isActive && 'bg-gray-100 dark:bg-gray-700',
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: project.color }}
+                              />
+                              <span
+                                className={clsx(
+                                  'font-medium',
+                                  isActive && 'text-blue-600 dark:text-blue-400',
+                                )}
+                              >
+                                {project.name}
+                              </span>
+                              {project.isDefault && (
+                                <svg
+                                  className="w-3 h-3 text-gray-400"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {showManager && <ProjectManager onClose={() => setShowManager(false)} />}
+    </>
+  );
+}
+
+function ProjectManager({ onClose }) {
+  const projects = useStore((s) => s.projects);
+  const currentProjectId = useStore((s) => s.currentProjectId);
+  const createProject = useStore((s) => s.createProject);
+  const deleteProject = useStore((s) => s.deleteProject);
+  const renameProject = useStore((s) => s.renameProject);
+  const reorderProjects = useStore((s) => s.reorderProjects);
+  const getProjectTaskCount = useStore((s) => s.getProjectTaskCount);
+
+  const [newProjectName, setNewProjectName] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState('');
+  const [error, setError] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [draggedProject, setDraggedProject] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const editInputRef = useRef(null);
+
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+    }
+  }, [editingId]);
+
+  const handleCreateProject = (e) => {
+    e.preventDefault();
+    const result = createProject(newProjectName);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setNewProjectName('');
+      setError('');
+    }
+  };
+
+  const handleRename = (projectId) => {
+    const result = renameProject(projectId, editingName);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setEditingId(null);
+      setError('');
+    }
+  };
+
+  const handleDelete = (projectId) => {
+    const result = deleteProject(projectId);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setDeleteConfirmId(null);
+      setError('');
+    }
+  };
+
+  const handleDragStart = (e, project, index) => {
+    setDraggedProject({ project, index });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedProject && draggedProject.index !== dropIndex) {
+      const newProjects = [...projects];
+      const [movedProject] = newProjects.splice(draggedProject.index, 1);
+      newProjects.splice(dropIndex, 0, movedProject);
+      reorderProjects(newProjects.map((p) => p.id));
+    }
+    setDraggedProject(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedProject(null);
+    setDragOverIndex(null);
+  };
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold">Manage Projects</h2>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4">
+          {error && (
+            <div className="mb-4 p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleCreateProject} className="mb-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder="New project name"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                maxLength={15}
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Create
+              </button>
+            </div>
+          </form>
+
+          <div className="space-y-2">
+            {projects.map((project, index) => {
+              const taskCount = getProjectTaskCount(project.id);
+              const isEditing = editingId === project.id;
+              const isDeleting = deleteConfirmId === project.id;
+
+              // Calculate project statistics
+              const tasks = useStore.getState().tasks.filter((t) => t.projectId === project.id);
+              const completedCount = tasks.filter((t) => t.status === 'done').length;
+              const completionRate =
+                taskCount > 0 ? Math.round((completedCount / taskCount) * 100) : 0;
+
+              return (
+                <motion.div
+                  key={project.id}
+                  draggable={!project.isDefault && !isEditing && !isDeleting}
+                  onDragStart={(e) => handleDragStart(e, project, index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={clsx(
+                    'flex items-center justify-between p-3 rounded-lg transition-colors relative group',
+                    dragOverIndex === index
+                      ? 'bg-blue-100 dark:bg-blue-900/30'
+                      : 'bg-gray-50 dark:bg-gray-900/50',
+                    !project.isDefault && 'cursor-move',
+                  )}
+                  animate={{
+                    opacity: draggedProject?.project.id === project.id ? 0.5 : 1,
+                  }}
+                >
+                  {!project.isDefault && (
+                    <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-50 transition-opacity pointer-events-none">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+                        <path
+                          d="M3 6h18M3 12h18M3 18h18"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 flex-1 ml-6">
+                    <span
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: project.color }}
+                    />
+                    {isEditing ? (
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onBlur={() => handleRename(project.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRename(project.id);
+                          if (e.key === 'Escape') setEditingId(null);
+                        }}
+                        className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded"
+                        maxLength={15}
+                      />
+                    ) : (
+                      <span className="font-medium">
+                        {project.name}
+                        {project.id === currentProjectId && (
+                          <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                            (current)
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {project.isDefault && (
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-end">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {taskCount} tasks
+                      </span>
+                      {taskCount > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-400">{completionRate}% done</span>
+                          <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-green-500 transition-all duration-300"
+                              style={{ width: `${completionRate}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {!project.isDefault && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingId(project.id);
+                            setEditingName(project.name);
+                          }}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                          title="Rename"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                            />
+                          </svg>
+                        </button>
+                        {isDeleting ? (
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleDelete(project.id)}
+                              className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                            >
+                              Delete {taskCount} tasks?
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(null)}
+                              className="px-2 py-1 text-xs bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteConfirmId(project.id)}
+                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 dark:text-red-400"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
+  const projects = useStore((s) => s.projects);
+  const currentProjectId = useStore((s) => s.currentProjectId);
+  const moveTasksToProject = useStore((s) => s.moveTasksToProject);
+  const getVisibleTasks = useStore((s) => s.getVisibleTasks);
+
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [error, setError] = useState('');
+
+  const tasks = getVisibleTasks();
+  const selectedTasks = tasks.filter((t) => taskIds.includes(t.id));
+  const availableProjects = projects.filter((p) => p.id !== currentProjectId);
+
+  const handleMove = () => {
+    if (!selectedProjectId) {
+      setError('Please select a target project');
+      return;
+    }
+
+    const result = moveTasksToProject(taskIds, selectedProjectId);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      onSuccess();
+    }
+  };
+
+  const currentProject = projects.find((p) => p.id === currentProjectId);
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold">Move Tasks to Project</h2>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4">
+          {error && (
+            <div className="mb-4 p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Moving{' '}
+              <span className="font-semibold">
+                {taskIds.length} task{taskIds.length > 1 ? 's' : ''}
+              </span>{' '}
+              from <span className="font-semibold">{currentProject?.name}</span>
+            </p>
+
+            {selectedTasks.length > 0 && (
+              <div className="mb-4 p-2 bg-gray-50 dark:bg-gray-900/50 rounded max-h-32 overflow-y-auto">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Selected tasks:</div>
+                {selectedTasks.slice(0, 5).map((task) => (
+                  <div key={task.id} className="text-sm truncate">
+                    • {task.title}
+                  </div>
+                ))}
+                {selectedTasks.length > 5 && (
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    ...and {selectedTasks.length - 5} more
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="target-project" className="block text-sm font-medium mb-2">
+              Select Target Project
+            </label>
+            <select
+              id="target-project"
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+            >
+              <option value="">Choose a project...</option>
+              {availableProjects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleMove}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Move Tasks
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
 
 // ----- Error Boundary -----
 class ErrorBoundary extends React.Component {
@@ -615,7 +1506,7 @@ function Badge({ children, className, variant = 'default' }) {
   );
 }
 
-function Column({ status, tasks }) {
+const Column = React.memo(function Column({ status, tasks }) {
   const dragHoverStatus = useStore((s) => s.dragHoverStatus);
   const highlight = dragHoverStatus === status;
   return (
@@ -643,7 +1534,7 @@ function Column({ status, tasks }) {
       </div>
     </div>
   );
-}
+});
 
 function TaskCard({ task }) {
   const move = useStore((s) => s.moveTask);
@@ -651,8 +1542,12 @@ function TaskCard({ task }) {
   const startTimer = useStore((s) => s.startTimer);
   const toggleSelected = useStore((s) => s.toggleSelected);
   const selectedIds = useStore((s) => s.selectedIds);
+  const projects = useStore((s) => s.projects);
+  const currentProjectId = useStore((s) => s.currentProjectId);
   const [open, setOpen] = useState(false);
   const overdue = task.dueAt ? isBefore(new Date(task.dueAt), new Date()) : false;
+
+  const taskProject = projects.find((p) => p.id === task.projectId);
 
   // Live ticker for running tasks
   const [, setTick] = useState(0);
@@ -723,6 +1618,15 @@ function TaskCard({ task }) {
               >
                 {task.priorityBucket}
               </Badge>
+              {taskProject && task.projectId !== currentProjectId && (
+                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-700">
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: taskProject.color }}
+                  />
+                  <span className="text-gray-600 dark:text-gray-400">{taskProject.name}</span>
+                </div>
+              )}
               {task.ownerType === 'ai' && (
                 <Badge variant="primary" className="text-xs">
                   <Bot className="w-3 h-3 mr-0.5" />
@@ -867,7 +1771,7 @@ function TaskDrawer({ task, onClose }) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-[9998]"
+        className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-[300]"
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
       />
       {/* Modal */}
@@ -875,7 +1779,7 @@ function TaskDrawer({ task, onClose }) {
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 40 }}
-        className="fixed right-4 top-4 bottom-4 w-[420px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl shadow-xl dark:shadow-2xl p-4 overflow-y-auto z-[9999]"
+        className="fixed right-4 top-4 bottom-4 w-[420px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl shadow-xl dark:shadow-2xl p-4 overflow-y-auto z-[301]"
       >
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">Task</h3>
@@ -1068,16 +1972,21 @@ function TaskDrawer({ task, onClose }) {
   );
 }
 
-function WipBanner() {
+const WipBanner = React.memo(function WipBanner() {
   const tasks = useStore((s) => s.tasks);
-  const wip = tasks.filter((t) => t.status === 'in_progress').length;
+  const currentProjectId = useStore((s) => s.currentProjectId);
+  const visibleTasks = useMemo(
+    () => tasks.filter((t) => t.projectId === currentProjectId),
+    [tasks, currentProjectId],
+  );
+  const wip = visibleTasks.filter((t) => t.status === 'in_progress').length;
   if (wip <= 3) return null;
   return (
     <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 px-3 py-2 text-sm flex items-center gap-2">
       <Flame className="w-4 h-4" /> High WIP ({wip}). Consider moving some to Ready or Waiting.
     </div>
   );
-}
+});
 
 function Toolbar({ viewMode, onChangeView }) {
   const addTask = useStore((s) => s.addTask);
@@ -1189,12 +2098,18 @@ function Toolbar({ viewMode, onChangeView }) {
     setInput('');
   };
 
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
+
   const onBulkDelete = () => {
     let ok = true;
     if (typeof window !== 'undefined' && window.confirm) {
       ok = window.confirm(`Delete ${selectedIds.length} selected task(s)? This cannot be undone.`);
     }
     if (ok) deleteSelected();
+  };
+
+  const onBulkMove = () => {
+    setShowMoveDialog(true);
   };
 
   return (
@@ -1362,21 +2277,45 @@ function Toolbar({ viewMode, onChangeView }) {
           </div>
         )}
         {selectedIds.length > 0 && (
-          <div className="mt-2 flex items-center justify-between rounded-xl border border-rose-300 bg-rose-50 text-rose-900 px-3 py-2">
+          <div className="mt-2 flex items-center justify-between rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-900/20 text-rose-900 dark:text-rose-300 px-3 py-2">
             <div className="text-sm">{selectedIds.length} selected</div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={onBulkMove}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                  />
+                </svg>
+                Move to Project
+              </button>
               <button
                 onClick={onBulkDelete}
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700"
               >
                 <Trash2 className="w-4 h-4" />
-                Delete selected
+                Delete
               </button>
               <button onClick={clearSelection} className="text-sm underline">
                 Clear
               </button>
             </div>
           </div>
+        )}
+        {showMoveDialog && (
+          <BulkMoveDialog
+            taskIds={selectedIds}
+            onClose={() => setShowMoveDialog(false)}
+            onSuccess={() => {
+              setShowMoveDialog(false);
+              clearSelection();
+            }}
+          />
         )}
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
           Tokens: #project !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5
@@ -1389,10 +2328,16 @@ function Toolbar({ viewMode, onChangeView }) {
 
 function useFilteredTasks() {
   const tasks = useStore((s) => s.tasks);
+  const currentProjectId = useStore((s) => s.currentProjectId);
   const filters = useStore((s) => s.filters);
 
+  // Memoize visible tasks to avoid recalculation
+  const visibleTasks = useMemo(() => {
+    return tasks.filter((t) => t.projectId === currentProjectId);
+  }, [tasks, currentProjectId]);
+
   return useMemo(() => {
-    return tasks
+    return visibleTasks
       .filter((t) => {
         if (filters.project !== 'all' && (t.project || '') !== filters.project) return false;
         if (filters.owner !== 'all' && t.ownerType !== filters.owner) return false;
@@ -1414,7 +2359,7 @@ function useFilteredTasks() {
         const bd = b.dueAt ? new Date(b.dueAt).getTime() : Infinity;
         return ad - bd;
       });
-  }, [tasks, filters]);
+  }, [visibleTasks, filters]);
 }
 
 function groupTasksByStatus(tasks) {
@@ -1427,9 +2372,64 @@ function groupTasksByStatus(tasks) {
   return grouped;
 }
 
-function Board() {
+const Board = React.memo(function Board() {
   const filtered = useFilteredTasks();
+  const currentProjectId = useStore((s) => s.currentProjectId);
+  const projects = useStore((s) => s.projects);
   const grouped = useMemo(() => groupTasksByStatus(filtered), [filtered]);
+
+  const currentProject = projects.find((p) => p.id === currentProjectId);
+  const hasNoTasks = filtered.length === 0;
+
+  if (hasNoTasks) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center max-w-md">
+          <div className="mb-4">
+            <svg
+              className="w-16 h-16 mx-auto text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            No tasks in {currentProject?.name || 'this project'}
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Get started by adding your first task using the quick-add bar above.
+          </p>
+          <div className="text-sm text-gray-500 dark:text-gray-500">
+            <p className="mb-2">Quick tips:</p>
+            <ul className="text-left inline-block">
+              <li>
+                • Use <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">!p0</code>{' '}
+                for high priority
+              </li>
+              <li>
+                • Use{' '}
+                <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">
+                  due:tomorrow
+                </code>{' '}
+                for deadlines
+              </li>
+              <li>
+                • Use <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">@ai</code>{' '}
+                to delegate to AI
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -1441,7 +2441,7 @@ function Board() {
       ))}
     </div>
   );
-}
+});
 
 function BacklogView() {
   const filtered = useFilteredTasks();
@@ -1549,7 +2549,7 @@ function BacklogView() {
 
 function BacklogHeader({ status, count, collapsed, onToggle }) {
   return (
-    <div className="bg-slate-50/95 dark:bg-slate-900/50 shadow-sm backdrop-blur-sm overflow-hidden transition-all sticky top-0 z-20 border-b border-slate-200/70 dark:border-slate-800/60">
+    <div className="bg-slate-50/95 dark:bg-slate-900/50 shadow-sm backdrop-blur-sm overflow-hidden transition-all sticky top-0 z-10 border-b border-slate-200/70 dark:border-slate-800/60">
       <button
         type="button"
         onClick={onToggle}
@@ -1808,6 +2808,97 @@ function runSelfTests() {
     return out.length === 1 && out[0].id === 'a';
   });
 
+  // Project-specific tests
+  test('Project: default project exists', () => {
+    const store = useStore.getState();
+    const defaultProject = store.projects.find((p) => p.isDefault === true);
+    return defaultProject && defaultProject.id === 'default';
+  });
+
+  test('Project: createProject validates name', () => {
+    const store = useStore.getState();
+    // Test empty name
+    const result1 = store.createProject('');
+    // Test too long name (>15 chars)
+    const result2 = store.createProject('ThisNameIsTooLongForAProject');
+    // Test valid name
+    const result3 = store.createProject('TestProject');
+    return result1.error && result2.error && result3.success;
+  });
+
+  test('Project: cannot delete default project', () => {
+    const store = useStore.getState();
+    const result = store.deleteProject('default');
+    return result.error === 'Cannot delete this project';
+  });
+
+  test('Project: tasks filtered by current project', () => {
+    const store = useStore.getState();
+    // Create a test project
+    const projectResult = store.createProject('Test1');
+    if (!projectResult.success) return false;
+
+    // Add task to default project
+    const originalProjectId = store.currentProjectId;
+    store.addTask({ title: 'Default Task' });
+
+    // Switch to test project and add task
+    store.switchProject(projectResult.projectId);
+    store.addTask({ title: 'Test Task' });
+
+    // Check visible tasks only show test project tasks
+    const visibleTasks = store.getVisibleTasks();
+    const isCorrect = visibleTasks.every((t) => t.projectId === projectResult.projectId);
+
+    // Cleanup
+    store.deleteProject(projectResult.projectId);
+    store.switchProject(originalProjectId);
+
+    return isCorrect;
+  });
+
+  test('Project: reorderProjects changes order', () => {
+    const store = useStore.getState();
+    const initialProjects = [...store.projects];
+    if (initialProjects.length < 2) {
+      // Need at least 2 projects to test reordering
+      store.createProject('ReorderTest');
+    }
+
+    const projectIds = store.projects.map((p) => p.id);
+    const reversedIds = [...projectIds].reverse();
+    store.reorderProjects(reversedIds);
+
+    const newOrder = store.projects.map((p) => p.id);
+    const isReordered = newOrder[0] === reversedIds[0];
+
+    // Restore original order
+    store.reorderProjects(projectIds);
+
+    return isReordered;
+  });
+
+  test('Project: localStorage cleanup removes orphaned tasks', () => {
+    const store = useStore.getState();
+
+    // Add a task with non-existent project ID directly
+    const orphanTask = {
+      id: 'orphan-test',
+      title: 'Orphan Task',
+      projectId: 'non-existent-project',
+      status: 'backlog',
+    };
+
+    store.tasks.push(orphanTask);
+    const tasksBeforeCleanup = store.tasks.length;
+
+    // Run cleanup
+    const wasCleanupNeeded = store.cleanupStorage();
+    const tasksAfterCleanup = store.tasks.length;
+
+    return wasCleanupNeeded && tasksAfterCleanup < tasksBeforeCleanup;
+  });
+
   return results;
 }
 
@@ -1872,15 +2963,18 @@ export default function WorkdayTaskBoardApp() {
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-black">
         <div className="max-w-[1400px] mx-auto">
-          <header className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/70 backdrop-blur-sm">
+          <header className="relative z-30 px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/70 backdrop-blur-sm">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 bg-clip-text text-transparent">
-                  Workday Task Board
-                </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Streamline your workflow with intelligent task management
-                </p>
+              <div className="flex items-center gap-4">
+                <ProjectSelector />
+                <div>
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 bg-clip-text text-transparent">
+                    Workday Task Board
+                  </h1>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Streamline your workflow with intelligent task management
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <button
