@@ -29,15 +29,55 @@ This is a single-page React application (Kanban-style task board) with the follo
   - Contains all business logic, state management, and UI components in one file
   - Uses Zustand for state management (store defined inline)
   - Implements drag-and-drop, focus timer, quick-add tokens, and task management
-  - State persists to localStorage under key `workday-board@v1`
+  - State persists to localStorage under keys:
+    - `workday-board@v1` - Main data (tasks, projects, ownerRegistry)
+    - `workday-board@view-mode` - View preferences
 
 ### Key Features & Implementation
 
 - **Columns**: Backlog, Ready, In Progress, Waiting on AI, Waiting on Others, Blocked, In Review, Done
 - **Priority System**: Score-based with buckets (P0-P3) and due date boost
-- **Quick-Add Tokens**: Parse inline tokens (#project, !p0-p3, due:, @ai/@me, +tags, impact:, urgency:, effort:)
+- **Quick-Add Tokens**: Parse inline tokens (#project, !p0-p3, due:, @owner, +tags, impact:, urgency:, effort:)
 - **Focus Timer**: Start/pause timer on tasks with automatic state transitions
 - **Drag-and-Drop**: Custom implementation using pointer events and `elementsFromPoint`
+- **Projects Module**: Multi-project support with Default project, project selector, bulk task moves
+
+### Current Development: Enhanced Owner Management (003-we-need-to)
+
+**Feature Branch**: 003-we-need-to
+
+Adding centralized owner registry with persistence and improved UX:
+
+**Key Components**:
+
+- Owner Registry: Central collection of all unique owners with statistics
+- Autocomplete UI: Combobox pattern for owner selection with suggestions
+- Bulk Operations: Assign single owner to multiple selected tasks
+- Data Persistence: Extended localStorage schema v1.1 with ownerRegistry
+
+**Store Extensions**:
+
+```javascript
+// New state
+ownerRegistry: {
+  owners: Set<string>,
+  statistics: Map<string, OwnerStats>
+}
+
+// New actions
+initializeOwnerRegistry()
+addOwnerToRegistry(name)
+removeOwnerFromRegistry(name)
+getOwnerSuggestions(partial)
+bulkAssignOwner(taskIds, owner)
+```
+
+**Constraints**:
+
+- Maximum 5 owners per task
+- Owner names limited to 30 characters
+- Case-sensitive storage
+- Removing owner from registry unassigns from all tasks
 
 ### Tech Stack
 
@@ -61,7 +101,8 @@ This is a single-page React application (Kanban-style task board) with the follo
 ### Testing
 
 - No formal test runner yet - rely on manual QA
-- In-app self-test panel available for validation
+- In-app self-tests available for validation
+- Playwright MCP tools for E2E testing
 - Always verify: `npm run lint` and `npm run build` before commits
 
 ## GitHub Pages Deployment
@@ -70,3 +111,20 @@ This is a single-page React application (Kanban-style task board) with the follo
 - Deploy workflow in `.github/workflows/deploy.yml`
 - CI workflow in `.github/workflows/ci.yml` runs on all branches
 - Custom domain via `GH_PAGES_CNAME` repo variable or `public/CNAME` file
+
+### Remember When Implementing
+
+1. Maintain single-file architecture in `WorkdayTaskBoardApp.jsx`
+2. Preserve all existing functionality (8 columns, timers, quick-add)
+3. Use existing Zustand patterns for state management
+4. Test localStorage migration carefully
+5. Ensure <100ms UI response time for owner operations
+6. Validate owner names (30 char max, valid characters)
+7. Respect 5 owner per task limit
+
+# important-instruction-reminders
+
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.

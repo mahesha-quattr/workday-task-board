@@ -1,7 +1,7 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Owner Add-Edit-Remove
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Branch**: `002-owner-add-edit` | **Date**: 2025-09-19 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `/specs/002-owner-add-edit/spec.md`
 
 ## Execution Flow (/plan command scope)
 
@@ -33,25 +33,32 @@
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Implement task ownership management in the Kanban board allowing users to add multiple owners to tasks, remove owners, and transfer ownership. Tasks support multiple concurrent owners with free text names (no duplicates within same task). The feature includes filtering by owner and inline UI for managing owners on task cards.
 
 ## Technical Context
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: JavaScript ES6+ / React 18
+**Primary Dependencies**: React, Zustand, Framer Motion, Tailwind CSS
+**Storage**: localStorage (key: `workday-board@v1`)
+**Testing**: Manual QA (no test runner configured)
+**Target Platform**: Web browsers (Chrome, Firefox, Safari, Edge)
+**Project Type**: single (single-file React application)
+**Performance Goals**: <100ms task updates, instant UI feedback
+**Constraints**: Single-file architecture, offline-capable, localStorage persistence
+**Scale/Scope**: Single user, ~100-500 tasks typical, 8 columns
 
 ## Constitution Check
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-[Gates determined based on constitution file]
+- [x] **Kanban Flow Integrity**: No changes to 8 columns or flow mechanics
+- [x] **Task Metadata Fidelity**: Extends task metadata with owners array
+- [x] **Focus Timer Accountability**: No impact on timer functionality
+- [x] **Local Persistence**: Owners stored in localStorage with tasks
+- [x] **Seamless Productivity**: Inline UI maintains single-file architecture
+- [x] **Quick-add Support**: Can extend to parse @owner tokens
+- [x] **Priority System**: No changes to scoring or buckets
+- [x] **View Modes**: Works in both board and backlog views
 
 ## Project Structure
 
@@ -105,7 +112,7 @@ ios/ or android/
 └── [platform-specific structure]
 ```
 
-**Structure Decision**: [DEFAULT to Option 1 unless Technical Context indicates web/mobile app]
+**Structure Decision**: Single-file architecture (all code in WorkdayTaskBoardApp.jsx)
 
 ## Phase 0: Outline & Research
 
@@ -171,18 +178,50 @@ _This section describes what the /tasks command will do - DO NOT execute during 
 
 - Load `.specify/templates/tasks-template.md` as base
 - Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
-- Each contract → contract test task [P]
-- Each entity → model creation task [P]
-- Each user story → integration test task
-- Implementation tasks to make tests pass
+- Focus on single-file implementation strategy
+- Group related changes for atomic commits
+
+**Task Categories**:
+
+1. **Data Model Tasks** (1-3 tasks)
+   - Extend task model with owners array
+   - Add migration logic for owner → owners
+   - Add validation for owner operations
+
+2. **Store Actions Tasks** (4-8 tasks)
+   - Implement addOwnerToTask action
+   - Implement removeOwnerFromTask action
+   - Implement transferTaskOwnership action
+   - Implement owner filtering logic
+   - Add computed values (getTasksByOwner, etc.)
+
+3. **UI Component Tasks** (5-7 tasks)
+   - Create owner badge component
+   - Add inline owner editor to task card
+   - Implement owner display with overflow
+   - Add owner filter to filter bar
+   - Update task card layout
+
+4. **Quick-Add Integration** (2-3 tasks)
+   - Add @owner token parsing
+   - Update parseQuickAdd function
+   - Add tests for token parsing
+
+5. **Testing & Validation** (3-5 tasks)
+   - Manual QA checklist execution
+   - Performance validation
+   - Migration testing
+   - Accessibility checks
 
 **Ordering Strategy**:
 
-- TDD order: Tests before implementation
-- Dependency order: Models before services before UI
-- Mark [P] for parallel execution (independent files)
+- Data model first (foundation)
+- Store actions next (business logic)
+- UI components (user interaction)
+- Integration features (quick-add)
+- Testing throughout
 
-**Estimated Output**: 25-30 numbered, ordered tasks in tasks.md
+**Estimated Output**: 18-26 numbered, ordered tasks in tasks.md
 
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
@@ -194,14 +233,25 @@ _These phases are beyond the scope of the /plan command_
 **Phase 4**: Implementation (execute tasks.md following constitutional principles)  
 **Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
 
+## Post-Design Constitution Re-Check
+
+_After Phase 1 design completion_
+
+- [x] **Kanban Flow Integrity**: No changes to columns or transitions
+- [x] **Task Metadata Fidelity**: Owners array added cleanly to task model
+- [x] **Focus Timer Accountability**: No timer functionality affected
+- [x] **Local Persistence**: Owners stored with existing localStorage pattern
+- [x] **Seamless Productivity**: Single-file architecture maintained
+- [x] **Quick-add Tokens**: @owner token follows existing patterns
+- [x] **No Breaking Changes**: Migration preserves existing data
+
+All constitution principles maintained. No violations requiring justification.
+
 ## Complexity Tracking
 
 _Fill ONLY if Constitution Check has violations that must be justified_
 
-| Violation                  | Why Needed         | Simpler Alternative Rejected Because |
-| -------------------------- | ------------------ | ------------------------------------ |
-| [e.g., 4th project]        | [current need]     | [why 3 projects insufficient]        |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient]  |
+No violations - feature aligns with all constitutional requirements.
 
 ## Progress Tracking
 
@@ -209,19 +259,19 @@ _This checklist is updated during execution flow_
 
 **Phase Status**:
 
-- [ ] Phase 0: Research complete (/plan command)
-- [ ] Phase 1: Design complete (/plan command)
-- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
+- [x] Phase 0: Research complete (/plan command)
+- [x] Phase 1: Design complete (/plan command)
+- [x] Phase 2: Task planning complete (/plan command - describe approach only)
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
 
-- [ ] Initial Constitution Check: PASS
-- [ ] Post-Design Constitution Check: PASS
-- [ ] All NEEDS CLARIFICATION resolved
-- [ ] Complexity deviations documented
+- [x] Initial Constitution Check: PASS
+- [x] Post-Design Constitution Check: PASS
+- [x] All NEEDS CLARIFICATION resolved
+- [x] Complexity deviations documented (none required)
 
 ---
 

@@ -1,7 +1,7 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Enhanced Owner Management System
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Branch**: `003-we-need-to` | **Date**: 2025-09-19 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `/specs/003-we-need-to/spec.md`
 
 ## Execution Flow (/plan command scope)
 
@@ -33,25 +33,51 @@
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Enhance the existing owner management feature (002-owner-add-edit) to provide a centralized owner registry with persistent storage, autocomplete selection UI, bulk operations, and proper data persistence. The system will maintain a registry of all unique owners, support up to 5 owners per task, provide owner statistics, and ensure data persists correctly across sessions.
 
 ## Technical Context
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: JavaScript/ES2020+ (React 18)
+**Primary Dependencies**: React 18, Zustand (state management), Framer Motion, Tailwind CSS, date-fns
+**Storage**: localStorage (key: `workday-board@v1`)
+**Testing**: Manual QA, in-app self-tests, Playwright MCP tools for E2E
+**Target Platform**: Web browsers (Chrome, Firefox, Safari, Edge)
+**Project Type**: single (single-file React application)
+**Performance Goals**: <100ms UI response time, instant owner selection
+**Constraints**: Single-file architecture (WorkdayTaskBoardApp.jsx), offline-capable, max 5 owners/task, 30 char owner names
+**Scale/Scope**: ~100 unique owners, ~500 tasks, single-page application
 
 ## Constitution Check
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-[Gates determined based on constitution file]
+### I. Kanban Flow Integrity
+
+- [x] **PASS**: No changes to 8-column structure or drag-drop behavior
+- [x] **PASS**: Owner management UI integrated without disrupting flow
+
+### II. Task Metadata Fidelity
+
+- [x] **PASS**: Extends owners array field (already partially implemented)
+- [x] **PASS**: Integrates with quick-add @owner tokens
+- [x] **PASS**: Preserves all existing metadata fields
+
+### III. Focus Timer Accountability
+
+- [x] **PASS**: No changes to timer functionality
+- [x] **PASS**: Owner changes don't affect timer state
+
+### IV. Local Persistence & Offline Resilience
+
+- [x] **PASS**: Uses existing localStorage structure
+- [x] **PASS**: Adds owner registry to storage schema
+- [x] **PASS**: Works fully offline
+
+### V. Seamless Productivity Experience
+
+- [x] **PASS**: All changes in single WorkdayTaskBoardApp.jsx
+- [x] **PASS**: Uses existing Tailwind patterns
+- [x] **PASS**: Maintains accessibility standards
 
 ## Project Structure
 
@@ -105,7 +131,7 @@ ios/ or android/
 └── [platform-specific structure]
 ```
 
-**Structure Decision**: [DEFAULT to Option 1 unless Technical Context indicates web/mobile app]
+**Structure Decision**: Single-file application (all code in src/WorkdayTaskBoardApp.jsx)
 
 ## Phase 0: Outline & Research
 
@@ -169,20 +195,44 @@ _This section describes what the /tasks command will do - DO NOT execute during 
 
 **Task Generation Strategy**:
 
-- Load `.specify/templates/tasks-template.md` as base
-- Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
-- Each contract → contract test task [P]
-- Each entity → model creation task [P]
-- Each user story → integration test task
-- Implementation tasks to make tests pass
+Since this is a single-file application, tasks will focus on incremental additions to `WorkdayTaskBoardApp.jsx`:
+
+1. **Data Model Tasks** (from data-model.md):
+   - Add ownerRegistry to store state
+   - Implement v1 → v1.1 migration logic
+   - Add owner validation functions
+
+2. **Store Action Tasks** (from contracts/owner-registry-api.md):
+   - Each store action becomes a task
+   - initializeOwnerRegistry, addOwnerToRegistry, etc.
+   - Update persistence logic
+
+3. **UI Component Tasks**:
+   - OwnerCombobox with autocomplete
+   - Owner management panel
+   - Bulk assignment UI
+   - Update existing owner display components
+
+4. **Integration Tasks** (from quickstart.md):
+   - Connect UI to store actions
+   - Update quick-add parser
+   - Integrate with filters
+
+5. **Testing Tasks**:
+   - Self-test additions
+   - Playwright E2E tests for each scenario
 
 **Ordering Strategy**:
 
-- TDD order: Tests before implementation
-- Dependency order: Models before services before UI
-- Mark [P] for parallel execution (independent files)
+1. Migration and data model (foundation)
+2. Store actions (business logic)
+3. UI components (user interface)
+4. Integration (connect everything)
+5. Testing (validate implementation)
 
-**Estimated Output**: 25-30 numbered, ordered tasks in tasks.md
+Note: Since it's a single file, most tasks cannot run in parallel
+
+**Estimated Output**: 35-40 numbered, ordered tasks in tasks.md
 
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
@@ -209,19 +259,19 @@ _This checklist is updated during execution flow_
 
 **Phase Status**:
 
-- [ ] Phase 0: Research complete (/plan command)
-- [ ] Phase 1: Design complete (/plan command)
-- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
+- [x] Phase 0: Research complete (/plan command)
+- [x] Phase 1: Design complete (/plan command)
+- [x] Phase 2: Task planning complete (/plan command - describe approach only)
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
 
-- [ ] Initial Constitution Check: PASS
-- [ ] Post-Design Constitution Check: PASS
-- [ ] All NEEDS CLARIFICATION resolved
-- [ ] Complexity deviations documented
+- [x] Initial Constitution Check: PASS
+- [x] Post-Design Constitution Check: PASS
+- [x] All NEEDS CLARIFICATION resolved (none in tech context)
+- [x] Complexity deviations documented (none required)
 
 ---
 
