@@ -262,16 +262,16 @@ function migrateToV1_1(data) {
   // Build registry from existing tasks
   const registry = {
     owners: [],
-    statistics: {}
+    statistics: {},
   };
 
   const ownerSet = new Set();
 
   // Scan all tasks for owners
   if (data.tasks) {
-    data.tasks.forEach(task => {
+    data.tasks.forEach((task) => {
       if (task.owners && Array.isArray(task.owners)) {
-        task.owners.forEach(owner => {
+        task.owners.forEach((owner) => {
           if (owner && typeof owner === 'string') {
             ownerSet.add(owner);
 
@@ -280,7 +280,7 @@ function migrateToV1_1(data) {
               registry.statistics[owner] = {
                 taskCount: 0,
                 lastUsed: task.updatedAt || task.createdAt || new Date().toISOString(),
-                createdAt: task.createdAt || new Date().toISOString()
+                createdAt: task.createdAt || new Date().toISOString(),
               };
             }
 
@@ -317,7 +317,11 @@ function validateOwnerName(name) {
     return { valid: false, error: 'Name too long (max 30 characters)' };
   }
   if (!/^[a-zA-Z0-9\s\-.']+$/.test(trimmed)) {
-    return { valid: false, error: 'Invalid characters (only letters, numbers, spaces, hyphen, period, apostrophe allowed)' };
+    return {
+      valid: false,
+      error:
+        'Invalid characters (only letters, numbers, spaces, hyphen, period, apostrophe allowed)',
+    };
   }
   return { valid: true, name: trimmed };
 }
@@ -494,9 +498,7 @@ const useStore = create((set, get) => ({
         // Convert stored owner registry to runtime format
         const ownerRegistry = {
           owners: new Set(parsed.ownerRegistry?.owners || []),
-          statistics: new Map(
-            Object.entries(parsed.ownerRegistry?.statistics || {})
-          ),
+          statistics: new Map(Object.entries(parsed.ownerRegistry?.statistics || {})),
         };
 
         set({
@@ -586,7 +588,7 @@ const useStore = create((set, get) => ({
 
     // Add owners to registry if they don't exist
     if (t.owners && Array.isArray(t.owners)) {
-      t.owners.forEach(owner => {
+      t.owners.forEach((owner) => {
         if (owner && typeof owner === 'string') {
           get().addOwnerToRegistry(owner);
         }
@@ -635,7 +637,11 @@ const useStore = create((set, get) => ({
             console.error('Task already has maximum 5 owners');
             return t;
           }
-          return { ...t, owners: [...t.owners, sanitizedName], updatedAt: new Date().toISOString() };
+          return {
+            ...t,
+            owners: [...t.owners, sanitizedName],
+            updatedAt: new Date().toISOString(),
+          };
         }
         return t;
       }),
@@ -707,9 +713,9 @@ const useStore = create((set, get) => ({
     const newStatistics = new Map();
 
     // Scan all tasks to build registry
-    tasks.forEach(task => {
+    tasks.forEach((task) => {
       if (task.owners && Array.isArray(task.owners)) {
-        task.owners.forEach(owner => {
+        task.owners.forEach((owner) => {
           if (owner && typeof owner === 'string') {
             newOwners.add(owner);
 
@@ -717,7 +723,7 @@ const useStore = create((set, get) => ({
             const stats = newStatistics.get(owner) || {
               taskCount: 0,
               lastUsed: new Date().toISOString(),
-              createdAt: new Date().toISOString()
+              createdAt: new Date().toISOString(),
             };
 
             stats.taskCount++;
@@ -737,8 +743,8 @@ const useStore = create((set, get) => ({
     set({
       ownerRegistry: {
         owners: newOwners,
-        statistics: newStatistics
-      }
+        statistics: newStatistics,
+      },
     });
 
     get().persist();
@@ -769,14 +775,14 @@ const useStore = create((set, get) => ({
     newStatistics.set(sanitizedName, {
       taskCount: 0,
       lastUsed: new Date().toISOString(),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     });
 
     set({
       ownerRegistry: {
         owners: newOwners,
-        statistics: newStatistics
-      }
+        statistics: newStatistics,
+      },
     });
 
     // Persist the changes
@@ -797,13 +803,13 @@ const useStore = create((set, get) => ({
     let tasksUpdated = 0;
 
     // Remove owner from all tasks
-    const updatedTasks = tasks.map(task => {
+    const updatedTasks = tasks.map((task) => {
       if (task.owners && task.owners.includes(ownerName)) {
         tasksUpdated++;
         return {
           ...task,
-          owners: task.owners.filter(owner => owner !== ownerName),
-          updatedAt: new Date().toISOString()
+          owners: task.owners.filter((owner) => owner !== ownerName),
+          updatedAt: new Date().toISOString(),
         };
       }
       return task;
@@ -822,8 +828,8 @@ const useStore = create((set, get) => ({
       tasks: updatedTasks,
       ownerRegistry: {
         owners: newOwners,
-        statistics: newStatistics
-      }
+        statistics: newStatistics,
+      },
     });
 
     // Persist the changes
@@ -864,17 +870,17 @@ const useStore = create((set, get) => ({
 
     // Transfer ownership in all tasks
     let tasksUpdated = 0;
-    const updatedTasks = tasks.map(task => {
+    const updatedTasks = tasks.map((task) => {
       if (task.owners && task.owners.includes(fromOwner)) {
         tasksUpdated++;
-        const newOwners = task.owners.filter(o => o !== fromOwner);
+        const newOwners = task.owners.filter((o) => o !== fromOwner);
         if (!newOwners.includes(sanitizedToOwner)) {
           newOwners.push(sanitizedToOwner);
         }
         return {
           ...task,
           owners: newOwners,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         };
       }
       return task;
@@ -904,16 +910,16 @@ const useStore = create((set, get) => ({
     const newStatistics = new Map();
 
     // Scan all tasks and rebuild statistics
-    tasks.forEach(task => {
+    tasks.forEach((task) => {
       if (task.owners && Array.isArray(task.owners)) {
-        task.owners.forEach(owner => {
+        task.owners.forEach((owner) => {
           if (owner && typeof owner === 'string') {
             // Get existing stats or create new ones
             const existingStats = ownerRegistry.statistics.get(owner);
             const stats = newStatistics.get(owner) || {
               taskCount: 0,
               lastUsed: existingStats?.lastUsed || new Date().toISOString(),
-              createdAt: existingStats?.createdAt || new Date().toISOString()
+              createdAt: existingStats?.createdAt || new Date().toISOString(),
             };
 
             stats.taskCount++;
@@ -932,14 +938,14 @@ const useStore = create((set, get) => ({
 
     // Remove statistics for owners with no tasks
     const activeOwners = new Set(newStatistics.keys());
-    const newOwners = new Set([...ownerRegistry.owners].filter(owner => activeOwners.has(owner)));
+    const newOwners = new Set([...ownerRegistry.owners].filter((owner) => activeOwners.has(owner)));
 
     // Update the store
     set({
       ownerRegistry: {
         owners: newOwners,
-        statistics: newStatistics
-      }
+        statistics: newStatistics,
+      },
     });
 
     // Persist the changes
@@ -950,13 +956,13 @@ const useStore = create((set, get) => ({
     const { tasks } = get();
 
     let tasksUpdated = 0;
-    const updatedTasks = tasks.map(task => {
+    const updatedTasks = tasks.map((task) => {
       if (task.owners && task.owners.includes(ownerName)) {
         tasksUpdated++;
         return {
           ...task,
-          owners: task.owners.filter(owner => owner !== ownerName),
-          updatedAt: new Date().toISOString()
+          owners: task.owners.filter((owner) => owner !== ownerName),
+          updatedAt: new Date().toISOString(),
         };
       }
       return task;
@@ -981,9 +987,9 @@ const useStore = create((set, get) => ({
     if (!searchTerm) {
       // Return all owners sorted by task count
       return Array.from(ownerRegistry.owners)
-        .map(owner => ({
+        .map((owner) => ({
           name: owner,
-          taskCount: ownerRegistry.statistics.get(owner)?.taskCount || 0
+          taskCount: ownerRegistry.statistics.get(owner)?.taskCount || 0,
         }))
         .sort((a, b) => {
           // First by task count (descending)
@@ -997,10 +1003,10 @@ const useStore = create((set, get) => ({
 
     // Filter by partial match and sort
     return Array.from(ownerRegistry.owners)
-      .filter(owner => owner.toLowerCase().includes(searchTerm))
-      .map(owner => ({
+      .filter((owner) => owner.toLowerCase().includes(searchTerm))
+      .map((owner) => ({
         name: owner,
-        taskCount: ownerRegistry.statistics.get(owner)?.taskCount || 0
+        taskCount: ownerRegistry.statistics.get(owner)?.taskCount || 0,
       }))
       .sort((a, b) => {
         // First by task count (descending)
@@ -1016,18 +1022,18 @@ const useStore = create((set, get) => ({
     const { ownerRegistry } = get();
 
     // Map all owners with their statistics
-    const ownersWithStats = Array.from(ownerRegistry.owners).map(owner => {
+    const ownersWithStats = Array.from(ownerRegistry.owners).map((owner) => {
       const stats = ownerRegistry.statistics.get(owner) || {
         taskCount: 0,
         lastUsed: null,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
 
       return {
         name: owner,
         taskCount: stats.taskCount,
         lastUsed: stats.lastUsed,
-        createdAt: stats.createdAt
+        createdAt: stats.createdAt,
       };
     });
 
@@ -1062,7 +1068,7 @@ const useStore = create((set, get) => ({
     const failedTaskIds = [];
 
     // Update each task
-    const updatedTasks = tasks.map(task => {
+    const updatedTasks = tasks.map((task) => {
       if (taskIds.includes(task.id)) {
         // Check if task already has 5 owners
         const currentOwners = task.owners || [];
@@ -1078,7 +1084,7 @@ const useStore = create((set, get) => ({
           return {
             ...task,
             owners: [...currentOwners, sanitizedName],
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
           };
         }
       }
@@ -1098,7 +1104,7 @@ const useStore = create((set, get) => ({
       success: true,
       tasksUpdated,
       tasksFailed,
-      failedTaskIds
+      failedTaskIds,
     };
   },
 
@@ -1928,7 +1934,12 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                   {!isAddingNew ? (
                     <>
                       <div>
-                        <label htmlFor="bulk-owner-select" className="block text-sm font-medium mb-1">Select existing owner:</label>
+                        <label
+                          htmlFor="bulk-owner-select"
+                          className="block text-sm font-medium mb-1"
+                        >
+                          Select existing owner:
+                        </label>
                         <select
                           id="bulk-owner-select"
                           value={selectedOwner}
@@ -1957,7 +1968,9 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                   ) : (
                     <>
                       <div>
-                        <label htmlFor="new-owner-name" className="block text-sm font-medium mb-1">New owner name:</label>
+                        <label htmlFor="new-owner-name" className="block text-sm font-medium mb-1">
+                          New owner name:
+                        </label>
                         <input
                           id="new-owner-name"
                           type="text"
@@ -1997,8 +2010,18 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
               {result.success ? (
                 <>
                   <div className="text-green-600 dark:text-green-400 mb-2">
-                    <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-12 h-12 mx-auto"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                   <p className="font-medium">Owner assigned successfully!</p>
@@ -2006,7 +2029,8 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                     Updated {result.tasksUpdated} task{result.tasksUpdated !== 1 ? 's' : ''}
                     {result.tasksFailed > 0 && (
                       <span className="block text-amber-600 dark:text-amber-400 mt-1">
-                        {result.tasksFailed} task{result.tasksFailed !== 1 ? 's' : ''} skipped (5 owner limit)
+                        {result.tasksFailed} task{result.tasksFailed !== 1 ? 's' : ''} skipped (5
+                        owner limit)
                       </span>
                     )}
                   </p>
@@ -2014,8 +2038,18 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
               ) : (
                 <>
                   <div className="text-red-600 dark:text-red-400 mb-2">
-                    <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-12 h-12 mx-auto"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                   <p className="font-medium">Assignment failed</p>
@@ -2626,13 +2660,13 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
       if (searchTerm.length > 0) {
         const results = getOwnerSuggestions(searchTerm);
         // Filter out already assigned owners
-        const filtered = results.filter(s => !currentOwners.includes(s.name));
+        const filtered = results.filter((s) => !currentOwners.includes(s.name));
         setSuggestions(filtered.slice(0, 8)); // Limit to 8 suggestions
         setShowSuggestions(filtered.length > 0);
       } else {
         // When input is empty, prepare all suggestions for when user focuses
         const results = getOwnerSuggestions('');
-        const filtered = results.filter(s => !currentOwners.includes(s.name));
+        const filtered = results.filter((s) => !currentOwners.includes(s.name));
         setSuggestions(filtered.slice(0, 8));
         // Don't auto-show, wait for user to focus the input
         // setShowSuggestions will be handled by onFocus
@@ -2687,9 +2721,7 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex((prev) =>
-          prev < suggestions.length - 1 ? prev + 1 : prev
-        );
+        setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : prev));
         break;
       case 'ArrowUp':
         e.preventDefault();
@@ -2736,9 +2768,7 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
             }}
             onKeyDown={handleKeyDown}
             placeholder={
-              isDisabled
-                ? `Maximum ${maxOwners} owners reached`
-                : 'Type to search or add owner'
+              isDisabled ? `Maximum ${maxOwners} owners reached` : 'Type to search or add owner'
             }
             disabled={isDisabled}
             maxLength={30}
@@ -2751,9 +2781,7 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
             aria-autocomplete="list"
             aria-expanded={showSuggestions}
             aria-controls="owner-suggestions"
-            aria-activedescendant={
-              selectedIndex >= 0 ? `owner-option-${selectedIndex}` : undefined
-            }
+            aria-activedescendant={selectedIndex >= 0 ? `owner-option-${selectedIndex}` : undefined}
           />
 
           {/* Dropdown suggestions */}
@@ -2785,36 +2813,40 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
                   role="option"
                   aria-selected={index === selectedIndex}
                 >
-                  <span className="text-sm text-gray-900 dark:text-gray-100">{suggestion.name}</span>
+                  <span className="text-sm text-gray-900 dark:text-gray-100">
+                    {suggestion.name}
+                  </span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     {suggestion.taskCount} {suggestion.taskCount === 1 ? 'task' : 'tasks'}
                   </span>
                 </div>
               ))}
-              {value.trim() && !suggestions.find(s => s.name.toLowerCase() === value.trim().toLowerCase()) && (
-                <div
-                  onClick={() => handleSubmit()}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleSubmit();
-                    }
-                  }}
-                  onMouseEnter={() => setSelectedIndex(suggestions.length)}
-                  tabIndex={0}
-                  className={`px-3 py-2 cursor-pointer border-t border-gray-200 dark:border-gray-700 ${
-                    selectedIndex === suggestions.length
-                      ? 'bg-blue-100 dark:bg-blue-900'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                  role="option"
-                  aria-selected={selectedIndex === suggestions.length}
-                >
-                  <span className="text-sm text-gray-900 dark:text-gray-100">
-                    Add &quot;<span className="font-medium">{value.trim()}</span>&quot; as new owner
-                  </span>
-                </div>
-              )}
+              {value.trim() &&
+                !suggestions.find((s) => s.name.toLowerCase() === value.trim().toLowerCase()) && (
+                  <div
+                    onClick={() => handleSubmit()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleSubmit();
+                      }
+                    }}
+                    onMouseEnter={() => setSelectedIndex(suggestions.length)}
+                    tabIndex={0}
+                    className={`px-3 py-2 cursor-pointer border-t border-gray-200 dark:border-gray-700 ${
+                      selectedIndex === suggestions.length
+                        ? 'bg-blue-100 dark:bg-blue-900'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                    role="option"
+                    aria-selected={selectedIndex === suggestions.length}
+                  >
+                    <span className="text-sm text-gray-900 dark:text-gray-100">
+                      Add &quot;<span className="font-medium">{value.trim()}</span>&quot; as new
+                      owner
+                    </span>
+                  </div>
+                )}
             </div>
           )}
         </div>
@@ -2904,8 +2936,8 @@ function OwnerManagerPanel({ isOpen, onClose }) {
     }
   }, [isOpen, getAllOwnersWithStats]);
 
-  const filteredOwners = owners.filter(owner =>
-    owner.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredOwners = owners.filter((owner) =>
+    owner.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleRemoveOwner = (ownerName) => {
@@ -2949,7 +2981,9 @@ function OwnerManagerPanel({ isOpen, onClose }) {
       <div
         className="absolute inset-0 bg-black bg-opacity-25"
         onClick={onClose}
-        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
         role="button"
         tabIndex={0}
         aria-label="Close panel"
@@ -3004,18 +3038,13 @@ function OwnerManagerPanel({ isOpen, onClose }) {
 
           <div className="space-y-2">
             {filteredOwners.map((owner) => (
-              <div
-                key={owner.name}
-                className="p-3 bg-gray-50 dark:bg-slate-700 rounded-lg"
-              >
+              <div key={owner.name} className="p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="font-medium text-sm">{owner.name}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {owner.taskCount} {owner.taskCount === 1 ? 'task' : 'tasks'}
-                      {owner.lastUsed && (
-                        <span> • Last used {formatDate(owner.lastUsed)}</span>
-                      )}
+                      {owner.lastUsed && <span> • Last used {formatDate(owner.lastUsed)}</span>}
                     </div>
                   </div>
 
@@ -3095,11 +3124,14 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                       />
                       <datalist id="transfer-owner-suggestions">
                         {owners
-                          .filter(o => o.name !== owner.name && o.name.toLowerCase().includes(targetOwner.toLowerCase()))
-                          .map(o => (
+                          .filter(
+                            (o) =>
+                              o.name !== owner.name &&
+                              o.name.toLowerCase().includes(targetOwner.toLowerCase()),
+                          )
+                          .map((o) => (
                             <option key={o.name} value={o.name} />
-                          ))
-                        }
+                          ))}
                       </datalist>
                       <label className="flex items-center gap-2 text-xs">
                         <input
@@ -3108,7 +3140,9 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                           onChange={(e) => setRemoveAfterTransfer(e.target.checked)}
                           className="rounded"
                         />
-                        <span className="text-gray-700 dark:text-gray-300">Remove {owner.name} after transfer</span>
+                        <span className="text-gray-700 dark:text-gray-300">
+                          Remove {owner.name} after transfer
+                        </span>
                       </label>
                     </div>
                     <div className="flex gap-2">
@@ -3135,7 +3169,8 @@ function OwnerManagerPanel({ isOpen, onClose }) {
 
                 {owner.taskCount > 0 && confirmDelete === owner.name && (
                   <div className="mt-2 p-2 bg-amber-100 dark:bg-amber-900/30 rounded text-xs text-amber-800 dark:text-amber-200">
-                    Warning: This will remove {owner.name} from {owner.taskCount} task{owner.taskCount !== 1 ? 's' : ''}
+                    Warning: This will remove {owner.name} from {owner.taskCount} task
+                    {owner.taskCount !== 1 ? 's' : ''}
                   </div>
                 )}
               </div>
@@ -3615,19 +3650,22 @@ function Toolbar({ viewMode, onChangeView }) {
               <button
                 onClick={() => setShowOwnerDropdown(!showOwnerDropdown)}
                 className={clsx(
-                  "p-2 rounded-xl border transition-colors",
+                  'p-2 rounded-xl border transition-colors',
                   ownerFilter
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
-                    : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                    : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700',
                 )}
-                title={ownerFilter ? `Filtering by: ${ownerFilter}` : "Filter by Owner"}
+                title={ownerFilter ? `Filtering by: ${ownerFilter}` : 'Filter by Owner'}
               >
                 <Users className="w-4 h-4" />
               </button>
               {showOwnerDropdown && (
                 <div className="absolute top-full mt-1 right-0 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
                   <button
-                    onClick={() => { setOwnerFilter(null); setShowOwnerDropdown(false); }}
+                    onClick={() => {
+                      setOwnerFilter(null);
+                      setShowOwnerDropdown(false);
+                    }}
                     className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
                   >
                     All Owners
@@ -3637,7 +3675,10 @@ function Toolbar({ viewMode, onChangeView }) {
                     .map((owner) => (
                       <button
                         key={owner.name}
-                        onClick={() => { setOwnerFilter(owner.name); setShowOwnerDropdown(false); }}
+                        onClick={() => {
+                          setOwnerFilter(owner.name);
+                          setShowOwnerDropdown(false);
+                        }}
                         className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm flex justify-between"
                       >
                         <span>{owner.name}</span>
@@ -4522,10 +4563,7 @@ export default function WorkdayTaskBoardApp() {
         </div>
 
         {showOwnerManager && (
-          <OwnerManagerPanel
-            isOpen={showOwnerManager}
-            onClose={() => setShowOwnerManager(false)}
-          />
+          <OwnerManagerPanel isOpen={showOwnerManager} onClose={() => setShowOwnerManager(false)} />
         )}
       </div>
     </ErrorBoundary>
