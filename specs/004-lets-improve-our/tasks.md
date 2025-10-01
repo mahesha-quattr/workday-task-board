@@ -132,7 +132,7 @@ All work happens in one file (`src/WorkdayTaskBoardApp.jsx`), so tasks are seque
   - **Debouncing**: 100ms debounce for autocomplete filtering
   - **Note**: Token preview will be added in T009
 
-- [ ] **T009** Add token preview badges to AutocompleteInput
+- [ ] **T009** Add token preview badges to AutocompleteInput (DEFERRED - enhancement)
   - **File**: `src/WorkdayTaskBoardApp.jsx`
   - **Location**: Enhance AutocompleteInput component created in T008
   - **Requirements** (FR-027, FR-035):
