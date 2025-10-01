@@ -2390,9 +2390,11 @@ const Column = React.memo(function Column({ status, tasks }) {
         </span>
       </div>
       <div className="space-y-2 min-h-24">
-        {tasks.map((t) => (
-          <TaskCard key={t.id} task={t} />
-        ))}
+        {tasks.length === 0 ? (
+          <EmptyColumnState columnName={STATUS_META[status].label} />
+        ) : (
+          tasks.map((t) => <TaskCard key={t.id} task={t} />)
+        )}
       </div>
     </div>
   );
@@ -2425,6 +2427,351 @@ function OwnersList({ owners }) {
     </div>
   );
 }
+
+// ===== NEW UI/UX IMPROVEMENT COMPONENTS (Feature 004) =====
+
+// TokenHelpTooltip - Collapsible help for token syntax (FR-001 to FR-005)
+function TokenHelpTooltip({ visible, onDismiss }) {
+  const tooltipRef = useRef(null);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onDismiss();
+    };
+
+    const handleClickOutside = (e) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(e.target)) {
+        onDismiss();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [visible, onDismiss]);
+
+  if (!visible) return null;
+
+  return (
+    <div
+      ref={tooltipRef}
+      className="absolute z-50 mt-2 w-96 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl"
+      role="dialog"
+      aria-label="Token syntax help"
+    >
+      <div className="flex justify-between items-start mb-3">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Token Syntax</h3>
+        <button
+          onClick={onDismiss}
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          aria-label="Close help"
+        >
+          <X size={20} />
+        </button>
+      </div>
+
+      <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">#project</strong> - Assign to project
+          <div className="text-xs text-gray-500 ml-2">Example: #alpha, #beta</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">!p0..p3</strong> - Set priority
+          <div className="text-xs text-gray-500 ml-2">Example: !p0 (highest), !p3 (lowest)</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">@owner</strong> - Assign owner
+          <div className="text-xs text-gray-500 ml-2">Example: @ai, @me, @john</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">+tag</strong> - Add tag
+          <div className="text-xs text-gray-500 ml-2">Example: +bug, +feature</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">due:</strong> - Set due date
+          <div className="text-xs text-gray-500 ml-2">
+            Example: due:today, due:tomorrow, due:2025-12-31, due:16:00
+          </div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">impact:0..5</strong> - Set impact
+          <div className="text-xs text-gray-500 ml-2">Example: impact:5 (high impact)</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">urgency:0..5</strong> - Set urgency
+          <div className="text-xs text-gray-500 ml-2">Example: urgency:4</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">effort:0..5</strong> - Set effort
+          <div className="text-xs text-gray-500 ml-2">Example: effort:2 (low effort)</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">expect:</strong> - Expected completion
+          <div className="text-xs text-gray-500 ml-2">Example: expect:today, expect:2025-12-31</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// getPriorityBorderClass - Returns Tailwind classes for priority color (FR-006 to FR-012)
+function getPriorityBorderClass(priority) {
+  const colors = {
+    P0: 'border-red-500 dark:border-red-400',
+    P1: 'border-orange-500 dark:border-orange-400',
+    P2: 'border-yellow-500 dark:border-yellow-400',
+    P3: 'border-gray-600 dark:border-gray-500',
+  };
+  return colors[priority] || colors.P3;
+}
+
+// EmptyColumnState - Contextual empty state messages (FR-013 to FR-019)
+const EmptyColumnState = React.memo(({ columnName }) => {
+  const messages = {
+    Backlog: { text: 'Add your ideas here', emoji: '💡' },
+    Ready: { text: 'Tasks ready for work will appear here', emoji: '✅' },
+    'In Progress': { text: 'Start working on a task', emoji: '🚀' },
+    'Waiting on AI': { text: 'Delegate to AI agents', emoji: '🤖' },
+    'Waiting on Others': { text: 'No blockers yet 👍', emoji: '' },
+    Blocked: { text: 'Nothing blocked right now', emoji: '🎉' },
+    'In Review': { text: 'Ready for PR review', emoji: '👀' },
+    Done: { text: 'Ready to ship!', emoji: '🎯' },
+  };
+
+  const message = messages[columnName] || { text: 'No tasks', emoji: '' };
+
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="text-4xl mb-2">{message.emoji}</div>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{message.text}</p>
+    </div>
+  );
+});
+EmptyColumnState.displayName = 'EmptyColumnState';
+
+// TaskActionIcons - Always-visible action icons (FR-020 to FR-026)
+function TaskActionIcons({
+  onMoveLeft,
+  onMoveRight,
+  onStartTimer,
+  showMoveLeft,
+  showMoveRight,
+  className = '',
+}) {
+  return (
+    <div className={`flex items-center gap-1 ${className}`}>
+      {/* Drag handle - always visible */}
+      <div
+        className="cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-1"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical size={16} />
+      </div>
+
+      {/* Move left */}
+      {showMoveLeft && (
+        <button
+          onClick={onMoveLeft}
+          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          aria-label="Move left"
+          title="Move to previous column"
+        >
+          <ChevronLeft size={16} />
+        </button>
+      )}
+
+      {/* Move right */}
+      {showMoveRight && (
+        <button
+          onClick={onMoveRight}
+          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          aria-label="Move right"
+          title="Move to next column"
+        >
+          <ChevronRight size={16} />
+        </button>
+      )}
+
+      {/* Timer */}
+      <button
+        onClick={onStartTimer}
+        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+        aria-label="Start focus timer"
+        title="Start timer"
+      >
+        <Play size={16} />
+      </button>
+    </div>
+  );
+}
+
+// AutocompleteInput base - Will be enhanced with token preview in next task (FR-027 to FR-036)
+function AutocompleteInput({ value, onChange, onSubmit, owners = [], projects = [], tags = [] }) {
+  const [inputFocused, setInputFocused] = useState(false);
+  const [autocomplete, setAutocomplete] = useState({
+    visible: false,
+    type: null,
+    query: '',
+    suggestions: [],
+    selectedIndex: 0,
+  });
+  const inputRef = useRef(null);
+
+  // Debounced autocomplete filtering
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Detect trigger character and extract query
+      const lastAtIndex = value.lastIndexOf('@');
+      const lastHashIndex = value.lastIndexOf('#');
+      const lastPlusIndex = value.lastIndexOf('+');
+
+      const triggers = [
+        { char: '@', index: lastAtIndex, type: 'owner', source: owners },
+        { char: '#', index: lastHashIndex, type: 'project', source: projects },
+        { char: '+', index: lastPlusIndex, type: 'tag', source: tags },
+      ];
+
+      // Find the most recent trigger
+      const activeTrigger = triggers
+        .filter((t) => t.index !== -1)
+        .sort((a, b) => b.index - a.index)[0];
+
+      if (activeTrigger) {
+        const query = value.slice(activeTrigger.index + 1).split(/\s/)[0];
+        const filtered = activeTrigger.source.filter((item) =>
+          item.toLowerCase().includes(query.toLowerCase()),
+        );
+
+        if (filtered.length > 0) {
+          setAutocomplete({
+            visible: true,
+            type: activeTrigger.type,
+            query,
+            suggestions: filtered.slice(0, 10),
+            selectedIndex: 0,
+          });
+        } else {
+          setAutocomplete((prev) => ({ ...prev, visible: false }));
+        }
+      } else {
+        setAutocomplete((prev) => ({ ...prev, visible: false }));
+      }
+    }, 100); // 100ms debounce
+
+    return () => clearTimeout(timer);
+  }, [value, owners, projects, tags]);
+
+  // Keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!autocomplete.visible) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        onSubmit(value);
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setAutocomplete((prev) => ({
+          ...prev,
+          selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1),
+        }));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setAutocomplete((prev) => ({
+          ...prev,
+          selectedIndex: Math.max(prev.selectedIndex - 1, 0),
+        }));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (autocomplete.suggestions[autocomplete.selectedIndex]) {
+          const selected = autocomplete.suggestions[autocomplete.selectedIndex];
+          const triggerChar = autocomplete.type === 'owner' ? '@' : autocomplete.type === 'project' ? '#' : '+';
+          const lastIndex = value.lastIndexOf(triggerChar);
+          const before = value.slice(0, lastIndex + 1);
+          const after = value.slice(lastIndex + 1).split(/\s/).slice(1).join(' ');
+          onChange(`${before}${selected} ${after}`.trim());
+          setAutocomplete((prev) => ({ ...prev, visible: false }));
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setAutocomplete((prev) => ({ ...prev, visible: false }));
+        break;
+    }
+  };
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onFocus={() => setInputFocused(true)}
+        onBlur={() => setInputFocused(false)}
+        className={clsx(
+          'w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-lg text-sm transition-all',
+          inputFocused
+            ? 'ring-2 ring-blue-500 border-blue-500'
+            : 'border-gray-300 dark:border-gray-600',
+          'focus:outline-none',
+        )}
+        placeholder="Add a task... (type @ for assignment, # for project, ! for priority)"
+      />
+
+      {/* Autocomplete dropdown */}
+      {autocomplete.visible && (
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {autocomplete.suggestions.map((suggestion, index) => (
+            <button
+              key={suggestion}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const triggerChar = autocomplete.type === 'owner' ? '@' : autocomplete.type === 'project' ? '#' : '+';
+                const lastIndex = value.lastIndexOf(triggerChar);
+                const before = value.slice(0, lastIndex + 1);
+                const after = value.slice(lastIndex + 1).split(/\s/).slice(1).join(' ');
+                onChange(`${before}${suggestion} ${after}`.trim());
+                setAutocomplete((prev) => ({ ...prev, visible: false }));
+              }}
+              className={clsx(
+                'w-full px-3 py-2 text-left text-sm transition-colors',
+                index === autocomplete.selectedIndex
+                  ? 'bg-blue-50 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
+                  : 'hover:bg-gray-50 dark:hover:bg-gray-700',
+              )}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== END NEW COMPONENTS =====
 
 function TaskCard({ task }) {
   const move = useStore((s) => s.moveTask);
@@ -2470,11 +2817,11 @@ function TaskCard({ task }) {
         useStore.getState().clearDrag();
       }}
       className={clsx(
-        'cursor-grab active:cursor-grabbing rounded-xl border p-3',
-        'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600',
+        'cursor-grab active:cursor-grabbing rounded-xl border-2 p-3',
+        'bg-white dark:bg-slate-800',
         'shadow-sm hover:shadow-md transition-shadow overflow-hidden',
         isSelected && 'ring-2 ring-rose-400',
-        PRIORITY_COLORS[task.priorityBucket].split(' ')[2],
+        getPriorityBorderClass(task.priorityBucket),
       )}
     >
       <div className="group">
@@ -3429,6 +3776,7 @@ function Toolbar({ viewMode, onChangeView }) {
   const [input, setInput] = useState('');
   const inputRef = useRef(null);
   const [showOwnerDropdown, setShowOwnerDropdown] = useState(false);
+  const [showTokenHelp, setShowTokenHelp] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -3567,7 +3915,13 @@ function Toolbar({ viewMode, onChangeView }) {
               <input
                 ref={inputRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  // Auto-dismiss token help when user starts typing
+                  if (showTokenHelp && e.target.value) {
+                    setShowTokenHelp(false);
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -3575,9 +3929,23 @@ function Toolbar({ viewMode, onChangeView }) {
                   }
                 }}
                 placeholder="Add a task... (type @ for assignment, # for project, ! for priority)"
-                className="w-full px-4 pl-10 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-4 pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
               <Plus className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              {/* Help button */}
+              <button
+                type="button"
+                onClick={() => setShowTokenHelp(!showTokenHelp)}
+                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                title="Show token syntax help"
+                aria-label="Help"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+              {/* Token help tooltip */}
+              <TokenHelpTooltip visible={showTokenHelp} onDismiss={() => setShowTokenHelp(false)} />
             </div>
             {/* Mic toggle */}
             <button
@@ -3996,13 +4364,17 @@ function BacklogView() {
               {grouped[status].length === 0 ? (
                 <div
                   className={clsx(
-                    'px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400 border border-dashed border-slate-200/80 dark:border-slate-700/60 rounded-xl bg-white/60 dark:bg-slate-900/30',
+                    'px-4 py-6 text-center text-sm border border-dashed border-slate-200/80 dark:border-slate-700/60 rounded-xl bg-white/60 dark:bg-slate-900/30',
                     dropTarget?.status === status &&
                       draggingTask &&
                       'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
                   )}
                 >
-                  {dropTarget?.status === status && draggingTask ? 'Drop here' : 'No tasks'}
+                  {dropTarget?.status === status && draggingTask ? (
+                    'Drop here'
+                  ) : (
+                    <EmptyColumnState columnName={STATUS_META[status].label} />
+                  )}
                 </div>
               ) : (
                 grouped[status].map((task) => (
