@@ -50,7 +50,7 @@ import clsx from 'clsx';
  * - Added pure helpers `computeElapsedSecs` and `formatDurationShort` + tests.
  * - DnD remains hit-tested via elementsFromPoint; backward/forward moves work.
  *
- * Quick-add tokens: #project, !p0..p3, due:today|tomorrow|YYYY-MM-DD|HH:mm, @ai, @me,
+ * Quick-add tokens: !p0..p3, due:today|tomorrow|YYYY-MM-DD|HH:mm, @ai, @me,
  * +tag, effort:1..5, impact:0..5, urgency:0..5, expect:today|YYYY-MM-DD
  */
 
@@ -193,7 +193,7 @@ function getStatusFromPoint(x, y) {
 // ----- Store -----
 
 /** @typedef {{
- *  id:string; title:string; description?:string; project?:string; projectId?:string; status:Status;
+ *  id:string; title:string; description?:string; projectId?:string; status:Status;
  *  impact:number; urgency:number; effort:number; priorityBucket:"P0"|"P1"|"P2"|"P3";
  *  score:number; dueAt?:string|null; ownerType:OwnerType; ownerRef?:string; owners:string[]; tags:string[];
  *  dependencies:string[]; createdAt:string; updatedAt:string; expectedBy?:string|null;
@@ -206,7 +206,7 @@ function getStatusFromPoint(x, y) {
 
 const STORAGE_KEY = 'workday-board@v1';
 const VIEW_MODE_KEY = 'workday-board@view-mode';
-const STORAGE_VERSION = 2; // Version for migration tracking
+const STORAGE_VERSION = 2.1; // Version for migration tracking
 
 // Project color palette
 const PROJECT_COLORS = [
@@ -307,6 +307,112 @@ function migrateToV1_1(data) {
   return data;
 }
 
+// Migration function to add status configuration (v2.1)
+function migrateToV2_1(data) {
+  // If already has statusConfig, no migration needed
+  if (data.statusConfig) {
+    return data;
+  }
+
+  // Initialize with the 8 default statuses from STATUS_META
+  const now = new Date().toISOString();
+  data.statusConfig = {
+    statuses: [
+      {
+        id: 'backlog',
+        label: 'Backlog',
+        description: 'Ideas and unsorted',
+        order: 0,
+        isDefault: true,
+        isCompletionState: false,
+        keyboardShortcut: '1',
+        createdAt: now,
+        canDelete: true,
+      },
+      {
+        id: 'ready',
+        label: 'Ready',
+        description: 'Triage done',
+        order: 1,
+        isDefault: false,
+        isCompletionState: false,
+        keyboardShortcut: '2',
+        createdAt: now,
+        canDelete: true,
+      },
+      {
+        id: 'in_progress',
+        label: 'In Progress',
+        description: 'Actively doing',
+        order: 2,
+        isDefault: false,
+        isCompletionState: false,
+        keyboardShortcut: '3',
+        createdAt: now,
+        canDelete: true,
+      },
+      {
+        id: 'waiting_ai',
+        label: 'Waiting on AI',
+        description: 'Delegated to agent',
+        order: 3,
+        isDefault: false,
+        isCompletionState: false,
+        keyboardShortcut: '4',
+        createdAt: now,
+        canDelete: true,
+      },
+      {
+        id: 'waiting_other',
+        label: 'Waiting on Others',
+        description: 'Blocked by a human',
+        order: 4,
+        isDefault: false,
+        isCompletionState: false,
+        keyboardShortcut: '5',
+        createdAt: now,
+        canDelete: true,
+      },
+      {
+        id: 'blocked',
+        label: 'Blocked',
+        description: 'Needs unblocking',
+        order: 5,
+        isDefault: false,
+        isCompletionState: false,
+        keyboardShortcut: '6',
+        createdAt: now,
+        canDelete: true,
+      },
+      {
+        id: 'in_review',
+        label: 'In Review',
+        description: 'PR/review/QA',
+        order: 6,
+        isDefault: false,
+        isCompletionState: false,
+        keyboardShortcut: '7',
+        createdAt: now,
+        canDelete: true,
+      },
+      {
+        id: 'done',
+        label: 'Done',
+        description: 'Completed',
+        order: 7,
+        isDefault: false,
+        isCompletionState: true,
+        keyboardShortcut: '8',
+        createdAt: now,
+        canDelete: true,
+      },
+    ],
+    version: 1,
+  };
+
+  return data;
+}
+
 // Owner name validation function
 function validateOwnerName(name) {
   const trimmed = name ? name.trim() : '';
@@ -338,7 +444,6 @@ const seedTasks = () => {
       id: uid(),
       projectId: 'default',
       title: 'Fix login bug for Alpha',
-      project: 'alpha',
       status: 'in_progress',
       impact: 4,
       urgency: 5,
@@ -352,7 +457,6 @@ const seedTasks = () => {
     {
       id: uid(),
       title: 'Delegate test data generation to AI',
-      project: 'alpha',
       status: 'waiting_ai',
       impact: 3,
       urgency: 3,
@@ -366,7 +470,6 @@ const seedTasks = () => {
     {
       id: uid(),
       title: 'Prep for requirements call',
-      project: 'beta',
       status: 'ready',
       impact: 3,
       urgency: 4,
@@ -379,7 +482,6 @@ const seedTasks = () => {
     {
       id: uid(),
       title: 'Refactor payment webhook',
-      project: 'gamma',
       status: 'blocked',
       impact: 4,
       urgency: 2,
@@ -410,14 +512,13 @@ function finalizeTask(partial) {
     id: partial.id ?? uid(),
     title: partial.title ?? 'Untitled',
     description: partial.description ?? '',
-    project: partial.project ?? undefined,
     projectId: partial.projectId ?? 'default',
     status: partial.status ?? 'backlog',
     impact,
     urgency,
     effort,
     score,
-    priorityBucket: bucket,
+    priorityBucket: partial.priorityBucket ?? bucket,
     dueAt: partial.dueAt ?? null,
     ownerType: partial.ownerType ?? 'self',
     ownerRef: partial.ownerRef ?? undefined,
@@ -462,6 +563,12 @@ const useStore = create((set, get) => ({
     statistics: new Map(),
   },
 
+  // Status Configuration state
+  statusConfig: {
+    statuses: [],
+    version: 1,
+  },
+
   // User prefs
   autoReturnOnStop: false,
   setAutoReturnOnStop(v) {
@@ -471,6 +578,7 @@ const useStore = create((set, get) => ({
   // Drag state
   draggingId: /** @type{string|null} */ (null),
   dragHoverStatus: /** @type{Status|null} */ (null),
+  lastDragCheck: /** @type{number|null} */ (null),
 
   init() {
     try {
@@ -495,6 +603,9 @@ const useStore = create((set, get) => ({
         // Apply owner registry migration
         parsed = migrateToV1_1({ ...parsed, tasks: migratedTasks });
 
+        // Apply status config migration
+        parsed = migrateToV2_1(parsed);
+
         // Convert stored owner registry to runtime format
         const ownerRegistry = {
           owners: new Set(parsed.ownerRegistry?.owners || []),
@@ -515,6 +626,7 @@ const useStore = create((set, get) => ({
           ],
           currentProjectId: parsed.currentProjectId || 'default',
           ownerRegistry: ownerRegistry,
+          statusConfig: parsed.statusConfig || { statuses: [], version: 1 },
         });
         return;
       }
@@ -523,6 +635,7 @@ const useStore = create((set, get) => ({
       console.error('Storage error:', e);
     }
     // Initialize with default project and seed tasks
+    const initialStatusConfig = migrateToV2_1({}).statusConfig;
     set({
       tasks: seedTasks(),
       projects: [
@@ -535,6 +648,7 @@ const useStore = create((set, get) => ({
         },
       ],
       currentProjectId: 'default',
+      statusConfig: initialStatusConfig,
     });
   },
   cleanupStorage() {
@@ -557,7 +671,8 @@ const useStore = create((set, get) => ({
       // Run cleanup before persisting
       get().cleanupStorage();
 
-      const { tasks, autoReturnOnStop, projects, currentProjectId, ownerRegistry } = get();
+      const { tasks, autoReturnOnStop, projects, currentProjectId, ownerRegistry, statusConfig } =
+        get();
 
       // Convert ownerRegistry from runtime format to storage format
       const serializedRegistry = {
@@ -574,6 +689,7 @@ const useStore = create((set, get) => ({
             projects,
             currentProjectId,
             ownerRegistry: serializedRegistry,
+            statusConfig,
             version: STORAGE_VERSION,
           }),
         );
@@ -584,7 +700,10 @@ const useStore = create((set, get) => ({
   },
   addTask(partial) {
     const { currentProjectId } = get();
-    const t = finalizeTask({ ...partial, projectId: partial.projectId || currentProjectId });
+    // Use default status if no status provided
+    const defaultStatus = get().getDefaultStatus();
+    const status = partial.status || (defaultStatus ? defaultStatus.id : 'backlog');
+    const t = finalizeTask({ ...partial, status, projectId: partial.projectId || currentProjectId });
 
     // Add owners to registry if they don't exist
     if (t.owners && Array.isArray(t.owners)) {
@@ -1108,6 +1227,332 @@ const useStore = create((set, get) => ({
     };
   },
 
+  // Status Configuration methods
+  getStatuses() {
+    const { statusConfig } = get();
+    return statusConfig.statuses.sort((a, b) => a.order - b.order);
+  },
+
+  getStatusById(statusId) {
+    const { statusConfig } = get();
+    return statusConfig.statuses.find((s) => s.id === statusId);
+  },
+
+  getDefaultStatus() {
+    const { statusConfig } = get();
+    return statusConfig.statuses.find((s) => s.isDefault);
+  },
+
+  getCompletionStatuses() {
+    const { statusConfig } = get();
+    return statusConfig.statuses.filter((s) => s.isCompletionState);
+  },
+
+  // Get status metadata in a map for easy lookup (like STATUS_META)
+  getStatusMetaMap() {
+    const statuses = get().getStatuses();
+    const map = {};
+    statuses.forEach((status) => {
+      map[status.id] = {
+        label: status.label,
+        key: status.keyboardShortcut,
+        hint: status.description,
+      };
+    });
+    return map;
+  },
+
+  // Get ordered array of status IDs (like STATUS_ORDER)
+  getStatusOrder() {
+    return get().getStatuses().map((s) => s.id);
+  },
+
+  // Validation helpers for status management
+  validateStatusLabel(label, excludeId = null) {
+    const trimmed = label?.trim();
+
+    if (!trimmed || trimmed.length === 0) {
+      return { valid: false, error: 'Status label cannot be empty' };
+    }
+
+    if (trimmed.length > 30) {
+      return { valid: false, error: 'Status label too long (max 30 characters)' };
+    }
+
+    // Check for duplicate labels (case-insensitive)
+    const { statusConfig } = get();
+    const duplicate = statusConfig.statuses.find(
+      (s) => s.id !== excludeId && s.label.toLowerCase() === trimmed.toLowerCase()
+    );
+
+    if (duplicate) {
+      return { valid: false, error: `Status "${trimmed}" already exists` };
+    }
+
+    return { valid: true, label: trimmed };
+  },
+
+  canDeleteStatus(statusId) {
+    const { statusConfig } = get();
+    const status = statusConfig.statuses.find((s) => s.id === statusId);
+
+    if (!status) {
+      return { canDelete: false, reason: 'Status not found' };
+    }
+
+    // Must have at least 2 statuses
+    if (statusConfig.statuses.length <= 2) {
+      return { canDelete: false, reason: 'Must have at least 2 statuses' };
+    }
+
+    // Cannot delete the only default status
+    const defaultStatuses = statusConfig.statuses.filter((s) => s.isDefault);
+    if (status.isDefault && defaultStatuses.length === 1) {
+      return { canDelete: false, reason: 'Cannot delete the only default status. Set another status as default first.' };
+    }
+
+    // Cannot delete the only completion status
+    const completionStatuses = statusConfig.statuses.filter((s) => s.isCompletionState);
+    if (status.isCompletionState && completionStatuses.length === 1) {
+      return { canDelete: false, reason: 'Cannot delete the only completion status. Mark another status as completion first.' };
+    }
+
+    return { canDelete: true };
+  },
+
+  getTasksForStatus(statusId) {
+    const { tasks } = get();
+    return tasks.filter((t) => t.status === statusId);
+  },
+
+  // CRUD operations for status management
+  createStatus(label, description = '', flags = {}) {
+    const validation = get().validateStatusLabel(label);
+    if (!validation.valid) {
+      console.error(`Cannot create status: ${validation.error}`);
+      return { success: false, error: validation.error };
+    }
+
+    const { statusConfig } = get();
+
+    // Enforce max 15 statuses
+    if (statusConfig.statuses.length >= 15) {
+      const error = 'Maximum 15 statuses allowed';
+      console.error(error);
+      return { success: false, error };
+    }
+
+    // Create new status
+    const newStatus = {
+      id: uid(), // Generate unique ID
+      label: validation.label,
+      description: description.trim(),
+      order: statusConfig.statuses.length, // Add at end
+      isDefault: flags.isDefault === true,
+      isCompletionState: flags.isCompletionState === true,
+      keyboardShortcut: flags.keyboardShortcut || '',
+      createdAt: new Date().toISOString(),
+      canDelete: true,
+    };
+
+    // If setting as default, unset other defaults
+    let updatedStatuses = [...statusConfig.statuses];
+    if (newStatus.isDefault) {
+      updatedStatuses = updatedStatuses.map((s) => ({ ...s, isDefault: false }));
+    }
+
+    // Add new status
+    updatedStatuses.push(newStatus);
+
+    set({
+      statusConfig: {
+        ...statusConfig,
+        statuses: updatedStatuses,
+      },
+    });
+
+    get().persist();
+
+    return { success: true, statusId: newStatus.id };
+  },
+
+  updateStatus(statusId, updates) {
+    const { statusConfig } = get();
+    const status = statusConfig.statuses.find((s) => s.id === statusId);
+
+    if (!status) {
+      const error = 'Status not found';
+      console.error(error);
+      return { success: false, error };
+    }
+
+    // Validate label if being updated
+    if (updates.label !== undefined) {
+      const validation = get().validateStatusLabel(updates.label, statusId);
+      if (!validation.valid) {
+        console.error(`Cannot update status: ${validation.error}`);
+        return { success: false, error: validation.error };
+      }
+      updates.label = validation.label;
+    }
+
+    // Trim description if provided
+    if (updates.description !== undefined) {
+      updates.description = updates.description.trim();
+    }
+
+    // Update the status
+    let updatedStatuses = statusConfig.statuses.map((s) => {
+      if (s.id === statusId) {
+        return { ...s, ...updates };
+      }
+      return s;
+    });
+
+    // If setting as default, unset other defaults
+    if (updates.isDefault === true) {
+      updatedStatuses = updatedStatuses.map((s) =>
+        s.id === statusId ? s : { ...s, isDefault: false }
+      );
+    }
+
+    set({
+      statusConfig: {
+        ...statusConfig,
+        statuses: updatedStatuses,
+      },
+    });
+
+    get().persist();
+
+    return { success: true };
+  },
+
+  deleteStatus(statusId, migrateToId) {
+    const deleteCheck = get().canDeleteStatus(statusId);
+    if (!deleteCheck.canDelete) {
+      console.error(`Cannot delete status: ${deleteCheck.reason}`);
+      return { success: false, error: deleteCheck.reason };
+    }
+
+    const { statusConfig, tasks } = get();
+
+    // Validate migration target
+    const targetStatus = statusConfig.statuses.find((s) => s.id === migrateToId);
+    if (!targetStatus) {
+      const error = 'Invalid migration target status';
+      console.error(error);
+      return { success: false, error };
+    }
+
+    if (migrateToId === statusId) {
+      const error = 'Cannot migrate tasks to the status being deleted';
+      console.error(error);
+      return { success: false, error };
+    }
+
+    // Get tasks that need to be migrated
+    const tasksToMigrate = tasks.filter((t) => t.status === statusId);
+
+    // Migrate all tasks to the new status
+    const updatedTasks = tasks.map((t) =>
+      t.status === statusId ? { ...t, status: migrateToId, updatedAt: new Date().toISOString() } : t
+    );
+
+    // Remove the status and reorder
+    const filteredStatuses = statusConfig.statuses.filter((s) => s.id !== statusId);
+    const reorderedStatuses = filteredStatuses.map((s, index) => ({
+      ...s,
+      order: index,
+    }));
+
+    set({
+      tasks: updatedTasks,
+      statusConfig: {
+        ...statusConfig,
+        statuses: reorderedStatuses,
+      },
+    });
+
+    get().persist();
+
+    return { success: true, tasksMigrated: tasksToMigrate.length };
+  },
+
+  reorderStatuses(newOrder) {
+    const { statusConfig } = get();
+
+    // Validate that newOrder contains all status IDs
+    const currentIds = new Set(statusConfig.statuses.map((s) => s.id));
+    const newIds = new Set(newOrder);
+
+    if (currentIds.size !== newIds.size || ![...currentIds].every((id) => newIds.has(id))) {
+      const error = 'Invalid reorder: must include all current status IDs';
+      console.error(error);
+      return { success: false, error };
+    }
+
+    // Create new statuses array in the specified order
+    const reorderedStatuses = newOrder.map((id, index) => {
+      const status = statusConfig.statuses.find((s) => s.id === id);
+      return { ...status, order: index };
+    });
+
+    set({
+      statusConfig: {
+        ...statusConfig,
+        statuses: reorderedStatuses,
+      },
+    });
+
+    get().persist();
+
+    return { success: true };
+  },
+
+  restoreDefaultStatuses() {
+    const { tasks } = get();
+
+    // Get the 8 default statuses
+    const defaultStatusConfig = migrateToV2_1({}).statusConfig;
+
+    // Build a mapping of old status IDs to new default status IDs
+    // Strategy: Map to closest matching default status by label similarity
+    const { statusConfig } = get();
+    const statusMapping = {};
+
+    statusConfig.statuses.forEach((currentStatus) => {
+      // Try to find exact match by ID first (for existing default statuses)
+      const exactMatch = defaultStatusConfig.statuses.find((s) => s.id === currentStatus.id);
+      if (exactMatch) {
+        statusMapping[currentStatus.id] = exactMatch.id;
+        return;
+      }
+
+      // Otherwise map to default status (backlog)
+      statusMapping[currentStatus.id] = 'backlog';
+    });
+
+    // Migrate all tasks to default statuses
+    const updatedTasks = tasks.map((t) => ({
+      ...t,
+      status: statusMapping[t.status] || 'backlog',
+      updatedAt: new Date().toISOString(),
+    }));
+
+    // Count how many tasks were migrated
+    const tasksMigrated = tasks.filter((t) => t.status !== statusMapping[t.status]).length;
+
+    set({
+      tasks: updatedTasks,
+      statusConfig: defaultStatusConfig,
+    });
+
+    get().persist();
+
+    return { success: true, tasksMigrated };
+  },
+
   moveTask(id, status) {
     set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, status } : t)) }));
     get().persist();
@@ -1215,8 +1660,11 @@ const useStore = create((set, get) => ({
   setDragHoverStatus(status) {
     set({ dragHoverStatus: status });
   },
+  setLastDragCheck(timestamp) {
+    set({ lastDragCheck: timestamp });
+  },
   clearDrag() {
-    set({ draggingId: null, dragHoverStatus: null });
+    set({ draggingId: null, dragHoverStatus: null, lastDragCheck: null });
   },
 
   // Project management actions
@@ -1405,6 +1853,21 @@ function ProjectSelector() {
   const [isOpen, setIsOpen] = useState(false);
   const [showManager, setShowManager] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const dropdownRef = useRef(null);
+
+  // Click outside to close
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1442,7 +1905,7 @@ function ProjectSelector() {
 
   return (
     <>
-      <div className="relative">
+      <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -1686,8 +2149,14 @@ function ProjectManager({ onClose }) {
   };
 
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold">Manage Projects</h2>
           <button
@@ -1882,6 +2351,379 @@ function ProjectManager({ onClose }) {
                 </motion.div>
               );
             })}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function WorkflowSettingsModal({ onClose }) {
+  const statuses = useStore((s) => s.getStatuses());
+  const createStatus = useStore((s) => s.createStatus);
+  const updateStatus = useStore((s) => s.updateStatus);
+  const deleteStatus = useStore((s) => s.deleteStatus);
+  const reorderStatuses = useStore((s) => s.reorderStatuses);
+  const restoreDefaultStatuses = useStore((s) => s.restoreDefaultStatuses);
+  const getTasksForStatus = useStore((s) => s.getTasksForStatus);
+  const canDeleteStatus = useStore((s) => s.canDeleteStatus);
+
+  const [newStatusLabel, setNewStatusLabel] = useState('');
+  const [newStatusDesc, setNewStatusDesc] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editingLabel, setEditingLabel] = useState('');
+  const [editingDesc, setEditingDesc] = useState('');
+  const [error, setError] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [migrateToId, setMigrateToId] = useState('');
+  const [restoreConfirm, setRestoreConfirm] = useState(false);
+  const [draggedStatus, setDraggedStatus] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  const editInputRef = useRef(null);
+
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+    }
+  }, [editingId]);
+
+  const handleCreateStatus = (e) => {
+    e.preventDefault();
+    const result = createStatus(newStatusLabel, newStatusDesc);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setNewStatusLabel('');
+      setNewStatusDesc('');
+      setError('');
+    }
+  };
+
+  const handleUpdate = (statusId) => {
+    const result = updateStatus(statusId, {
+      label: editingLabel,
+      description: editingDesc,
+    });
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setEditingId(null);
+      setError('');
+    }
+  };
+
+  const handleDelete = (statusId) => {
+    if (!migrateToId) {
+      setError('Please select a status to migrate tasks to');
+      return;
+    }
+    const result = deleteStatus(statusId, migrateToId);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setDeleteConfirmId(null);
+      setMigrateToId('');
+      setError('');
+    }
+  };
+
+  const handleRestoreDefaults = () => {
+    const result = restoreDefaultStatuses();
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setRestoreConfirm(false);
+      setError('');
+    }
+  };
+
+  const handleDragStart = (e, status, index) => {
+    setDraggedStatus({ status, index });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedStatus && draggedStatus.index !== dropIndex) {
+      const newStatuses = [...statuses];
+      const [movedStatus] = newStatuses.splice(draggedStatus.index, 1);
+      newStatuses.splice(dropIndex, 0, movedStatus);
+      reorderStatuses(newStatuses.map((s) => s.id));
+    }
+    setDraggedStatus(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedStatus(null);
+    setDragOverIndex(null);
+  };
+
+  return ReactDOM.createPortal(
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-auto relative z-[201]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+          <div>
+            <h2 className="text-lg font-semibold">Workflow Configuration</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Customize your workflow statuses
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4">
+          {error && (
+            <div className="mb-4 p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Add New Status Form */}
+          <form onSubmit={handleCreateStatus} className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+            <h3 className="font-medium mb-3">Add New Status</h3>
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={newStatusLabel}
+                onChange={(e) => setNewStatusLabel(e.target.value)}
+                placeholder="Status name (e.g., 'In Design')"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                maxLength={30}
+              />
+              <input
+                type="text"
+                value={newStatusDesc}
+                onChange={(e) => setNewStatusDesc(e.target.value)}
+                placeholder="Description (e.g., 'Design work in progress')"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                maxLength={50}
+              />
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {statuses.length} / 15 statuses
+                </span>
+                <button
+                  type="submit"
+                  disabled={statuses.length >= 15}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add Status
+                </button>
+              </div>
+            </div>
+          </form>
+
+          {/* Status List */}
+          <div className="space-y-2 mb-6">
+            <h3 className="font-medium mb-2">Current Statuses</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Drag to reorder • Click to edit
+            </p>
+            {statuses.map((status, index) => {
+              const taskCount = getTasksForStatus(status.id).length;
+              const isEditing = editingId === status.id;
+              const isDeleting = deleteConfirmId === status.id;
+              const deleteCheck = canDeleteStatus(status.id);
+
+              return (
+                <motion.div
+                  key={status.id}
+                  draggable={!isEditing && !isDeleting}
+                  onDragStart={(e) => handleDragStart(e, status, index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={clsx(
+                    'p-3 rounded-lg border transition-all',
+                    dragOverIndex === index && draggedStatus ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700',
+                    isEditing && 'bg-blue-50 dark:bg-blue-900/20'
+                  )}
+                >
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editingLabel}
+                        onChange={(e) => setEditingLabel(e.target.value)}
+                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                        maxLength={30}
+                      />
+                      <input
+                        type="text"
+                        value={editingDesc}
+                        onChange={(e) => setEditingDesc(e.target.value)}
+                        placeholder="Description"
+                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                        maxLength={50}
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleUpdate(status.id)}
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingId(null);
+                            setError('');
+                          }}
+                          className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded text-sm hover:bg-gray-400 dark:hover:bg-gray-500"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : isDeleting ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                        Delete "{status.label}"? ({taskCount} tasks)
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Move these tasks to:
+                      </p>
+                      <select
+                        value={migrateToId}
+                        onChange={(e) => setMigrateToId(e.target.value)}
+                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                      >
+                        <option value="">Select status...</option>
+                        {statuses.filter((s) => s.id !== status.id).map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDelete(status.id)}
+                          className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                        >
+                          Delete & Move
+                        </button>
+                        <button
+                          onClick={() => {
+                            setDeleteConfirmId(null);
+                            setMigrateToId('');
+                            setError('');
+                          }}
+                          className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded text-sm hover:bg-gray-400 dark:hover:bg-gray-500"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        <GripVertical className="w-4 h-4 text-gray-400 cursor-grab" />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{status.label}</span>
+                            {status.isDefault && (
+                              <span className="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
+                                Default
+                              </span>
+                            )}
+                            {status.isCompletionState && (
+                              <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
+                                Completion
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {status.description}
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            {taskCount} task{taskCount !== 1 ? 's' : ''} • Key: {status.keyboardShortcut || 'none'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingId(status.id);
+                            setEditingLabel(status.label);
+                            setEditingDesc(status.description);
+                          }}
+                          className="px-2 py-1 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!deleteCheck.canDelete) {
+                              setError(deleteCheck.reason);
+                            } else {
+                              setDeleteConfirmId(status.id);
+                              setMigrateToId('');
+                            }
+                          }}
+                          disabled={!deleteCheck.canDelete}
+                          className="px-2 py-1 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={deleteCheck.canDelete ? 'Delete status' : deleteCheck.reason}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Restore Defaults */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            {restoreConfirm ? (
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
+                <p className="text-sm text-amber-800 dark:text-amber-400 mb-3">
+                  This will reset to 8 default statuses. All tasks will be migrated. Continue?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleRestoreDefaults}
+                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                  >
+                    Yes, Restore Defaults
+                  </button>
+                  <button
+                    onClick={() => setRestoreConfirm(false)}
+                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setRestoreConfirm(true)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Restore Default Statuses
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -2259,8 +3101,7 @@ function parseQuickAdd(input) {
   // Tokenize by spaces but keep quoted phrases
   const tokens = input.match(/"[^"]+"|\S+/g) || [];
   let titleParts = [];
-  let project,
-    dueAt = null,
+  let dueAt = null,
     ownerType = 'self',
     owners = [],
     tags = [],
@@ -2271,10 +3112,6 @@ function parseQuickAdd(input) {
     expectedBy = null;
   for (let i = 0; i < tokens.length; i++) {
     const raw = tokens[i].replaceAll('"', '');
-    if (raw.startsWith('#')) {
-      project = raw.slice(1);
-      continue;
-    }
     if (raw.startsWith('+')) {
       tags.push(raw.slice(1));
       continue;
@@ -2336,7 +3173,7 @@ function parseQuickAdd(input) {
     titleParts.push(raw);
   }
   const title = titleParts.join(' ').trim();
-  const base = { title, project, dueAt, ownerType, tags, expectedBy };
+  const base = { title, dueAt, ownerType, tags, expectedBy };
   if (owners.length > 0) base.owners = owners;
   if (impact !== undefined) base.impact = impact;
   if (urgency !== undefined) base.urgency = urgency;
@@ -2370,7 +3207,10 @@ function Badge({ children, className, variant = 'default' }) {
 
 const Column = React.memo(function Column({ status, tasks }) {
   const dragHoverStatus = useStore((s) => s.dragHoverStatus);
+  const statusMeta = useStore((s) => s.getStatusMetaMap());
   const highlight = dragHoverStatus === status;
+  const meta = statusMeta[status] || { label: status, hint: '' };
+
   return (
     <div
       data-col={status}
@@ -2383,16 +3223,18 @@ const Column = React.memo(function Column({ status, tasks }) {
       <div className="flex items-center gap-2 mb-2">
         <GripVertical className="w-4 h-4 text-slate-400" />
         <h3 className="font-semibold text-slate-800 dark:text-slate-100">
-          {STATUS_META[status].label}
+          {meta.label}
         </h3>
         <span className="text-xs text-slate-700 dark:text-slate-400">
-          {STATUS_META[status].hint}
+          {meta.hint}
         </span>
       </div>
       <div className="space-y-2 min-h-24">
-        {tasks.map((t) => (
-          <TaskCard key={t.id} task={t} />
-        ))}
+        {tasks.length === 0 ? (
+          <EmptyColumnState columnName={meta.label} />
+        ) : (
+          tasks.map((t) => <TaskCard key={t.id} task={t} />)
+        )}
       </div>
     </div>
   );
@@ -2425,6 +3267,347 @@ function OwnersList({ owners }) {
     </div>
   );
 }
+
+// ===== NEW UI/UX IMPROVEMENT COMPONENTS (Feature 004) =====
+
+// TokenHelpTooltip - Collapsible help for token syntax (FR-001 to FR-005)
+function TokenHelpTooltip({ visible, onDismiss }) {
+  const tooltipRef = useRef(null);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onDismiss();
+    };
+
+    const handleClickOutside = (e) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(e.target)) {
+        onDismiss();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [visible, onDismiss]);
+
+  if (!visible) return null;
+
+  return (
+    <div
+      ref={tooltipRef}
+      className="absolute z-50 mt-2 w-96 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl"
+      role="dialog"
+      aria-label="Token syntax help"
+    >
+      <div className="flex justify-between items-start mb-3">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Token Syntax</h3>
+        <button
+          onClick={onDismiss}
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          aria-label="Close help"
+        >
+          <X size={20} />
+        </button>
+      </div>
+
+      <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">!p0..p3</strong> - Set priority
+          <div className="text-xs text-gray-500 ml-2">Example: !p0 (highest), !p3 (lowest)</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">@owner</strong> - Assign owner
+          <div className="text-xs text-gray-500 ml-2">Example: @ai, @me, @john</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">+tag</strong> - Add tag
+          <div className="text-xs text-gray-500 ml-2">Example: +bug, +feature</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">due:</strong> - Set due date
+          <div className="text-xs text-gray-500 ml-2">
+            Example: due:today, due:tomorrow, due:2025-12-31, due:16:00
+          </div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">impact:0..5</strong> - Set impact
+          <div className="text-xs text-gray-500 ml-2">Example: impact:5 (high impact)</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">urgency:0..5</strong> - Set urgency
+          <div className="text-xs text-gray-500 ml-2">Example: urgency:4</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">effort:0..5</strong> - Set effort
+          <div className="text-xs text-gray-500 ml-2">Example: effort:2 (low effort)</div>
+        </div>
+
+        <div>
+          <strong className="text-gray-900 dark:text-gray-100">expect:</strong> - Expected completion
+          <div className="text-xs text-gray-500 ml-2">Example: expect:today, expect:2025-12-31</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// getPriorityBorderClass - Returns Tailwind classes for priority color (FR-006 to FR-012)
+function getPriorityBorderClass(priority) {
+  const colors = {
+    P0: 'border-red-500 dark:border-red-400',
+    P1: 'border-orange-500 dark:border-orange-400',
+    P2: 'border-yellow-500 dark:border-yellow-400',
+    P3: 'border-gray-600 dark:border-gray-500',
+  };
+  return colors[priority] || colors.P3;
+}
+
+// EmptyColumnState - Contextual empty state messages (FR-013 to FR-019)
+const EmptyColumnState = React.memo(({ columnName }) => {
+  const messages = {
+    Backlog: { text: 'Add your ideas here', emoji: '💡' },
+    Ready: { text: 'Tasks ready for work will appear here', emoji: '✅' },
+    'In Progress': { text: 'Start working on a task', emoji: '🚀' },
+    'Waiting on AI': { text: 'Delegate to AI agents', emoji: '🤖' },
+    'Waiting on Others': { text: 'No blockers yet 👍', emoji: '' },
+    Blocked: { text: 'Nothing blocked right now', emoji: '🎉' },
+    'In Review': { text: 'Ready for PR review', emoji: '👀' },
+    Done: { text: 'Ready to ship!', emoji: '🎯' },
+  };
+
+  const message = messages[columnName] || { text: 'No tasks', emoji: '' };
+
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="text-4xl mb-2">{message.emoji}</div>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{message.text}</p>
+    </div>
+  );
+});
+EmptyColumnState.displayName = 'EmptyColumnState';
+
+// TaskActionIcons - Always-visible action icons (FR-020 to FR-026)
+function TaskActionIcons({
+  onMoveLeft,
+  onMoveRight,
+  onStartTimer,
+  showMoveLeft,
+  showMoveRight,
+  className = '',
+}) {
+  return (
+    <div className={`flex items-center gap-1 ${className}`}>
+      {/* Drag handle - always visible */}
+      <div
+        className="cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-1"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical size={16} />
+      </div>
+
+      {/* Move left */}
+      {showMoveLeft && (
+        <button
+          onClick={onMoveLeft}
+          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          aria-label="Move left"
+          title="Move to previous column"
+        >
+          <ChevronLeft size={16} />
+        </button>
+      )}
+
+      {/* Move right */}
+      {showMoveRight && (
+        <button
+          onClick={onMoveRight}
+          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          aria-label="Move right"
+          title="Move to next column"
+        >
+          <ChevronRight size={16} />
+        </button>
+      )}
+
+      {/* Timer */}
+      <button
+        onClick={onStartTimer}
+        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+        aria-label="Start focus timer"
+        title="Start timer"
+      >
+        <Play size={16} />
+      </button>
+    </div>
+  );
+}
+
+// AutocompleteInput base - Will be enhanced with token preview in next task (FR-027 to FR-036)
+function AutocompleteInput({ value, onChange, onSubmit, owners = [], projects = [], tags = [] }) {
+  const [inputFocused, setInputFocused] = useState(false);
+  const [autocomplete, setAutocomplete] = useState({
+    visible: false,
+    type: null,
+    query: '',
+    suggestions: [],
+    selectedIndex: 0,
+  });
+  const inputRef = useRef(null);
+
+  // Debounced autocomplete filtering
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Detect trigger character and extract query
+      const lastAtIndex = value.lastIndexOf('@');
+      const lastHashIndex = value.lastIndexOf('#');
+      const lastPlusIndex = value.lastIndexOf('+');
+
+      const triggers = [
+        { char: '@', index: lastAtIndex, type: 'owner', source: owners },
+        { char: '#', index: lastHashIndex, type: 'project', source: projects },
+        { char: '+', index: lastPlusIndex, type: 'tag', source: tags },
+      ];
+
+      // Find the most recent trigger
+      const activeTrigger = triggers
+        .filter((t) => t.index !== -1)
+        .sort((a, b) => b.index - a.index)[0];
+
+      if (activeTrigger) {
+        const query = value.slice(activeTrigger.index + 1).split(/\s/)[0];
+        const filtered = activeTrigger.source.filter((item) =>
+          item.toLowerCase().includes(query.toLowerCase()),
+        );
+
+        if (filtered.length > 0) {
+          setAutocomplete({
+            visible: true,
+            type: activeTrigger.type,
+            query,
+            suggestions: filtered.slice(0, 10),
+            selectedIndex: 0,
+          });
+        } else {
+          setAutocomplete((prev) => ({ ...prev, visible: false }));
+        }
+      } else {
+        setAutocomplete((prev) => ({ ...prev, visible: false }));
+      }
+    }, 100); // 100ms debounce
+
+    return () => clearTimeout(timer);
+  }, [value, owners, projects, tags]);
+
+  // Keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!autocomplete.visible) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        onSubmit(value);
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setAutocomplete((prev) => ({
+          ...prev,
+          selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1),
+        }));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setAutocomplete((prev) => ({
+          ...prev,
+          selectedIndex: Math.max(prev.selectedIndex - 1, 0),
+        }));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (autocomplete.suggestions[autocomplete.selectedIndex]) {
+          const selected = autocomplete.suggestions[autocomplete.selectedIndex];
+          const triggerChar = autocomplete.type === 'owner' ? '@' : autocomplete.type === 'project' ? '#' : '+';
+          const lastIndex = value.lastIndexOf(triggerChar);
+          const before = value.slice(0, lastIndex + 1);
+          const after = value.slice(lastIndex + 1).split(/\s/).slice(1).join(' ');
+          onChange(`${before}${selected} ${after}`.trim());
+          setAutocomplete((prev) => ({ ...prev, visible: false }));
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setAutocomplete((prev) => ({ ...prev, visible: false }));
+        break;
+    }
+  };
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onFocus={() => setInputFocused(true)}
+        onBlur={() => setInputFocused(false)}
+        className={clsx(
+          'w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-lg text-sm transition-all',
+          inputFocused
+            ? 'ring-2 ring-blue-500 border-blue-500'
+            : 'border-gray-300 dark:border-gray-600',
+          'focus:outline-none',
+        )}
+        placeholder="Add a task... (type @ for assignment, # for project, ! for priority)"
+      />
+
+      {/* Autocomplete dropdown */}
+      {autocomplete.visible && (
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {autocomplete.suggestions.map((suggestion, index) => (
+            <button
+              key={suggestion}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const triggerChar = autocomplete.type === 'owner' ? '@' : autocomplete.type === 'project' ? '#' : '+';
+                const lastIndex = value.lastIndexOf(triggerChar);
+                const before = value.slice(0, lastIndex + 1);
+                const after = value.slice(lastIndex + 1).split(/\s/).slice(1).join(' ');
+                onChange(`${before}${suggestion} ${after}`.trim());
+                setAutocomplete((prev) => ({ ...prev, visible: false }));
+              }}
+              className={clsx(
+                'w-full px-3 py-2 text-left text-sm transition-colors',
+                index === autocomplete.selectedIndex
+                  ? 'bg-blue-50 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
+                  : 'hover:bg-gray-50 dark:hover:bg-gray-700',
+              )}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== END NEW COMPONENTS =====
 
 function TaskCard({ task }) {
   const move = useStore((s) => s.moveTask);
@@ -2461,8 +3644,13 @@ function TaskCard({ task }) {
         useStore.getState().setDraggingId(task.id);
       }}
       onDrag={(e, info) => {
-        const status = getStatusFromPoint(info.point.x, info.point.y);
-        useStore.getState().setDragHoverStatus(status);
+        // Throttle: only check every 100ms to avoid performance issues
+        const now = Date.now();
+        if (!useStore.getState().lastDragCheck || now - useStore.getState().lastDragCheck > 100) {
+          const status = getStatusFromPoint(info.point.x, info.point.y);
+          useStore.getState().setDragHoverStatus(status);
+          useStore.getState().setLastDragCheck(now);
+        }
       }}
       onDragEnd={(e, info) => {
         const status = getStatusFromPoint(info.point.x, info.point.y);
@@ -2470,11 +3658,11 @@ function TaskCard({ task }) {
         useStore.getState().clearDrag();
       }}
       className={clsx(
-        'cursor-grab active:cursor-grabbing rounded-xl border p-3',
-        'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600',
+        'cursor-grab active:cursor-grabbing rounded-xl border-2 p-3',
+        'bg-white dark:bg-slate-800',
         'shadow-sm hover:shadow-md transition-shadow overflow-hidden',
         isSelected && 'ring-2 ring-rose-400',
-        PRIORITY_COLORS[task.priorityBucket].split(' ')[2],
+        getPriorityBorderClass(task.priorityBucket),
       )}
     >
       <div className="group">
@@ -2566,7 +3754,7 @@ function TaskCard({ task }) {
             title="Move left"
             className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
             onClick={() => {
-              const order = /** @type{Status[]} */ (Object.keys(STATUS_META));
+              const order = useStore.getState().getStatusOrder();
               const idx = order.indexOf(task.status);
               if (idx > 0)
                 useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx - 1]));
@@ -2594,7 +3782,7 @@ function TaskCard({ task }) {
           <button
             title="Move right"
             onClick={() => {
-              const order = /** @type{Status[]} */ (Object.keys(STATUS_META));
+              const order = useStore.getState().getStatusOrder();
               const idx = order.indexOf(task.status);
               if (idx < order.length - 1)
                 useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx + 1]));
@@ -3185,6 +4373,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
 function TaskDrawer({ task, onClose }) {
   const update = useStore((s) => s.updateTask);
   const del = useStore((s) => s.deleteTask);
+  const statusMeta = useStore((s) => s.getStatusMetaMap());
   const [local, setLocal] = useState(task);
   useEffect(() => setLocal(task), [task]);
 
@@ -3239,15 +4428,6 @@ function TaskDrawer({ task, onClose }) {
               className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
           </Field>
-          <Field label="Project">
-            <input
-              value={local.project || ''}
-              placeholder="#project"
-              onChange={(e) => setLocal({ ...local, project: e.target.value })}
-              onBlur={() => save({ project: local.project })}
-              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-            />
-          </Field>
           <Field label="Status">
             <select
               value={local.status}
@@ -3258,9 +4438,9 @@ function TaskDrawer({ task, onClose }) {
               }}
               className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             >
-              {Object.keys(STATUS_META).map((k) => (
+              {Object.keys(statusMeta).map((k) => (
                 <option key={k} value={k}>
-                  {STATUS_META[k].label}
+                  {statusMeta[k].label}
                 </option>
               ))}
             </select>
@@ -3429,6 +4609,7 @@ function Toolbar({ viewMode, onChangeView }) {
   const [input, setInput] = useState('');
   const inputRef = useRef(null);
   const [showOwnerDropdown, setShowOwnerDropdown] = useState(false);
+  const [showTokenHelp, setShowTokenHelp] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -3524,8 +4705,8 @@ function Toolbar({ viewMode, onChangeView }) {
     const p = parseQuickAdd(input);
     const base = {
       title: p.title || 'Untitled',
-      project: p.project,
-      status: p.ownerType === 'ai' ? 'waiting_ai' : 'ready',
+      // Only set status for AI tasks, let addTask() handle default for others
+      ...(p.ownerType === 'ai' && { status: 'waiting_ai' }),
       ownerType: p.ownerType,
       tags: p.tags,
       dueAt: p.dueAt,
@@ -3535,6 +4716,7 @@ function Toolbar({ viewMode, onChangeView }) {
     if (p.impact !== undefined) base.impact = p.impact;
     if (p.urgency !== undefined) base.urgency = p.urgency;
     if (p.effort !== undefined) base.effort = p.effort;
+    if (p.priorityBucket) base.priorityBucket = p.priorityBucket;
     addTask(base);
     setInput('');
   };
@@ -3567,7 +4749,13 @@ function Toolbar({ viewMode, onChangeView }) {
               <input
                 ref={inputRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  // Auto-dismiss token help when user starts typing
+                  if (showTokenHelp && e.target.value) {
+                    setShowTokenHelp(false);
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -3575,9 +4763,23 @@ function Toolbar({ viewMode, onChangeView }) {
                   }
                 }}
                 placeholder="Add a task... (type @ for assignment, # for project, ! for priority)"
-                className="w-full px-4 pl-10 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-4 pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
               <Plus className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              {/* Help button */}
+              <button
+                type="button"
+                onClick={() => setShowTokenHelp(!showTokenHelp)}
+                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                title="Show token syntax help"
+                aria-label="Help"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+              {/* Token help tooltip */}
+              <TokenHelpTooltip visible={showTokenHelp} onDismiss={() => setShowTokenHelp(false)} />
             </div>
             {/* Mic toggle */}
             <button
@@ -3794,7 +4996,7 @@ function Toolbar({ viewMode, onChangeView }) {
           />
         )}
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          Tokens: #project !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5
+          Tokens: !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5
           urgency:0..5 effort:0..5 expect:today|YYYY-MM-DD
         </div>
       </div>
@@ -3807,6 +5009,7 @@ function useFilteredTasks() {
   const currentProjectId = useStore((s) => s.currentProjectId);
   const filters = useStore((s) => s.filters);
   const ownerFilter = useStore((s) => s.ownerFilter);
+  const statusOrder = useStore((s) => s.getStatusOrder());
 
   // Memoize visible tasks to avoid recalculation
   const visibleTasks = useMemo(() => {
@@ -3830,22 +5033,28 @@ function useFilteredTasks() {
       .sort((a, b) => {
         // Sort by status lane then priority score desc then due date asc
         if (a.status !== b.status)
-          return STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
+          return statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status);
         if (a.score !== b.score) return b.score - a.score;
         const ad = a.dueAt ? new Date(a.dueAt).getTime() : Infinity;
         const bd = b.dueAt ? new Date(b.dueAt).getTime() : Infinity;
         return ad - bd;
       });
-  }, [visibleTasks, filters, ownerFilter]);
+  }, [visibleTasks, filters, ownerFilter, statusOrder]);
 }
 
-function groupTasksByStatus(tasks) {
+function groupTasksByStatus(tasks, statusOrder = null) {
+  // If no statusOrder provided, fall back to STATUS_ORDER constant
+  const order = statusOrder || STATUS_ORDER;
   /** @type{Record<Status, Task[]>} */
-  const grouped = STATUS_ORDER.reduce((acc, status) => {
+  const grouped = order.reduce((acc, status) => {
     acc[status] = [];
     return acc;
   }, /** @type{Record<Status, Task[]>} */ ({}));
-  for (const t of tasks) grouped[t.status].push(t);
+  for (const t of tasks) {
+    if (grouped[t.status]) {
+      grouped[t.status].push(t);
+    }
+  }
   return grouped;
 }
 
@@ -3853,7 +5062,8 @@ const Board = React.memo(function Board() {
   const filtered = useFilteredTasks();
   const currentProjectId = useStore((s) => s.currentProjectId);
   const projects = useStore((s) => s.projects);
-  const grouped = useMemo(() => groupTasksByStatus(filtered), [filtered]);
+  const statusOrder = useStore((s) => s.getStatusOrder());
+  const grouped = useMemo(() => groupTasksByStatus(filtered, statusOrder), [filtered, statusOrder]);
 
   const currentProject = projects.find((p) => p.id === currentProjectId);
   const hasNoTasks = filtered.length === 0;
@@ -3913,8 +5123,8 @@ const Board = React.memo(function Board() {
       className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3"
       style={{ position: 'relative', zIndex: 1 }}
     >
-      {STATUS_ORDER.map((status) => (
-        <Column key={status} status={status} tasks={grouped[status]} />
+      {statusOrder.map((status) => (
+        <Column key={status} status={status} tasks={grouped[status] || []} />
       ))}
     </div>
   );
@@ -3926,7 +5136,9 @@ function BacklogView() {
   const [draggingTask, setDraggingTask] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const updateTask = useStore((s) => s.updateTask);
-  const grouped = useMemo(() => groupTasksByStatus(filtered), [filtered]);
+  const statusOrder = useStore((s) => s.getStatusOrder());
+  const statusMeta = useStore((s) => s.getStatusMetaMap());
+  const grouped = useMemo(() => groupTasksByStatus(filtered, statusOrder), [filtered, statusOrder]);
 
   const handleDragStart = (e, task) => {
     setDraggingTask(task);
@@ -3969,14 +5181,15 @@ function BacklogView() {
 
   return (
     <div className="space-y-0">
-      {STATUS_ORDER.map((status) => (
+      {statusOrder.map((status) => (
         <div
           key={status}
           className="border-b border-slate-200 dark:border-slate-700 last:border-b-0"
         >
           <BacklogHeader
-            status={status}
-            count={grouped[status].length}
+            statusLabel={statusMeta[status]?.label}
+            statusHint={statusMeta[status]?.hint}
+            count={grouped[status]?.length || 0}
             collapsed={collapsed.has(status)}
             onToggle={() => toggle(status)}
           />
@@ -3993,16 +5206,20 @@ function BacklogView() {
                 handleDragEnd();
               }}
             >
-              {grouped[status].length === 0 ? (
+              {(grouped[status]?.length || 0) === 0 ? (
                 <div
                   className={clsx(
-                    'px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400 border border-dashed border-slate-200/80 dark:border-slate-700/60 rounded-xl bg-white/60 dark:bg-slate-900/30',
+                    'px-4 py-6 text-center text-sm border border-dashed border-slate-200/80 dark:border-slate-700/60 rounded-xl bg-white/60 dark:bg-slate-900/30',
                     dropTarget?.status === status &&
                       draggingTask &&
                       'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
                   )}
                 >
-                  {dropTarget?.status === status && draggingTask ? 'Drop here' : 'No tasks'}
+                  {dropTarget?.status === status && draggingTask ? (
+                    'Drop here'
+                  ) : (
+                    <EmptyColumnState columnName={statusMeta[status]?.label || status} />
+                  )}
                 </div>
               ) : (
                 grouped[status].map((task) => (
@@ -4024,7 +5241,7 @@ function BacklogView() {
   );
 }
 
-function BacklogHeader({ status, count, collapsed, onToggle }) {
+function BacklogHeader({ statusLabel, statusHint, count, collapsed, onToggle }) {
   return (
     <div className="bg-slate-50/95 dark:bg-slate-900/50 shadow-sm backdrop-blur-sm overflow-hidden transition-all sticky top-0 z-10 border-b border-slate-200/70 dark:border-slate-800/60">
       <button
@@ -4040,10 +5257,10 @@ function BacklogHeader({ status, count, collapsed, onToggle }) {
             )}
           />
           <span className="font-semibold text-slate-800 dark:text-slate-100">
-            {STATUS_META[status].label}
+            {statusLabel}
           </span>
           <span className="text-xs text-slate-600 dark:text-slate-400">
-            {STATUS_META[status].hint}
+            {statusHint}
           </span>
         </div>
         <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
@@ -4060,6 +5277,8 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
   const startTimer = useStore((s) => s.startTimer);
   const stopTimer = useStore((s) => s.stopTimer);
   const moveTask = useStore((s) => s.moveTask);
+  const statusOrder = useStore((s) => s.getStatusOrder());
+  const statusMeta = useStore((s) => s.getStatusMetaMap());
   const [open, setOpen] = useState(false);
   const isSelected = selectedIds.includes(task.id);
   const isRunning = !!task.timerStartedAt;
@@ -4164,9 +5383,9 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
             onChange={(e) => moveTask(task.id, /** @type{Status} */ (e.target.value))}
             className="px-2 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900"
           >
-            {STATUS_ORDER.map((status) => (
+            {statusOrder.map((status) => (
               <option key={status} value={status}>
-                {STATUS_META[status].label}
+                {statusMeta[status]?.label || status}
               </option>
             ))}
           </select>
@@ -4213,10 +5432,9 @@ function runSelfTests() {
   // Test: parseQuickAdd basics
   test('parseQuickAdd tokens', () => {
     const p = parseQuickAdd(
-      'Fix login #alpha !p0 due:today 17:00 @ai +auth impact:4 urgency:5 effort:2 expect:today',
+      'Fix login !p0 due:today 17:00 @ai +auth impact:4 urgency:5 effort:2 expect:today',
     );
     return (
-      p.project === 'alpha' &&
       p.ownerType === 'ai' &&
       p.tags.includes('auth') &&
       !!p.dueAt &&
@@ -4477,6 +5695,7 @@ export default function WorkdayTaskBoardApp() {
   }, [persist]);
 
   const [showOwnerManager, setShowOwnerManager] = useState(false);
+  const [showWorkflowSettings, setShowWorkflowSettings] = useState(false);
 
   // Theme toggle with persistence
   const [dark, setDark] = useState(() => {
@@ -4531,6 +5750,13 @@ export default function WorkdayTaskBoardApp() {
               </div>
               <div className="flex items-center gap-3">
                 <button
+                  onClick={() => setShowWorkflowSettings(true)}
+                  className="p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  title="Workflow Settings"
+                >
+                  <Kanban className="w-5 h-5" />
+                </button>
+                <button
                   onClick={() => setShowOwnerManager(true)}
                   className="p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   title="Manage Owners"
@@ -4564,6 +5790,10 @@ export default function WorkdayTaskBoardApp() {
 
         {showOwnerManager && (
           <OwnerManagerPanel isOpen={showOwnerManager} onClose={() => setShowOwnerManager(false)} />
+        )}
+
+        {showWorkflowSettings && (
+          <WorkflowSettingsModal onClose={() => setShowWorkflowSettings(false)} />
         )}
       </div>
     </ErrorBoundary>
