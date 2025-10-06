@@ -17,6 +17,7 @@ This feature implements **pure UI/UX improvements** with zero backend or API cha
 While there are no API contracts, the UI components have informal contracts:
 
 ### TokenHelpTooltip
+
 ```typescript
 interface TokenHelpTooltipProps {
   visible: boolean;
@@ -25,6 +26,7 @@ interface TokenHelpTooltipProps {
 ```
 
 ### PriorityBadge
+
 ```typescript
 interface PriorityBadgeProps {
   priority: 'P0' | 'P1' | 'P2' | 'P3';
@@ -33,6 +35,7 @@ interface PriorityBadgeProps {
 ```
 
 ### EmptyColumnState
+
 ```typescript
 interface EmptyColumnStateProps {
   columnName: string;
@@ -40,6 +43,7 @@ interface EmptyColumnStateProps {
 ```
 
 ### AutocompleteInput
+
 ```typescript
 interface AutocompleteInputProps {
   value: string;
@@ -54,6 +58,7 @@ interface AutocompleteInputProps {
 ```
 
 ### TaskActionIcons
+
 ```typescript
 interface TaskActionIconsProps {
   taskId: string;
