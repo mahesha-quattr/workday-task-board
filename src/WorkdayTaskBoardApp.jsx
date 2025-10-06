@@ -703,7 +703,11 @@ const useStore = create((set, get) => ({
     // Use default status if no status provided
     const defaultStatus = get().getDefaultStatus();
     const status = partial.status || (defaultStatus ? defaultStatus.id : 'backlog');
-    const t = finalizeTask({ ...partial, status, projectId: partial.projectId || currentProjectId });
+    const t = finalizeTask({
+      ...partial,
+      status,
+      projectId: partial.projectId || currentProjectId,
+    });
 
     // Add owners to registry if they don't exist
     if (t.owners && Array.isArray(t.owners)) {
@@ -1264,7 +1268,9 @@ const useStore = create((set, get) => ({
 
   // Get ordered array of status IDs (like STATUS_ORDER)
   getStatusOrder() {
-    return get().getStatuses().map((s) => s.id);
+    return get()
+      .getStatuses()
+      .map((s) => s.id);
   },
 
   // Validation helpers for status management
@@ -1282,7 +1288,7 @@ const useStore = create((set, get) => ({
     // Check for duplicate labels (case-insensitive)
     const { statusConfig } = get();
     const duplicate = statusConfig.statuses.find(
-      (s) => s.id !== excludeId && s.label.toLowerCase() === trimmed.toLowerCase()
+      (s) => s.id !== excludeId && s.label.toLowerCase() === trimmed.toLowerCase(),
     );
 
     if (duplicate) {
@@ -1308,13 +1314,20 @@ const useStore = create((set, get) => ({
     // Cannot delete the only default status
     const defaultStatuses = statusConfig.statuses.filter((s) => s.isDefault);
     if (status.isDefault && defaultStatuses.length === 1) {
-      return { canDelete: false, reason: 'Cannot delete the only default status. Set another status as default first.' };
+      return {
+        canDelete: false,
+        reason: 'Cannot delete the only default status. Set another status as default first.',
+      };
     }
 
     // Cannot delete the only completion status
     const completionStatuses = statusConfig.statuses.filter((s) => s.isCompletionState);
     if (status.isCompletionState && completionStatuses.length === 1) {
-      return { canDelete: false, reason: 'Cannot delete the only completion status. Mark another status as completion first.' };
+      return {
+        canDelete: false,
+        reason:
+          'Cannot delete the only completion status. Mark another status as completion first.',
+      };
     }
 
     return { canDelete: true };
@@ -1412,7 +1425,7 @@ const useStore = create((set, get) => ({
     // If setting as default, unset other defaults
     if (updates.isDefault === true) {
       updatedStatuses = updatedStatuses.map((s) =>
-        s.id === statusId ? s : { ...s, isDefault: false }
+        s.id === statusId ? s : { ...s, isDefault: false },
       );
     }
 
@@ -1456,7 +1469,9 @@ const useStore = create((set, get) => ({
 
     // Migrate all tasks to the new status
     const updatedTasks = tasks.map((t) =>
-      t.status === statusId ? { ...t, status: migrateToId, updatedAt: new Date().toISOString() } : t
+      t.status === statusId
+        ? { ...t, status: migrateToId, updatedAt: new Date().toISOString() }
+        : t,
     );
 
     // Remove the status and reorder
@@ -2152,10 +2167,12 @@ function ProjectManager({ onClose }) {
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4"
       onClick={onClose}
+      role="presentation"
     >
       <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold">Manage Projects</h2>
@@ -2471,10 +2488,12 @@ function WorkflowSettingsModal({ onClose }) {
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4"
       onClick={onClose}
+      role="presentation"
     >
       <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-auto relative z-[201]"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
           <div>
@@ -2499,7 +2518,10 @@ function WorkflowSettingsModal({ onClose }) {
           )}
 
           {/* Add New Status Form */}
-          <form onSubmit={handleCreateStatus} className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+          <form
+            onSubmit={handleCreateStatus}
+            className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg"
+          >
             <h3 className="font-medium mb-3">Add New Status</h3>
             <div className="space-y-2">
               <input
@@ -2555,8 +2577,10 @@ function WorkflowSettingsModal({ onClose }) {
                   onDragEnd={handleDragEnd}
                   className={clsx(
                     'p-3 rounded-lg border transition-all',
-                    dragOverIndex === index && draggedStatus ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700',
-                    isEditing && 'bg-blue-50 dark:bg-blue-900/20'
+                    dragOverIndex === index && draggedStatus
+                      ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 dark:border-gray-700',
+                    isEditing && 'bg-blue-50 dark:bg-blue-900/20',
                   )}
                 >
                   {isEditing ? (
@@ -2598,7 +2622,7 @@ function WorkflowSettingsModal({ onClose }) {
                   ) : isDeleting ? (
                     <div className="space-y-2">
                       <p className="text-sm font-medium text-red-600 dark:text-red-400">
-                        Delete "{status.label}"? ({taskCount} tasks)
+                        Delete &quot;{status.label}&quot;? ({taskCount} tasks)
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
                         Move these tasks to:
@@ -2609,11 +2633,13 @@ function WorkflowSettingsModal({ onClose }) {
                         className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                       >
                         <option value="">Select status...</option>
-                        {statuses.filter((s) => s.id !== status.id).map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.label}
-                          </option>
-                        ))}
+                        {statuses
+                          .filter((s) => s.id !== status.id)
+                          .map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.label}
+                            </option>
+                          ))}
                       </select>
                       <div className="flex gap-2">
                         <button
@@ -2656,7 +2682,8 @@ function WorkflowSettingsModal({ onClose }) {
                             {status.description}
                           </p>
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            {taskCount} task{taskCount !== 1 ? 's' : ''} • Key: {status.keyboardShortcut || 'none'}
+                            {taskCount} task{taskCount !== 1 ? 's' : ''} • Key:{' '}
+                            {status.keyboardShortcut || 'none'}
                           </p>
                         </div>
                       </div>
@@ -3222,12 +3249,8 @@ const Column = React.memo(function Column({ status, tasks }) {
     >
       <div className="flex items-center gap-2 mb-2">
         <GripVertical className="w-4 h-4 text-slate-400" />
-        <h3 className="font-semibold text-slate-800 dark:text-slate-100">
-          {meta.label}
-        </h3>
-        <span className="text-xs text-slate-700 dark:text-slate-400">
-          {meta.hint}
-        </span>
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100">{meta.label}</h3>
+        <span className="text-xs text-slate-700 dark:text-slate-400">{meta.hint}</span>
       </div>
       <div className="space-y-2 min-h-24">
         {tasks.length === 0 ? (
@@ -3317,7 +3340,6 @@ function TokenHelpTooltip({ visible, onDismiss }) {
       </div>
 
       <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
-
         <div>
           <strong className="text-gray-900 dark:text-gray-100">!p0..p3</strong> - Set priority
           <div className="text-xs text-gray-500 ml-2">Example: !p0 (highest), !p3 (lowest)</div>
@@ -3356,7 +3378,8 @@ function TokenHelpTooltip({ visible, onDismiss }) {
         </div>
 
         <div>
-          <strong className="text-gray-900 dark:text-gray-100">expect:</strong> - Expected completion
+          <strong className="text-gray-900 dark:text-gray-100">expect:</strong> - Expected
+          completion
           <div className="text-xs text-gray-500 ml-2">Example: expect:today, expect:2025-12-31</div>
         </div>
       </div>
@@ -3398,214 +3421,6 @@ const EmptyColumnState = React.memo(({ columnName }) => {
   );
 });
 EmptyColumnState.displayName = 'EmptyColumnState';
-
-// TaskActionIcons - Always-visible action icons (FR-020 to FR-026)
-function TaskActionIcons({
-  onMoveLeft,
-  onMoveRight,
-  onStartTimer,
-  showMoveLeft,
-  showMoveRight,
-  className = '',
-}) {
-  return (
-    <div className={`flex items-center gap-1 ${className}`}>
-      {/* Drag handle - always visible */}
-      <div
-        className="cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-1"
-        aria-label="Drag to reorder"
-      >
-        <GripVertical size={16} />
-      </div>
-
-      {/* Move left */}
-      {showMoveLeft && (
-        <button
-          onClick={onMoveLeft}
-          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-          aria-label="Move left"
-          title="Move to previous column"
-        >
-          <ChevronLeft size={16} />
-        </button>
-      )}
-
-      {/* Move right */}
-      {showMoveRight && (
-        <button
-          onClick={onMoveRight}
-          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-          aria-label="Move right"
-          title="Move to next column"
-        >
-          <ChevronRight size={16} />
-        </button>
-      )}
-
-      {/* Timer */}
-      <button
-        onClick={onStartTimer}
-        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-        aria-label="Start focus timer"
-        title="Start timer"
-      >
-        <Play size={16} />
-      </button>
-    </div>
-  );
-}
-
-// AutocompleteInput base - Will be enhanced with token preview in next task (FR-027 to FR-036)
-function AutocompleteInput({ value, onChange, onSubmit, owners = [], projects = [], tags = [] }) {
-  const [inputFocused, setInputFocused] = useState(false);
-  const [autocomplete, setAutocomplete] = useState({
-    visible: false,
-    type: null,
-    query: '',
-    suggestions: [],
-    selectedIndex: 0,
-  });
-  const inputRef = useRef(null);
-
-  // Debounced autocomplete filtering
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      // Detect trigger character and extract query
-      const lastAtIndex = value.lastIndexOf('@');
-      const lastHashIndex = value.lastIndexOf('#');
-      const lastPlusIndex = value.lastIndexOf('+');
-
-      const triggers = [
-        { char: '@', index: lastAtIndex, type: 'owner', source: owners },
-        { char: '#', index: lastHashIndex, type: 'project', source: projects },
-        { char: '+', index: lastPlusIndex, type: 'tag', source: tags },
-      ];
-
-      // Find the most recent trigger
-      const activeTrigger = triggers
-        .filter((t) => t.index !== -1)
-        .sort((a, b) => b.index - a.index)[0];
-
-      if (activeTrigger) {
-        const query = value.slice(activeTrigger.index + 1).split(/\s/)[0];
-        const filtered = activeTrigger.source.filter((item) =>
-          item.toLowerCase().includes(query.toLowerCase()),
-        );
-
-        if (filtered.length > 0) {
-          setAutocomplete({
-            visible: true,
-            type: activeTrigger.type,
-            query,
-            suggestions: filtered.slice(0, 10),
-            selectedIndex: 0,
-          });
-        } else {
-          setAutocomplete((prev) => ({ ...prev, visible: false }));
-        }
-      } else {
-        setAutocomplete((prev) => ({ ...prev, visible: false }));
-      }
-    }, 100); // 100ms debounce
-
-    return () => clearTimeout(timer);
-  }, [value, owners, projects, tags]);
-
-  // Keyboard navigation
-  const handleKeyDown = (e) => {
-    if (!autocomplete.visible) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        onSubmit(value);
-      }
-      return;
-    }
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setAutocomplete((prev) => ({
-          ...prev,
-          selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1),
-        }));
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setAutocomplete((prev) => ({
-          ...prev,
-          selectedIndex: Math.max(prev.selectedIndex - 1, 0),
-        }));
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (autocomplete.suggestions[autocomplete.selectedIndex]) {
-          const selected = autocomplete.suggestions[autocomplete.selectedIndex];
-          const triggerChar = autocomplete.type === 'owner' ? '@' : autocomplete.type === 'project' ? '#' : '+';
-          const lastIndex = value.lastIndexOf(triggerChar);
-          const before = value.slice(0, lastIndex + 1);
-          const after = value.slice(lastIndex + 1).split(/\s/).slice(1).join(' ');
-          onChange(`${before}${selected} ${after}`.trim());
-          setAutocomplete((prev) => ({ ...prev, visible: false }));
-        }
-        break;
-      case 'Escape':
-        e.preventDefault();
-        setAutocomplete((prev) => ({ ...prev, visible: false }));
-        break;
-    }
-  };
-
-  return (
-    <div className="relative">
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onFocus={() => setInputFocused(true)}
-        onBlur={() => setInputFocused(false)}
-        className={clsx(
-          'w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-lg text-sm transition-all',
-          inputFocused
-            ? 'ring-2 ring-blue-500 border-blue-500'
-            : 'border-gray-300 dark:border-gray-600',
-          'focus:outline-none',
-        )}
-        placeholder="Add a task... (type @ for assignment, # for project, ! for priority)"
-      />
-
-      {/* Autocomplete dropdown */}
-      {autocomplete.visible && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-          {autocomplete.suggestions.map((suggestion, index) => (
-            <button
-              key={suggestion}
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                const triggerChar = autocomplete.type === 'owner' ? '@' : autocomplete.type === 'project' ? '#' : '+';
-                const lastIndex = value.lastIndexOf(triggerChar);
-                const before = value.slice(0, lastIndex + 1);
-                const after = value.slice(lastIndex + 1).split(/\s/).slice(1).join(' ');
-                onChange(`${before}${suggestion} ${after}`.trim());
-                setAutocomplete((prev) => ({ ...prev, visible: false }));
-              }}
-              className={clsx(
-                'w-full px-3 py-2 text-left text-sm transition-colors',
-                index === autocomplete.selectedIndex
-                  ? 'bg-blue-50 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
-                  : 'hover:bg-gray-50 dark:hover:bg-gray-700',
-              )}
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ===== END NEW COMPONENTS =====
 
@@ -4775,7 +4590,12 @@ function Toolbar({ viewMode, onChangeView }) {
                 aria-label="Help"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </button>
               {/* Token help tooltip */}
@@ -4996,8 +4816,8 @@ function Toolbar({ viewMode, onChangeView }) {
           />
         )}
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          Tokens: !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5
-          urgency:0..5 effort:0..5 expect:today|YYYY-MM-DD
+          Tokens: !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5 urgency:0..5
+          effort:0..5 expect:today|YYYY-MM-DD
         </div>
       </div>
     </div>
@@ -5256,12 +5076,8 @@ function BacklogHeader({ statusLabel, statusHint, count, collapsed, onToggle }) 
               collapsed ? '-rotate-90' : 'rotate-0',
             )}
           />
-          <span className="font-semibold text-slate-800 dark:text-slate-100">
-            {statusLabel}
-          </span>
-          <span className="text-xs text-slate-600 dark:text-slate-400">
-            {statusHint}
-          </span>
+          <span className="font-semibold text-slate-800 dark:text-slate-100">{statusLabel}</span>
+          <span className="text-xs text-slate-600 dark:text-slate-400">{statusHint}</span>
         </div>
         <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
           {count} task{count === 1 ? '' : 's'}
