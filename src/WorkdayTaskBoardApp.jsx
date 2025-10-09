@@ -2152,10 +2152,17 @@ function ProjectManager({ onClose }) {
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label="Close manager"
     >
       <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]"
         onClick={(e) => e.stopPropagation()}
+        role="presentation"
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold">Manage Projects</h2>
@@ -2471,10 +2478,17 @@ function WorkflowSettingsModal({ onClose }) {
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label="Close workflow settings"
     >
       <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-auto relative z-[201]"
         onClick={(e) => e.stopPropagation()}
+        role="presentation"
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
           <div>
@@ -2598,7 +2612,7 @@ function WorkflowSettingsModal({ onClose }) {
                   ) : isDeleting ? (
                     <div className="space-y-2">
                       <p className="text-sm font-medium text-red-600 dark:text-red-400">
-                        Delete "{status.label}"? ({taskCount} tasks)
+                        Delete &ldquo;{status.label}&rdquo;? ({taskCount} tasks)
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
                         Move these tasks to:
@@ -3399,213 +3413,7 @@ const EmptyColumnState = React.memo(({ columnName }) => {
 });
 EmptyColumnState.displayName = 'EmptyColumnState';
 
-// TaskActionIcons - Always-visible action icons (FR-020 to FR-026)
-function TaskActionIcons({
-  onMoveLeft,
-  onMoveRight,
-  onStartTimer,
-  showMoveLeft,
-  showMoveRight,
-  className = '',
-}) {
-  return (
-    <div className={`flex items-center gap-1 ${className}`}>
-      {/* Drag handle - always visible */}
-      <div
-        className="cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-1"
-        aria-label="Drag to reorder"
-      >
-        <GripVertical size={16} />
-      </div>
 
-      {/* Move left */}
-      {showMoveLeft && (
-        <button
-          onClick={onMoveLeft}
-          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-          aria-label="Move left"
-          title="Move to previous column"
-        >
-          <ChevronLeft size={16} />
-        </button>
-      )}
-
-      {/* Move right */}
-      {showMoveRight && (
-        <button
-          onClick={onMoveRight}
-          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-          aria-label="Move right"
-          title="Move to next column"
-        >
-          <ChevronRight size={16} />
-        </button>
-      )}
-
-      {/* Timer */}
-      <button
-        onClick={onStartTimer}
-        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-        aria-label="Start focus timer"
-        title="Start timer"
-      >
-        <Play size={16} />
-      </button>
-    </div>
-  );
-}
-
-// AutocompleteInput base - Will be enhanced with token preview in next task (FR-027 to FR-036)
-function AutocompleteInput({ value, onChange, onSubmit, owners = [], projects = [], tags = [] }) {
-  const [inputFocused, setInputFocused] = useState(false);
-  const [autocomplete, setAutocomplete] = useState({
-    visible: false,
-    type: null,
-    query: '',
-    suggestions: [],
-    selectedIndex: 0,
-  });
-  const inputRef = useRef(null);
-
-  // Debounced autocomplete filtering
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      // Detect trigger character and extract query
-      const lastAtIndex = value.lastIndexOf('@');
-      const lastHashIndex = value.lastIndexOf('#');
-      const lastPlusIndex = value.lastIndexOf('+');
-
-      const triggers = [
-        { char: '@', index: lastAtIndex, type: 'owner', source: owners },
-        { char: '#', index: lastHashIndex, type: 'project', source: projects },
-        { char: '+', index: lastPlusIndex, type: 'tag', source: tags },
-      ];
-
-      // Find the most recent trigger
-      const activeTrigger = triggers
-        .filter((t) => t.index !== -1)
-        .sort((a, b) => b.index - a.index)[0];
-
-      if (activeTrigger) {
-        const query = value.slice(activeTrigger.index + 1).split(/\s/)[0];
-        const filtered = activeTrigger.source.filter((item) =>
-          item.toLowerCase().includes(query.toLowerCase()),
-        );
-
-        if (filtered.length > 0) {
-          setAutocomplete({
-            visible: true,
-            type: activeTrigger.type,
-            query,
-            suggestions: filtered.slice(0, 10),
-            selectedIndex: 0,
-          });
-        } else {
-          setAutocomplete((prev) => ({ ...prev, visible: false }));
-        }
-      } else {
-        setAutocomplete((prev) => ({ ...prev, visible: false }));
-      }
-    }, 100); // 100ms debounce
-
-    return () => clearTimeout(timer);
-  }, [value, owners, projects, tags]);
-
-  // Keyboard navigation
-  const handleKeyDown = (e) => {
-    if (!autocomplete.visible) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        onSubmit(value);
-      }
-      return;
-    }
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setAutocomplete((prev) => ({
-          ...prev,
-          selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1),
-        }));
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setAutocomplete((prev) => ({
-          ...prev,
-          selectedIndex: Math.max(prev.selectedIndex - 1, 0),
-        }));
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (autocomplete.suggestions[autocomplete.selectedIndex]) {
-          const selected = autocomplete.suggestions[autocomplete.selectedIndex];
-          const triggerChar = autocomplete.type === 'owner' ? '@' : autocomplete.type === 'project' ? '#' : '+';
-          const lastIndex = value.lastIndexOf(triggerChar);
-          const before = value.slice(0, lastIndex + 1);
-          const after = value.slice(lastIndex + 1).split(/\s/).slice(1).join(' ');
-          onChange(`${before}${selected} ${after}`.trim());
-          setAutocomplete((prev) => ({ ...prev, visible: false }));
-        }
-        break;
-      case 'Escape':
-        e.preventDefault();
-        setAutocomplete((prev) => ({ ...prev, visible: false }));
-        break;
-    }
-  };
-
-  return (
-    <div className="relative">
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onFocus={() => setInputFocused(true)}
-        onBlur={() => setInputFocused(false)}
-        className={clsx(
-          'w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-lg text-sm transition-all',
-          inputFocused
-            ? 'ring-2 ring-blue-500 border-blue-500'
-            : 'border-gray-300 dark:border-gray-600',
-          'focus:outline-none',
-        )}
-        placeholder="Add a task... (type @ for assignment, # for project, ! for priority)"
-      />
-
-      {/* Autocomplete dropdown */}
-      {autocomplete.visible && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-          {autocomplete.suggestions.map((suggestion, index) => (
-            <button
-              key={suggestion}
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                const triggerChar = autocomplete.type === 'owner' ? '@' : autocomplete.type === 'project' ? '#' : '+';
-                const lastIndex = value.lastIndexOf(triggerChar);
-                const before = value.slice(0, lastIndex + 1);
-                const after = value.slice(lastIndex + 1).split(/\s/).slice(1).join(' ');
-                onChange(`${before}${suggestion} ${after}`.trim());
-                setAutocomplete((prev) => ({ ...prev, visible: false }));
-              }}
-              className={clsx(
-                'w-full px-3 py-2 text-left text-sm transition-colors',
-                index === autocomplete.selectedIndex
-                  ? 'bg-blue-50 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
-                  : 'hover:bg-gray-50 dark:hover:bg-gray-700',
-              )}
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ===== END NEW COMPONENTS =====
 
