@@ -703,7 +703,11 @@ const useStore = create((set, get) => ({
     // Use default status if no status provided
     const defaultStatus = get().getDefaultStatus();
     const status = partial.status || (defaultStatus ? defaultStatus.id : 'backlog');
-    const t = finalizeTask({ ...partial, status, projectId: partial.projectId || currentProjectId });
+    const t = finalizeTask({
+      ...partial,
+      status,
+      projectId: partial.projectId || currentProjectId,
+    });
 
     // Add owners to registry if they don't exist
     if (t.owners && Array.isArray(t.owners)) {
@@ -1264,7 +1268,9 @@ const useStore = create((set, get) => ({
 
   // Get ordered array of status IDs (like STATUS_ORDER)
   getStatusOrder() {
-    return get().getStatuses().map((s) => s.id);
+    return get()
+      .getStatuses()
+      .map((s) => s.id);
   },
 
   // Validation helpers for status management
@@ -1282,7 +1288,7 @@ const useStore = create((set, get) => ({
     // Check for duplicate labels (case-insensitive)
     const { statusConfig } = get();
     const duplicate = statusConfig.statuses.find(
-      (s) => s.id !== excludeId && s.label.toLowerCase() === trimmed.toLowerCase()
+      (s) => s.id !== excludeId && s.label.toLowerCase() === trimmed.toLowerCase(),
     );
 
     if (duplicate) {
@@ -1308,13 +1314,20 @@ const useStore = create((set, get) => ({
     // Cannot delete the only default status
     const defaultStatuses = statusConfig.statuses.filter((s) => s.isDefault);
     if (status.isDefault && defaultStatuses.length === 1) {
-      return { canDelete: false, reason: 'Cannot delete the only default status. Set another status as default first.' };
+      return {
+        canDelete: false,
+        reason: 'Cannot delete the only default status. Set another status as default first.',
+      };
     }
 
     // Cannot delete the only completion status
     const completionStatuses = statusConfig.statuses.filter((s) => s.isCompletionState);
     if (status.isCompletionState && completionStatuses.length === 1) {
-      return { canDelete: false, reason: 'Cannot delete the only completion status. Mark another status as completion first.' };
+      return {
+        canDelete: false,
+        reason:
+          'Cannot delete the only completion status. Mark another status as completion first.',
+      };
     }
 
     return { canDelete: true };
@@ -1412,7 +1425,7 @@ const useStore = create((set, get) => ({
     // If setting as default, unset other defaults
     if (updates.isDefault === true) {
       updatedStatuses = updatedStatuses.map((s) =>
-        s.id === statusId ? s : { ...s, isDefault: false }
+        s.id === statusId ? s : { ...s, isDefault: false },
       );
     }
 
@@ -1456,7 +1469,9 @@ const useStore = create((set, get) => ({
 
     // Migrate all tasks to the new status
     const updatedTasks = tasks.map((t) =>
-      t.status === statusId ? { ...t, status: migrateToId, updatedAt: new Date().toISOString() } : t
+      t.status === statusId
+        ? { ...t, status: migrateToId, updatedAt: new Date().toISOString() }
+        : t,
     );
 
     // Remove the status and reorder
@@ -2513,7 +2528,10 @@ function WorkflowSettingsModal({ onClose }) {
           )}
 
           {/* Add New Status Form */}
-          <form onSubmit={handleCreateStatus} className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+          <form
+            onSubmit={handleCreateStatus}
+            className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg"
+          >
             <h3 className="font-medium mb-3">Add New Status</h3>
             <div className="space-y-2">
               <input
@@ -2569,8 +2587,10 @@ function WorkflowSettingsModal({ onClose }) {
                   onDragEnd={handleDragEnd}
                   className={clsx(
                     'p-3 rounded-lg border transition-all',
-                    dragOverIndex === index && draggedStatus ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700',
-                    isEditing && 'bg-blue-50 dark:bg-blue-900/20'
+                    dragOverIndex === index && draggedStatus
+                      ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 dark:border-gray-700',
+                    isEditing && 'bg-blue-50 dark:bg-blue-900/20',
                   )}
                 >
                   {isEditing ? (
@@ -2623,11 +2643,13 @@ function WorkflowSettingsModal({ onClose }) {
                         className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                       >
                         <option value="">Select status...</option>
-                        {statuses.filter((s) => s.id !== status.id).map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.label}
-                          </option>
-                        ))}
+                        {statuses
+                          .filter((s) => s.id !== status.id)
+                          .map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.label}
+                            </option>
+                          ))}
                       </select>
                       <div className="flex gap-2">
                         <button
@@ -2670,7 +2692,8 @@ function WorkflowSettingsModal({ onClose }) {
                             {status.description}
                           </p>
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            {taskCount} task{taskCount !== 1 ? 's' : ''} • Key: {status.keyboardShortcut || 'none'}
+                            {taskCount} task{taskCount !== 1 ? 's' : ''} • Key:{' '}
+                            {status.keyboardShortcut || 'none'}
                           </p>
                         </div>
                       </div>
@@ -3236,12 +3259,8 @@ const Column = React.memo(function Column({ status, tasks }) {
     >
       <div className="flex items-center gap-2 mb-2">
         <GripVertical className="w-4 h-4 text-slate-400" />
-        <h3 className="font-semibold text-slate-800 dark:text-slate-100">
-          {meta.label}
-        </h3>
-        <span className="text-xs text-slate-700 dark:text-slate-400">
-          {meta.hint}
-        </span>
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100">{meta.label}</h3>
+        <span className="text-xs text-slate-700 dark:text-slate-400">{meta.hint}</span>
       </div>
       <div className="space-y-2 min-h-24">
         {tasks.length === 0 ? (
@@ -3331,7 +3350,6 @@ function TokenHelpTooltip({ visible, onDismiss }) {
       </div>
 
       <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
-
         <div>
           <strong className="text-gray-900 dark:text-gray-100">!p0..p3</strong> - Set priority
           <div className="text-xs text-gray-500 ml-2">Example: !p0 (highest), !p3 (lowest)</div>
@@ -3370,7 +3388,8 @@ function TokenHelpTooltip({ visible, onDismiss }) {
         </div>
 
         <div>
-          <strong className="text-gray-900 dark:text-gray-100">expect:</strong> - Expected completion
+          <strong className="text-gray-900 dark:text-gray-100">expect:</strong> - Expected
+          completion
           <div className="text-xs text-gray-500 ml-2">Example: expect:today, expect:2025-12-31</div>
         </div>
       </div>
@@ -3412,8 +3431,6 @@ const EmptyColumnState = React.memo(({ columnName }) => {
   );
 });
 EmptyColumnState.displayName = 'EmptyColumnState';
-
-
 
 // ===== END NEW COMPONENTS =====
 
@@ -4583,7 +4600,12 @@ function Toolbar({ viewMode, onChangeView }) {
                 aria-label="Help"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </button>
               {/* Token help tooltip */}
@@ -4804,8 +4826,8 @@ function Toolbar({ viewMode, onChangeView }) {
           />
         )}
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          Tokens: !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5
-          urgency:0..5 effort:0..5 expect:today|YYYY-MM-DD
+          Tokens: !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5 urgency:0..5
+          effort:0..5 expect:today|YYYY-MM-DD
         </div>
       </div>
     </div>
@@ -5064,12 +5086,8 @@ function BacklogHeader({ statusLabel, statusHint, count, collapsed, onToggle }) 
               collapsed ? '-rotate-90' : 'rotate-0',
             )}
           />
-          <span className="font-semibold text-slate-800 dark:text-slate-100">
-            {statusLabel}
-          </span>
-          <span className="text-xs text-slate-600 dark:text-slate-400">
-            {statusHint}
-          </span>
+          <span className="font-semibold text-slate-800 dark:text-slate-100">{statusLabel}</span>
+          <span className="text-xs text-slate-600 dark:text-slate-400">{statusHint}</span>
         </div>
         <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
           {count} task{count === 1 ? '' : 's'}

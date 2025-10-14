@@ -8,6 +8,7 @@
 ## Execution Flow Summary
 
 This feature implements 5 UI/UX improvements in a single-file React application:
+
 1. Token help tooltip (collapsible)
 2. Priority color coding (P0/P1/P2/P3)
 3. Empty column state messages
@@ -19,6 +20,7 @@ All work happens in one file (`src/WorkdayTaskBoardApp.jsx`), so tasks are seque
 ---
 
 ## Format: `[ID] [P?] Description`
+
 - **[P]**: Can run in parallel (independent components, no file conflicts)
 - All paths relative to repository root
 - File: `src/WorkdayTaskBoardApp.jsx` (unless specified otherwise)
@@ -445,6 +447,7 @@ All work happens in one file (`src/WorkdayTaskBoardApp.jsx`), so tasks are seque
 ## Dependencies
 
 ### Critical Path
+
 ```
 T001-T003 (Setup)
   ↓
@@ -460,6 +463,7 @@ T028-T032 (Final validation - sequential)
 ```
 
 ### Blocking Dependencies
+
 - T010 requires T005 (PriorityBadge must exist)
 - T011 requires T007 (TaskActionIcons must exist)
 - T012, T013 require T006 (EmptyColumnState must exist)
@@ -474,6 +478,7 @@ T028-T032 (Final validation - sequential)
 ## Parallel Execution Examples
 
 ### Group A: Component Creation (Conceptually Parallel)
+
 ```
 # NOTE: In practice, must commit sequentially to avoid merge conflicts
 # But components are independent and can be designed/written in parallel
@@ -486,6 +491,7 @@ Task: "Create AutocompleteInput base in src/WorkdayTaskBoardApp.jsx"
 ```
 
 ### Group B: Performance Optimization (Truly Parallel)
+
 ```
 Task: "Add memoization for priority lookups in src/WorkdayTaskBoardApp.jsx"
 Task: "Add debouncing for autocomplete in src/WorkdayTaskBoardApp.jsx"
@@ -494,6 +500,7 @@ Task: "Optimize EmptyColumnState with React.memo in src/WorkdayTaskBoardApp.jsx"
 ```
 
 ### Group C: Automated Testing (Parallel)
+
 ```
 Task: "E2E test token help via Chrome MCP"
 Task: "E2E test priority colors via Chrome MCP"
