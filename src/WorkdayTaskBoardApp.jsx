@@ -79,7 +79,7 @@ const PRIORITY_COLORS = {
   P0: 'bg-red-50 text-red-600 border-l-4 border-l-red-500',
   P1: 'bg-orange-50 text-orange-600 border-l-4 border-l-orange-500',
   P2: 'bg-amber-50 text-amber-600 border-l-4 border-l-amber-500',
-  P3: 'bg-gray-50 text-gray-600 border-l-4 border-l-gray-400',
+  P3: 'bg-slate-50 text-slate-600 border-l-4 border-l-gray-400',
 };
 
 // ----- Helpers -----
@@ -1932,7 +1932,7 @@ function ProjectSelector() {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
           aria-haspopup="listbox"
           aria-expanded={isOpen}
         >
@@ -1942,7 +1942,7 @@ function ProjectSelector() {
           />
           <span className="font-medium">{currentProject.name}</span>
           {currentProject.isDefault && (
-            <svg className="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-3 h-3 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"
                 d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
@@ -1950,7 +1950,7 @@ function ProjectSelector() {
               />
             </svg>
           )}
-          <ChevronDown className="w-4 h-4 text-gray-500" />
+          <ChevronDown className="w-4 h-4 text-slate-500" />
           {hasActiveTimerInOther() && (
             <button
               className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse cursor-pointer"
@@ -1980,17 +1980,17 @@ function ProjectSelector() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="absolute md:top-full top-0 md:mt-1 mt-0 w-full md:w-64 bg-white dark:bg-gray-800 md:rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-[100] md:left-0 left-0 md:right-auto right-0 md:max-h-96 max-h-screen overflow-auto"
+                className="absolute md:top-full top-0 md:mt-1 mt-0 w-full md:w-64 bg-white dark:bg-slate-800 md:rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-[100] md:left-0 left-0 md:right-auto right-0 md:max-h-96 max-h-screen overflow-auto"
               >
                 <div className="p-2">
-                  <div className="flex items-center justify-between px-2 py-1 text-xs text-gray-500 dark:text-gray-400 uppercase">
+                  <div className="flex items-center justify-between px-2 py-1 text-xs text-slate-500 dark:text-slate-400 uppercase">
                     <span>Projects</span>
                     <button
                       onClick={() => {
                         setShowManager(true);
                         setIsOpen(false);
                       }}
-                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
                       title="Manage Projects"
                     >
                       <svg
@@ -2021,7 +2021,7 @@ function ProjectSelector() {
                         placeholder="Search projects..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                        className="w-full px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700"
                       />
                     </div>
                   )}
@@ -2038,8 +2038,8 @@ function ProjectSelector() {
                           key={project.id}
                           onClick={() => handleProjectSwitch(project.id)}
                           className={clsx(
-                            'w-full text-left px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
-                            isActive && 'bg-gray-100 dark:bg-gray-700',
+                            'w-full text-left px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors',
+                            isActive && 'bg-slate-100 dark:bg-slate-700',
                           )}
                         >
                           <div className="flex items-center justify-between">
@@ -2058,7 +2058,7 @@ function ProjectSelector() {
                               </span>
                               {project.isDefault && (
                                 <svg
-                                  className="w-3 h-3 text-gray-400"
+                                  className="w-3 h-3 text-slate-400"
                                   fill="currentColor"
                                   viewBox="0 0 20 20"
                                 >
@@ -2070,7 +2070,7 @@ function ProjectSelector() {
                                 </svg>
                               )}
                             </div>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
                               {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
                             </span>
                           </div>
@@ -2184,7 +2184,7 @@ function ProjectManager({ onClose }) {
       aria-label="Close manager"
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]"
+        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]"
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
@@ -2192,7 +2192,7 @@ function ProjectManager({ onClose }) {
           <h2 className="text-lg font-semibold">Manage Projects</h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
           >
             <X className="w-5 h-5" />
           </button>
@@ -2212,7 +2212,7 @@ function ProjectManager({ onClose }) {
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
                 placeholder="New project name"
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
                 maxLength={15}
               />
               <button
@@ -2248,7 +2248,7 @@ function ProjectManager({ onClose }) {
                     'flex items-center justify-between p-3 rounded-lg transition-colors relative group',
                     dragOverIndex === index
                       ? 'bg-blue-100 dark:bg-blue-900/30'
-                      : 'bg-gray-50 dark:bg-gray-900/50',
+                      : 'bg-slate-50 dark:bg-gray-900/50',
                     !project.isDefault && 'cursor-move',
                   )}
                   animate={{
@@ -2257,7 +2257,7 @@ function ProjectManager({ onClose }) {
                 >
                   {!project.isDefault && (
                     <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-50 transition-opacity pointer-events-none">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24">
                         <path
                           d="M3 6h18M3 12h18M3 18h18"
                           stroke="currentColor"
@@ -2283,7 +2283,7 @@ function ProjectManager({ onClose }) {
                           if (e.key === 'Enter') handleRename(project.id);
                           if (e.key === 'Escape') setEditingId(null);
                         }}
-                        className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded"
+                        className="flex-1 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded"
                         maxLength={15}
                       />
                     ) : (
@@ -2298,7 +2298,7 @@ function ProjectManager({ onClose }) {
                     )}
                     {project.isDefault && (
                       <svg
-                        className="w-4 h-4 text-gray-400"
+                        className="w-4 h-4 text-slate-400"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
@@ -2313,13 +2313,13 @@ function ProjectManager({ onClose }) {
 
                   <div className="flex items-center gap-2">
                     <div className="flex flex-col items-end">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                      <span className="text-sm text-slate-500 dark:text-slate-400">
                         {taskCount} tasks
                       </span>
                       {taskCount > 0 && (
                         <div className="flex items-center gap-1">
-                          <span className="text-xs text-gray-400">{completionRate}% done</span>
-                          <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <span className="text-xs text-slate-400">{completionRate}% done</span>
+                          <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-green-500 transition-all duration-300"
                               style={{ width: `${completionRate}%` }}
@@ -2335,7 +2335,7 @@ function ProjectManager({ onClose }) {
                             setEditingId(project.id);
                             setEditingName(project.name);
                           }}
-                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded"
                           title="Rename"
                         >
                           <svg
@@ -2362,7 +2362,7 @@ function ProjectManager({ onClose }) {
                             </button>
                             <button
                               onClick={() => setDeleteConfirmId(null)}
-                              className="px-2 py-1 text-xs bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
+                              className="px-2 py-1 text-xs bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-slate-500"
                             >
                               Cancel
                             </button>
@@ -2510,20 +2510,20 @@ function WorkflowSettingsModal({ onClose }) {
       aria-label="Close workflow settings"
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-auto relative z-[201]"
+        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-auto relative z-[201]"
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-slate-800 z-10">
           <div>
             <h2 className="text-lg font-semibold">Workflow Configuration</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Customize your workflow statuses
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
           >
             <X className="w-5 h-5" />
           </button>
@@ -2539,7 +2539,7 @@ function WorkflowSettingsModal({ onClose }) {
           {/* Add New Status Form */}
           <form
             onSubmit={handleCreateStatus}
-            className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg"
+            className="mb-6 p-4 bg-slate-50 dark:bg-gray-900 rounded-lg"
           >
             <h3 className="font-medium mb-3">Add New Status</h3>
             <div className="space-y-2">
@@ -2548,7 +2548,7 @@ function WorkflowSettingsModal({ onClose }) {
                 value={newStatusLabel}
                 onChange={(e) => setNewStatusLabel(e.target.value)}
                 placeholder="Status name (e.g., 'In Design')"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
                 maxLength={30}
               />
               <input
@@ -2556,11 +2556,11 @@ function WorkflowSettingsModal({ onClose }) {
                 value={newStatusDesc}
                 onChange={(e) => setNewStatusDesc(e.target.value)}
                 placeholder="Description (e.g., 'Design work in progress')"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
                 maxLength={50}
               />
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
                   {statuses.length} / 15 statuses
                 </span>
                 <button
@@ -2577,7 +2577,7 @@ function WorkflowSettingsModal({ onClose }) {
           {/* Status List */}
           <div className="space-y-2 mb-6">
             <h3 className="font-medium mb-2">Current Statuses</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
               Drag to reorder • Click to edit
             </p>
             {statuses.map((status, index) => {
@@ -2609,7 +2609,7 @@ function WorkflowSettingsModal({ onClose }) {
                         type="text"
                         value={editingLabel}
                         onChange={(e) => setEditingLabel(e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700"
                         maxLength={30}
                       />
                       <input
@@ -2617,7 +2617,7 @@ function WorkflowSettingsModal({ onClose }) {
                         value={editingDesc}
                         onChange={(e) => setEditingDesc(e.target.value)}
                         placeholder="Description"
-                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700"
                         maxLength={50}
                       />
                       <div className="flex gap-2">
@@ -2632,7 +2632,7 @@ function WorkflowSettingsModal({ onClose }) {
                             setEditingId(null);
                             setError('');
                           }}
-                          className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded text-sm hover:bg-gray-400 dark:hover:bg-gray-500"
+                          className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded text-sm hover:bg-gray-400 dark:hover:bg-slate-500"
                         >
                           Cancel
                         </button>
@@ -2643,13 +2643,13 @@ function WorkflowSettingsModal({ onClose }) {
                       <p className="text-sm font-medium text-red-600 dark:text-red-400">
                         Delete &ldquo;{status.label}&rdquo;? ({taskCount} tasks)
                       </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
                         Move these tasks to:
                       </p>
                       <select
                         value={migrateToId}
                         onChange={(e) => setMigrateToId(e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700"
                       >
                         <option value="">Select status...</option>
                         {statuses
@@ -2673,7 +2673,7 @@ function WorkflowSettingsModal({ onClose }) {
                             setMigrateToId('');
                             setError('');
                           }}
-                          className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded text-sm hover:bg-gray-400 dark:hover:bg-gray-500"
+                          className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded text-sm hover:bg-gray-400 dark:hover:bg-slate-500"
                         >
                           Cancel
                         </button>
@@ -2682,7 +2682,7 @@ function WorkflowSettingsModal({ onClose }) {
                   ) : (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1">
-                        <GripVertical className="w-4 h-4 text-gray-400 cursor-grab" />
+                        <GripVertical className="w-4 h-4 text-slate-400 cursor-grab" />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{status.label}</span>
@@ -2697,10 +2697,10 @@ function WorkflowSettingsModal({ onClose }) {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
                             {status.description}
                           </p>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                             {taskCount} task{taskCount !== 1 ? 's' : ''} • Key:{' '}
                             {status.keyboardShortcut || 'none'}
                           </p>
@@ -2756,7 +2756,7 @@ function WorkflowSettingsModal({ onClose }) {
                   </button>
                   <button
                     onClick={() => setRestoreConfirm(false)}
-                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
+                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400 dark:hover:bg-slate-500"
                   >
                     Cancel
                   </button>
@@ -2765,7 +2765,7 @@ function WorkflowSettingsModal({ onClose }) {
             ) : (
               <button
                 onClick={() => setRestoreConfirm(true)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
               >
                 Restore Default Statuses
               </button>
@@ -2805,7 +2805,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-96 max-w-full">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-96 max-w-full">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold">Assign Owner to {taskIds.length} Tasks</h3>
         </div>
@@ -2814,7 +2814,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
           {!result ? (
             <>
               <div className="mb-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
                   Select an existing owner or add a new one to assign to the selected tasks.
                 </p>
 
@@ -2832,7 +2832,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                           id="bulk-owner-select"
                           value={selectedOwner}
                           onChange={(e) => setSelectedOwner(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Choose an owner...</option>
                           {owners.map((owner) => (
@@ -2866,7 +2866,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                           onChange={(e) => setNewOwnerName(e.target.value)}
                           maxLength={30}
                           placeholder="Enter owner name"
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
 
@@ -2877,7 +2877,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                             setIsAddingNew(false);
                             setNewOwnerName('');
                           }}
-                          className="text-sm text-gray-600 dark:text-gray-400 hover:underline"
+                          className="text-sm text-slate-600 dark:text-slate-400 hover:underline"
                         >
                           Back to existing owners
                         </button>
@@ -2913,7 +2913,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                     </svg>
                   </div>
                   <p className="font-medium">Owner assigned successfully!</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                     Updated {result.tasksUpdated} task{result.tasksUpdated !== 1 ? 's' : ''}
                     {result.tasksFailed > 0 && (
                       <span className="block text-amber-600 dark:text-amber-400 mt-1">
@@ -2941,7 +2941,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                     </svg>
                   </div>
                   <p className="font-medium">Assignment failed</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{result.error}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{result.error}</p>
                 </>
               )}
             </div>
@@ -2953,7 +2953,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
             <>
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
               >
                 Cancel
               </button>
@@ -2962,7 +2962,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                 disabled={!isAddingNew ? !selectedOwner : !newOwnerName.trim()}
                 className={`px-4 py-2 text-sm rounded transition-colors ${
                   (!isAddingNew ? !selectedOwner : !newOwnerName.trim())
-                    ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                    ? 'bg-gray-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
@@ -2972,7 +2972,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
           ) : (
             <button
               onClick={result.success ? onSuccess : onClose}
-              className="px-4 py-2 text-sm bg-gray-600 text-white hover:bg-gray-700 rounded transition-colors"
+              className="px-4 py-2 text-sm bg-gray-600 text-white hover:bg-slate-700 rounded transition-colors"
             >
               Close
             </button>
@@ -3014,12 +3014,12 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
 
   return ReactDOM.createPortal(
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]">
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold">Move Tasks to Project</h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
           >
             <X className="w-5 h-5" />
           </button>
@@ -3033,7 +3033,7 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
           )}
 
           <div className="mb-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Moving{' '}
               <span className="font-semibold">
                 {taskIds.length} task{taskIds.length > 1 ? 's' : ''}
@@ -3042,15 +3042,17 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
             </p>
 
             {selectedTasks.length > 0 && (
-              <div className="mb-4 p-2 bg-gray-50 dark:bg-gray-900/50 rounded max-h-32 overflow-y-auto">
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Selected tasks:</div>
+              <div className="mb-4 p-2 bg-slate-50 dark:bg-gray-900/50 rounded max-h-32 overflow-y-auto">
+                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  Selected tasks:
+                </div>
                 {selectedTasks.slice(0, 5).map((task) => (
                   <div key={task.id} className="text-sm truncate">
                     • {task.title}
                   </div>
                 ))}
                 {selectedTasks.length > 5 && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-sm text-slate-500 dark:text-slate-400">
                     ...and {selectedTasks.length - 5} more
                   </div>
                 )}
@@ -3066,7 +3068,7 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
               id="target-project"
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
             >
               <option value="">Choose a project...</option>
               {availableProjects.map((project) => (
@@ -3080,7 +3082,7 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
           <div className="flex justify-end gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
             >
               Cancel
             </button>
@@ -3232,7 +3234,7 @@ function parseQuickAdd(input) {
 
 function Badge({ children, className, variant = 'default' }) {
   const variants = {
-    default: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+    default: 'bg-slate-100 text-gray-700 dark:bg-slate-800 dark:text-slate-300',
     primary: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
     success: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     warning: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
@@ -3304,7 +3306,7 @@ function OwnersList({ owners }) {
         <OwnerBadge key={owner} owner={owner} />
       ))}
       {remainingCount > 0 && (
-        <span className="text-xs text-gray-500 dark:text-gray-400">+{remainingCount} more</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">+{remainingCount} more</span>
       )}
     </div>
   );
@@ -3343,63 +3345,65 @@ function TokenHelpTooltip({ visible, onDismiss }) {
   return (
     <div
       ref={tooltipRef}
-      className="absolute z-50 mt-2 w-96 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl"
+      className="absolute z-50 mt-2 w-96 p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl"
       role="dialog"
       aria-label="Token syntax help"
     >
       <div className="flex justify-between items-start mb-3">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Token Syntax</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Token Syntax</h3>
         <button
           onClick={onDismiss}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
           aria-label="Close help"
         >
           <X size={20} />
         </button>
       </div>
 
-      <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+      <div className="space-y-3 text-sm text-gray-700 dark:text-slate-300">
         <div>
-          <strong className="text-gray-900 dark:text-gray-100">!p0..p3</strong> - Set priority
-          <div className="text-xs text-gray-500 ml-2">Example: !p0 (highest), !p3 (lowest)</div>
+          <strong className="text-slate-900 dark:text-slate-100">!p0..p3</strong> - Set priority
+          <div className="text-xs text-slate-500 ml-2">Example: !p0 (highest), !p3 (lowest)</div>
         </div>
 
         <div>
-          <strong className="text-gray-900 dark:text-gray-100">@owner</strong> - Assign owner
-          <div className="text-xs text-gray-500 ml-2">Example: @ai, @me, @john</div>
+          <strong className="text-slate-900 dark:text-slate-100">@owner</strong> - Assign owner
+          <div className="text-xs text-slate-500 ml-2">Example: @ai, @me, @john</div>
         </div>
 
         <div>
-          <strong className="text-gray-900 dark:text-gray-100">+tag</strong> - Add tag
-          <div className="text-xs text-gray-500 ml-2">Example: +bug, +feature</div>
+          <strong className="text-slate-900 dark:text-slate-100">+tag</strong> - Add tag
+          <div className="text-xs text-slate-500 ml-2">Example: +bug, +feature</div>
         </div>
 
         <div>
-          <strong className="text-gray-900 dark:text-gray-100">due:</strong> - Set due date
-          <div className="text-xs text-gray-500 ml-2">
+          <strong className="text-slate-900 dark:text-slate-100">due:</strong> - Set due date
+          <div className="text-xs text-slate-500 ml-2">
             Example: due:today, due:tomorrow, due:2025-12-31, due:16:00
           </div>
         </div>
 
         <div>
-          <strong className="text-gray-900 dark:text-gray-100">impact:0..5</strong> - Set impact
-          <div className="text-xs text-gray-500 ml-2">Example: impact:5 (high impact)</div>
+          <strong className="text-slate-900 dark:text-slate-100">impact:0..5</strong> - Set impact
+          <div className="text-xs text-slate-500 ml-2">Example: impact:5 (high impact)</div>
         </div>
 
         <div>
-          <strong className="text-gray-900 dark:text-gray-100">urgency:0..5</strong> - Set urgency
-          <div className="text-xs text-gray-500 ml-2">Example: urgency:4</div>
+          <strong className="text-slate-900 dark:text-slate-100">urgency:0..5</strong> - Set urgency
+          <div className="text-xs text-slate-500 ml-2">Example: urgency:4</div>
         </div>
 
         <div>
-          <strong className="text-gray-900 dark:text-gray-100">effort:0..5</strong> - Set effort
-          <div className="text-xs text-gray-500 ml-2">Example: effort:2 (low effort)</div>
+          <strong className="text-slate-900 dark:text-slate-100">effort:0..5</strong> - Set effort
+          <div className="text-xs text-slate-500 ml-2">Example: effort:2 (low effort)</div>
         </div>
 
         <div>
-          <strong className="text-gray-900 dark:text-gray-100">expect:</strong> - Expected
+          <strong className="text-slate-900 dark:text-slate-100">expect:</strong> - Expected
           completion
-          <div className="text-xs text-gray-500 ml-2">Example: expect:today, expect:2025-12-31</div>
+          <div className="text-xs text-slate-500 ml-2">
+            Example: expect:today, expect:2025-12-31
+          </div>
         </div>
       </div>
     </div>
@@ -3412,7 +3416,7 @@ function getPriorityBorderClass(priority) {
     P0: 'border-red-500 dark:border-red-400',
     P1: 'border-orange-500 dark:border-orange-400',
     P2: 'border-yellow-500 dark:border-yellow-400',
-    P3: 'border-gray-600 dark:border-gray-500',
+    P3: 'border-slate-600 dark:border-gray-500',
   };
   return colors[priority] || colors.P3;
 }
@@ -3434,10 +3438,10 @@ const EmptyColumnState = React.memo(({ columnName }) => {
 
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="text-6xl mb-4 p-4 rounded-full bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-700 dark:to-slate-600 shadow-lg">
+      <div className="text-6xl mb-4 p-4 rounded-full bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-700 dark:to-slate-600 shadow-lg hover:scale-110 transition-transform duration-300">
         {message.emoji}
       </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400">{message.text}</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{message.text}</p>
     </div>
   );
 });
@@ -3495,9 +3499,10 @@ function TaskCard({ task }) {
       }}
       className={clsx(
         'cursor-grab active:cursor-grabbing rounded-xl border-2 p-3 relative',
-        'bg-white dark:bg-slate-800',
-        'shadow-sm hover:shadow-md transition-shadow overflow-hidden',
-        isSelected && 'ring-2 ring-rose-400',
+        'bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm',
+        'shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden',
+        'hover:scale-105 hover:translate-y-[-2px]',
+        isSelected && 'ring-2 ring-rose-400 shadow-lg',
         getPriorityBorderClass(task.priorityBucket),
       )}
     >
@@ -3513,7 +3518,7 @@ function TaskCard({ task }) {
           />
           <div className="flex-1 min-w-0">
             <button
-              className="text-left font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate block w-full"
+              className="text-left font-medium text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate block w-full"
               title={task.title}
               onClick={() => setOpen(true)}
             >
@@ -3533,12 +3538,12 @@ function TaskCard({ task }) {
                 {task.priorityBucket}
               </Badge>
               {taskProject && task.projectId !== currentProjectId && (
-                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-700">
+                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">
                   <span
                     className="w-2 h-2 rounded-full"
                     style={{ backgroundColor: taskProject.color }}
                   />
-                  <span className="text-gray-600 dark:text-gray-400">{taskProject.name}</span>
+                  <span className="text-slate-600 dark:text-slate-400">{taskProject.name}</span>
                 </div>
               )}
               {task.ownerType === 'ai' && (
@@ -3560,14 +3565,14 @@ function TaskCard({ task }) {
                 <OwnersList owners={task.owners} />
               </div>
             )}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
               {task.project && (
-                <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
+                <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">
                   #{task.project}
                 </span>
               )}
               {task.tags?.map((t) => (
-                <span key={t} className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
+                <span key={t} className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">
                   +{t}
                 </span>
               ))}
@@ -3658,7 +3663,7 @@ function NumberInput({ value, onChange, min = 0, max = 5 }) {
       min={min}
       max={max}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="w-20 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+      className="w-20 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
     />
   );
 }
@@ -3800,8 +3805,8 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
             maxLength={30}
             className={`w-full px-3 py-1 text-sm rounded border ${
               isDisabled
-                ? 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400'
+                ? 'border-gray-200 dark:border-gray-700 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400'
             }`}
             role="combobox"
             aria-autocomplete="list"
@@ -3834,15 +3839,15 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
                   className={`px-3 py-2 cursor-pointer flex justify-between items-center ${
                     index === selectedIndex
                       ? 'bg-blue-100 dark:bg-blue-900'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-700'
                   }`}
                   role="option"
                   aria-selected={index === selectedIndex}
                 >
-                  <span className="text-sm text-gray-900 dark:text-gray-100">
+                  <span className="text-sm text-slate-900 dark:text-slate-100">
                     {suggestion.name}
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
                     {suggestion.taskCount} {suggestion.taskCount === 1 ? 'task' : 'tasks'}
                   </span>
                 </div>
@@ -3862,12 +3867,12 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
                     className={`px-3 py-2 cursor-pointer border-t border-gray-200 dark:border-gray-700 ${
                       selectedIndex === suggestions.length
                         ? 'bg-blue-100 dark:bg-blue-900'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                        : 'hover:bg-slate-100 dark:hover:bg-slate-700'
                     }`}
                     role="option"
                     aria-selected={selectedIndex === suggestions.length}
                   >
-                    <span className="text-sm text-gray-900 dark:text-gray-100">
+                    <span className="text-sm text-slate-900 dark:text-slate-100">
                       Add &quot;<span className="font-medium">{value.trim()}</span>&quot; as new
                       owner
                     </span>
@@ -3882,7 +3887,7 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
           disabled={isDisabled || !value.trim()}
           className={`px-3 py-1 text-sm rounded transition-colors ${
             isDisabled || !value.trim()
-              ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              ? 'bg-gray-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
               : 'bg-blue-500 text-white hover:bg-blue-600'
           }`}
         >
@@ -3891,7 +3896,7 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
       </form>
 
       {currentOwners.length > 0 && (
-        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
           {currentOwners.length}/{maxOwners} owners assigned
         </div>
       )}
@@ -3910,7 +3915,7 @@ function OwnerEditor({ taskId, owners = [] }) {
         {owners.map((owner) => (
           <div
             key={owner}
-            className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded"
+            className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-700 rounded"
           >
             <span className="text-sm">{owner}</span>
             <button
@@ -3922,7 +3927,7 @@ function OwnerEditor({ taskId, owners = [] }) {
           </div>
         ))}
         {owners.length === 0 && (
-          <div className="text-sm text-gray-500 dark:text-gray-400">No owners assigned</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">No owners assigned</div>
         )}
       </div>
 
@@ -4021,7 +4026,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
             <h2 className="text-lg font-semibold">Owner Management</h2>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
             >
               <X className="w-5 h-5" />
             </button>
@@ -4029,17 +4034,17 @@ function OwnerManagerPanel({ isOpen, onClose }) {
 
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search owners..."
-              className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
             Total: {owners.length} owners
           </div>
         </div>
@@ -4047,16 +4052,16 @@ function OwnerManagerPanel({ isOpen, onClose }) {
         {/* Owner List */}
         <div className="flex-1 overflow-y-auto p-4">
           {filteredOwners.length === 0 && searchTerm && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
               No owners found matching &quot;{searchTerm}&quot;
             </div>
           )}
 
           {filteredOwners.length === 0 && !searchTerm && (
             <div className="text-center py-8">
-              <Users className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-              <div className="text-gray-500 dark:text-gray-400">No owners yet</div>
-              <div className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+              <Users className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
+              <div className="text-slate-500 dark:text-slate-400">No owners yet</div>
+              <div className="text-sm text-slate-400 dark:text-slate-500 mt-1">
                 Owners will appear here as you assign them to tasks
               </div>
             </div>
@@ -4064,11 +4069,11 @@ function OwnerManagerPanel({ isOpen, onClose }) {
 
           <div className="space-y-2">
             {filteredOwners.map((owner) => (
-              <div key={owner.name} className="p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+              <div key={owner.name} className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="font-medium text-sm">{owner.name}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                       {owner.taskCount} {owner.taskCount === 1 ? 'task' : 'tasks'}
                       {owner.lastUsed && <span> • Last used {formatDate(owner.lastUsed)}</span>}
                     </div>
@@ -4099,7 +4104,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                       </button>
                       <button
                         onClick={() => setConfirmDelete(null)}
-                        className="p-1 bg-gray-400 text-white rounded hover:bg-gray-500"
+                        className="p-1 bg-gray-400 text-white rounded hover:bg-slate-500"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -4146,7 +4151,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                         onChange={(e) => setTargetOwner(e.target.value)}
                         placeholder="Enter target owner name"
                         list="transfer-owner-suggestions"
-                        className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <datalist id="transfer-owner-suggestions">
                         {owners
@@ -4166,7 +4171,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                           onChange={(e) => setRemoveAfterTransfer(e.target.checked)}
                           className="rounded"
                         />
-                        <span className="text-gray-700 dark:text-gray-300">
+                        <span className="text-gray-700 dark:text-slate-300">
                           Remove {owner.name} after transfer
                         </span>
                       </label>
@@ -4185,7 +4190,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                           setTargetOwner('');
                           setRemoveAfterTransfer(false);
                         }}
-                        className="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                        className="px-3 py-1 text-xs bg-slate-500 text-white rounded hover:bg-gray-600"
                       >
                         Cancel
                       </button>
@@ -4263,7 +4268,7 @@ function TaskDrawer({ task, onClose }) {
               value={local.title}
               onChange={(e) => setLocal({ ...local, title: e.target.value })}
               onBlur={() => save({ title: local.title })}
-              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
           </Field>
           <Field label="Status">
@@ -4274,7 +4279,7 @@ function TaskDrawer({ task, onClose }) {
                 setLocal({ ...local, status: v });
                 save({ status: v });
               }}
-              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             >
               {Object.keys(statusMeta).map((k) => (
                 <option key={k} value={k}>
@@ -4298,7 +4303,7 @@ function TaskDrawer({ task, onClose }) {
                   setLocal({ ...local, expectedBy: iso });
                   save({ expectedBy: iso });
                 }}
-                className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </Field>
           )}
@@ -4311,7 +4316,7 @@ function TaskDrawer({ task, onClose }) {
                 setLocal({ ...local, dueAt: iso });
                 save({ dueAt: iso });
               }}
-              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
           </Field>
           <Field label="Impact / Urgency / Effort">
@@ -4375,7 +4380,7 @@ function TaskDrawer({ task, onClose }) {
                 setLocal({ ...local, tags: arr });
                 save({ tags: arr });
               }}
-              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
           </Field>
           <Field label="Notes">
@@ -4384,7 +4389,7 @@ function TaskDrawer({ task, onClose }) {
               value={local.description || ''}
               onChange={(e) => setLocal({ ...local, description: e.target.value })}
               onBlur={() => save({ description: local.description })}
-              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
           </Field>
           <div className="flex items-center justify-between pt-2">
@@ -4604,14 +4609,14 @@ function Toolbar({ viewMode, onChangeView }) {
                   }
                 }}
                 placeholder="Add a task... (type @ for assignment, # for project, ! for priority)"
-                className="w-full px-4 pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-4 pl-10 pr-10 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
-              <Plus className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <Plus className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
               {/* Help button */}
               <button
                 type="button"
                 onClick={() => setShowTokenHelp(!showTokenHelp)}
-                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 title="Show token syntax help"
                 aria-label="Help"
               >
@@ -4660,22 +4665,22 @@ function Toolbar({ viewMode, onChangeView }) {
             </button>
             <button
               onClick={onAdd}
-              className="px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
+              className="px-4 py-2.5 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 font-medium"
             >
               Add Task
             </button>
           </div>
           <div className="flex flex-wrap items-center gap-2 justify-end">
-            <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-hidden">
+            <div className="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 overflow-hidden">
               <button
                 type="button"
                 onClick={() => onChangeView('board')}
                 aria-pressed={viewMode === 'board'}
                 className={clsx(
-                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-colors rounded-lg',
+                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-all duration-200 rounded-lg',
                   viewMode === 'board'
-                    ? 'bg-blue-600 text-white dark:bg-blue-500 dark:text-white'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400',
+                    ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white dark:from-blue-600 dark:to-blue-700 shadow-md'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105',
                 )}
               >
                 <Kanban className="w-4 h-4" /> Board
@@ -4685,10 +4690,10 @@ function Toolbar({ viewMode, onChangeView }) {
                 onClick={() => onChangeView('backlog')}
                 aria-pressed={viewMode === 'backlog'}
                 className={clsx(
-                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-colors rounded-lg',
+                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-all duration-200 rounded-lg',
                   viewMode === 'backlog'
-                    ? 'bg-purple-600 text-white dark:bg-purple-500 dark:text-white'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400',
+                    ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white dark:from-purple-600 dark:to-purple-700 shadow-md'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400 hover:scale-105',
                 )}
               >
                 <List className="w-4 h-4" /> Backlog
@@ -4708,13 +4713,13 @@ function Toolbar({ viewMode, onChangeView }) {
                 <Users className="w-4 h-4" />
               </button>
               {showOwnerDropdown && (
-                <div className="absolute top-full mt-1 right-0 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                <div className="absolute top-full mt-1 right-0 w-48 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
                   <button
                     onClick={() => {
                       setOwnerFilter(null);
                       setShowOwnerDropdown(false);
                     }}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
+                    className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm"
                   >
                     All Owners
                   </button>
@@ -4727,10 +4732,10 @@ function Toolbar({ viewMode, onChangeView }) {
                           setOwnerFilter(owner.name);
                           setShowOwnerDropdown(false);
                         }}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm flex justify-between"
+                        className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex justify-between"
                       >
                         <span>{owner.name}</span>
-                        <span className="text-gray-500">({owner.taskCount})</span>
+                        <span className="text-slate-500">({owner.taskCount})</span>
                       </button>
                     ))}
                 </div>
@@ -4740,7 +4745,7 @@ function Toolbar({ viewMode, onChangeView }) {
               value={filters.q}
               onChange={(e) => setFilters({ q: e.target.value })}
               placeholder="Filter text"
-              className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
             <button
               onClick={() => {
@@ -4758,7 +4763,7 @@ function Toolbar({ viewMode, onChangeView }) {
                 }
               }}
               title="Delete all tasks in the current project"
-              className="p-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-600 transition-colors"
+              className="p-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-600 transition-colors"
               aria-label="Clear all tasks in current project"
             >
               <Trash2 className="w-4 h-4" />
@@ -4862,7 +4867,7 @@ function Toolbar({ viewMode, onChangeView }) {
             }}
           />
         )}
-        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+        <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
           Tokens: !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5 urgency:0..5
           effort:0..5 expect:today|YYYY-MM-DD
         </div>
@@ -4941,7 +4946,7 @@ const Board = React.memo(function Board() {
         <div className="text-center max-w-md">
           <div className="mb-4">
             <svg
-              className="w-16 h-16 mx-auto text-gray-400"
+              className="w-16 h-16 mx-auto text-slate-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -4954,29 +4959,31 @@ const Board = React.memo(function Board() {
               />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
             No tasks in {currentProject?.name || 'this project'}
           </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-slate-600 dark:text-slate-400 mb-4">
             Get started by adding your first task using the quick-add bar above.
           </p>
-          <div className="text-sm text-gray-500 dark:text-gray-500">
+          <div className="text-sm text-slate-500 dark:text-slate-500">
             <p className="mb-2">Quick tips:</p>
             <ul className="text-left inline-block">
               <li>
-                • Use <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">!p0</code>{' '}
-                for high priority
+                • Use{' '}
+                <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">!p0</code> for
+                high priority
               </li>
               <li>
                 • Use{' '}
-                <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">
+                <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
                   due:tomorrow
                 </code>{' '}
                 for deadlines
               </li>
               <li>
-                • Use <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">@ai</code>{' '}
-                to delegate to AI
+                • Use{' '}
+                <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">@ai</code> to
+                delegate to AI
               </li>
             </ul>
           </div>
@@ -5173,7 +5180,7 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2 min-w-0">
                 <button
-                  className="text-left font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate min-w-0 max-w-full"
+                  className="text-left font-medium text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate min-w-0 max-w-full"
                   title={task.title}
                   onClick={() => setOpen(true)}
                 >
@@ -5244,7 +5251,7 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
           <select
             value={task.status}
             onChange={(e) => moveTask(task.id, /** @type{Status} */ (e.target.value))}
-            className="px-2 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900"
+            className="px-2 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900"
           >
             {statusOrder.map((status) => (
               <option key={status} value={status}>
@@ -5606,7 +5613,7 @@ export default function WorkdayTaskBoardApp() {
                   <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 bg-clip-text text-transparent">
                     Workday Task Board
                   </h1>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                     Streamline your workflow with intelligent task management
                   </p>
                 </div>
@@ -5655,7 +5662,7 @@ export default function WorkdayTaskBoardApp() {
 
             <footer className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-800">
               <SelfTestResults />
-              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+              <div className="mt-2 text-xs text-slate-500 dark:text-slate-400 text-center">
                 💡 Tip: Use keyboard shortcuts and drag tasks between columns for faster workflow
               </div>
             </footer>
