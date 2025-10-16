@@ -5634,12 +5634,10 @@ export default function WorkdayTaskBoardApp() {
                     dark
                       ? {
                           borderColor: '#fbbf24',
-                          backgroundColor: '#fef3c7',
                           color: '#f59e0b',
                         }
                       : {
-                          borderColor: '#60a5fa',
-                          backgroundColor: '#dbeafe',
+                          borderColor: '#3b82f6',
                           color: '#3b82f6',
                         }
                   }
