@@ -58,7 +58,7 @@
 - [ ] Start typing in input → tooltip auto-dismisses
 
 **Result**: ☐ PASS | ☐ FAIL
-**Notes**: ****\_\_\_****
+**Notes**: \*\*\*\*\_\_\_\*\*\*\*
 
 ---
 
@@ -117,7 +117,7 @@
 - [ ] Colors are consistent across views
 
 **Result**: ☐ PASS | ☐ FAIL
-**Notes**: ****\_\_\_****
+**Notes**: \*\*\*\*\_\_\_\*\*\*\*
 
 ---
 
@@ -184,7 +184,7 @@
 - [ ] No text overflow or truncation
 
 **Result**: ☐ PASS | ☐ FAIL
-**Notes**: ****\_\_\_****
+**Notes**: \*\*\*\*\_\_\_\*\*\*\*
 
 ---
 
@@ -244,7 +244,7 @@
 - [ ] Maintains usability for non-hover users
 
 **Result**: ☐ PASS | ☐ FAIL
-**Notes**: ****\_\_\_****
+**Notes**: \***\*\_\_\_\*\***
 
 ---
 
@@ -338,7 +338,7 @@
 - [ ] No visual delay or flicker
 
 **Result**: ☐ PASS | ☐ FAIL
-**Notes**: ****\_\_\_****
+**Notes**: \*\*\*\*\_\_\_\*\*\*\*
 
 ---
 
@@ -375,7 +375,7 @@
 - [ ] Focus remains on input
 
 **Result**: ☐ PASS | ☐ FAIL
-**Notes**: ****\_\_\_****
+**Notes**: \*\*\*\*\_\_\_\*\*\*\*
 
 ---
 
@@ -410,7 +410,7 @@
 - [ ] Verify no memory leaks (stable baseline)
 
 **Result**: ☐ PASS | ☐ FAIL
-**Notes**: ****\_\_\_****
+**Notes**: \*\*\*\*\_\_\_\*\*\*\*
 
 ---
 
@@ -440,7 +440,7 @@
 - [ ] Test in both light and dark modes
 
 **Result**: ☐ PASS | ☐ FAIL
-**Notes**: ****\_\_\_****
+**Notes**: \*\*\*\*\_\_\_\*\*\*\*
 
 ---
 
@@ -474,7 +474,7 @@
 - [ ] Action icons remain accessible
 
 **Result**: ☐ PASS | ☐ FAIL
-**Notes**: ****\_\_\_****
+**Notes**: \*\*\*\*\_\_\_\*\*\*\*
 
 ---
 
@@ -502,7 +502,7 @@ npm run build
 - [ ] Performance is acceptable on 3G simulation
 
 **Result**: ☐ PASS | ☐ FAIL
-**Notes**: ****\_\_\_****
+**Notes**: \*\*\*\*\_\_\_\*\*\*\*
 
 ---
 
@@ -521,7 +521,7 @@ npm run build
 
 **Overall Result**: ☐ PASS | ☐ FAIL
 
-**Tester**: ****\_\_\_****
-**Date**: ****\_\_\_****
-**Browser/Version**: ****\_\_\_****
-**Issues Found**: ****\_\_\_****
+**Tester**: \*\*\*\*\_\_\_\*\*\*\*
+**Date**: \*\*\*\*\_\_\_\*\*\*\*
+**Browser/Version**: \*\*\*\*\_\_\_\*\*\*\*
+**Issues Found**: \*\*\*\*\_\_\_\*\*\*\*
