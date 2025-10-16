@@ -1853,6 +1853,15 @@ const useStore = create((set, get) => ({
     }
     return null;
   },
+
+  // Clear all tasks in the current project
+  clearCurrentProject() {
+    const { tasks, currentProjectId } = get();
+    const remainingTasks = tasks.filter((t) => t.projectId !== currentProjectId);
+    set({ tasks: remainingTasks });
+    get().persist();
+    return { success: true, deletedCount: tasks.length - remainingTasks.length };
+  },
 }));
 
 // ----- Project Components -----
@@ -4431,6 +4440,9 @@ function Toolbar({ viewMode, onChangeView }) {
   const selectedIds = useStore((s) => s.selectedIds);
   const deleteSelected = useStore((s) => s.deleteSelected);
   const clearSelection = useStore((s) => s.clearSelection);
+  const clearCurrentProject = useStore((s) => s.clearCurrentProject);
+  const getProjectTaskCount = useStore((s) => s.getProjectTaskCount);
+  const currentProjectId = useStore((s) => s.currentProjectId);
   const [input, setInput] = useState('');
   const inputRef = useRef(null);
   const [showOwnerDropdown, setShowOwnerDropdown] = useState(false);
@@ -4726,6 +4738,27 @@ function Toolbar({ viewMode, onChangeView }) {
               placeholder="Filter text"
               className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
+            <button
+              onClick={() => {
+                const count = getProjectTaskCount(currentProjectId);
+                if (count === 0) {
+                  alert('No tasks to delete in this project.');
+                  return;
+                }
+                if (
+                  window.confirm(
+                    `Delete all ${count} task(s) in this project? This cannot be undone.`,
+                  )
+                ) {
+                  clearCurrentProject();
+                }
+              }}
+              title="Delete all tasks in the current project"
+              className="p-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-600 transition-colors"
+              aria-label="Clear all tasks in current project"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
         </div>
         {(isListening || speechErr) && (
