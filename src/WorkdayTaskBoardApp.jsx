@@ -3500,8 +3500,7 @@ function TaskCard({ task }) {
       className={clsx(
         'cursor-grab active:cursor-grabbing rounded-xl border-2 p-3 relative',
         'bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm',
-        'shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden',
-        'hover:scale-105 hover:translate-y-[-2px]',
+        'shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden',
         isSelected && 'ring-2 ring-rose-400 shadow-lg',
         getPriorityBorderClass(task.priorityBucket),
       )}
