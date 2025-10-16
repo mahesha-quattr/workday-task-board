@@ -3434,7 +3434,9 @@ const EmptyColumnState = React.memo(({ columnName }) => {
 
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="text-4xl mb-2">{message.emoji}</div>
+      <div className="text-6xl mb-4 p-4 rounded-full bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-700 dark:to-slate-600 shadow-lg">
+        {message.emoji}
+      </div>
       <p className="text-sm text-gray-500 dark:text-gray-400">{message.text}</p>
     </div>
   );
@@ -3573,7 +3575,9 @@ function TaskCard({ task }) {
                 <span
                   className={clsx(
                     'inline-flex items-center gap-0.5',
-                    overdue ? 'text-red-600 font-medium' : 'text-gray-500',
+                    overdue
+                      ? 'text-red-500 dark:text-red-400 font-medium'
+                      : 'text-blue-500 dark:text-blue-400',
                   )}
                 >
                   <Clock className="w-3 h-3" />
@@ -3586,7 +3590,7 @@ function TaskCard({ task }) {
         <div className="hidden group-hover:flex absolute bottom-2 right-2 items-center gap-0.5 bg-slate-700 dark:bg-slate-600 rounded-lg p-1">
           <button
             title="Move left"
-            className="p-1 rounded hover:bg-slate-500 text-white"
+            className="p-1 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-600/30 transition-colors"
             onClick={() => {
               const order = useStore.getState().getStatusOrder();
               const idx = order.indexOf(task.status);
@@ -3600,7 +3604,7 @@ function TaskCard({ task }) {
             <button
               title="Pause"
               onClick={() => stopTimer(task.id)}
-              className="p-1 rounded hover:bg-slate-500 text-white"
+              className="p-1 rounded text-orange-400 hover:text-orange-300 hover:bg-orange-600/30 transition-colors"
             >
               <Pause className="w-4 h-4" />
             </button>
@@ -3608,7 +3612,7 @@ function TaskCard({ task }) {
             <button
               title="Start focus timer"
               onClick={() => startTimer(task.id)}
-              className="p-1 rounded hover:bg-slate-500 text-white"
+              className="p-1 rounded text-green-400 hover:text-green-300 hover:bg-green-600/30 transition-colors"
             >
               <Play className="w-4 h-4" />
             </button>
@@ -3621,7 +3625,7 @@ function TaskCard({ task }) {
               if (idx < order.length - 1)
                 useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx + 1]));
             }}
-            className="p-1 rounded hover:bg-slate-500 text-white"
+            className="p-1 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-600/30 transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -4668,10 +4672,10 @@ function Toolbar({ viewMode, onChangeView }) {
                 onClick={() => onChangeView('board')}
                 aria-pressed={viewMode === 'board'}
                 className={clsx(
-                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-colors',
+                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-colors rounded-lg',
                   viewMode === 'board'
-                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
+                    ? 'bg-blue-600 text-white dark:bg-blue-500 dark:text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400',
                 )}
               >
                 <Kanban className="w-4 h-4" /> Board
@@ -4681,10 +4685,10 @@ function Toolbar({ viewMode, onChangeView }) {
                 onClick={() => onChangeView('backlog')}
                 aria-pressed={viewMode === 'backlog'}
                 className={clsx(
-                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-colors',
+                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-colors rounded-lg',
                   viewMode === 'backlog'
-                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
+                    ? 'bg-purple-600 text-white dark:bg-purple-500 dark:text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400',
                 )}
               >
                 <List className="w-4 h-4" /> Backlog
