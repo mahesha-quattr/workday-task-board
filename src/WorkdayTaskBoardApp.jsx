@@ -3492,7 +3492,7 @@ function TaskCard({ task }) {
         useStore.getState().clearDrag();
       }}
       className={clsx(
-        'cursor-grab active:cursor-grabbing rounded-xl border-2 p-3',
+        'cursor-grab active:cursor-grabbing rounded-xl border-2 p-3 relative',
         'bg-white dark:bg-slate-800',
         'shadow-sm hover:shadow-md transition-shadow overflow-hidden',
         isSelected && 'ring-2 ring-rose-400',
@@ -3583,10 +3583,10 @@ function TaskCard({ task }) {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="hidden group-hover:flex absolute bottom-2 right-2 items-center gap-0.5 bg-slate-700 dark:bg-slate-600 rounded-lg p-1">
           <button
             title="Move left"
-            className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="p-1 rounded hover:bg-slate-500 text-white"
             onClick={() => {
               const order = useStore.getState().getStatusOrder();
               const idx = order.indexOf(task.status);
@@ -3600,7 +3600,7 @@ function TaskCard({ task }) {
             <button
               title="Pause"
               onClick={() => stopTimer(task.id)}
-              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-1 rounded hover:bg-slate-500 text-white"
             >
               <Pause className="w-4 h-4" />
             </button>
@@ -3608,7 +3608,7 @@ function TaskCard({ task }) {
             <button
               title="Start focus timer"
               onClick={() => startTimer(task.id)}
-              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-1 rounded hover:bg-slate-500 text-white"
             >
               <Play className="w-4 h-4" />
             </button>
@@ -3621,7 +3621,7 @@ function TaskCard({ task }) {
               if (idx < order.length - 1)
                 useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx + 1]));
             }}
-            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-1 rounded hover:bg-slate-500 text-white"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
