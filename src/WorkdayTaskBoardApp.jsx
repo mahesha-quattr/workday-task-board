@@ -4700,8 +4700,8 @@ function Toolbar({ viewMode, onChangeView }) {
                 className={clsx(
                   'p-2 rounded-xl border transition-colors',
                   ownerFilter
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
-                    : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700',
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                    : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20',
                 )}
                 title={ownerFilter ? `Filtering by: ${ownerFilter}` : 'Filter by Owner'}
               >
@@ -5614,22 +5614,35 @@ export default function WorkdayTaskBoardApp() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setShowWorkflowSettings(true)}
-                  className="p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="p-2.5 rounded-lg border border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 transition-colors"
                   title="Workflow Settings"
                 >
                   <Kanban className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => setShowOwnerManager(true)}
-                  className="p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="p-2.5 rounded-lg border border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 transition-colors"
                   title="Manage Owners"
                 >
                   <Settings className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => setDark((v) => !v)}
-                  className="p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="p-2.5 rounded-lg border transition-colors"
                   title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+                  style={
+                    dark
+                      ? {
+                          borderColor: '#fbbf24',
+                          backgroundColor: '#fef3c7',
+                          color: '#f59e0b',
+                        }
+                      : {
+                          borderColor: '#60a5fa',
+                          backgroundColor: '#dbeafe',
+                          color: '#3b82f6',
+                        }
+                  }
                 >
                   {dark ? '☀️' : '🌙'}
                 </button>
