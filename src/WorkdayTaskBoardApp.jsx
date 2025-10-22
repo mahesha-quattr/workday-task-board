@@ -4746,27 +4746,6 @@ function Toolbar({ viewMode, onChangeView }) {
               placeholder="Filter text"
               className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
-            <button
-              onClick={() => {
-                const count = getProjectTaskCount(currentProjectId);
-                if (count === 0) {
-                  alert('No tasks to delete in this project.');
-                  return;
-                }
-                if (
-                  window.confirm(
-                    `Delete all ${count} task(s) in this project? This cannot be undone.`,
-                  )
-                ) {
-                  clearCurrentProject();
-                }
-              }}
-              title="Delete all tasks in the current project"
-              className="p-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-600 transition-colors"
-              aria-label="Clear all tasks in current project"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
           </div>
         </div>
         {(isListening || speechErr) && (
@@ -5553,6 +5532,9 @@ function SelfTestResults() {
 export default function WorkdayTaskBoardApp() {
   const persist = useStore((s) => s.persist);
   const init = useStore((s) => s.init);
+  const currentProjectId = useStore((s) => s.currentProjectId);
+  const getProjectTaskCount = useStore((s) => s.getProjectTaskCount);
+  const clearCurrentProject = useStore((s) => s.clearCurrentProject);
   useEffect(() => {
     init();
     // Initialize owner registry after loading from storage
@@ -5606,16 +5588,13 @@ export default function WorkdayTaskBoardApp() {
         <div className="max-w-[1400px] mx-auto">
           <header className="relative z-30 px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/70 backdrop-blur-sm">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <ProjectSelector />
-                <div>
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 bg-clip-text text-transparent">
-                    Workday Task Board
-                  </h1>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                    Streamline your workflow with intelligent task management
-                  </p>
-                </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 bg-clip-text text-transparent">
+                  Workday Task Board
+                </h1>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  Streamline your workflow with intelligent task management
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -5624,6 +5603,27 @@ export default function WorkdayTaskBoardApp() {
                   title="Workflow Settings"
                 >
                   <Kanban className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => {
+                    const count = getProjectTaskCount(currentProjectId);
+                    if (count === 0) {
+                      alert('No tasks to delete in this project.');
+                      return;
+                    }
+                    if (
+                      window.confirm(
+                        `Delete all ${count} task(s) in this project? This cannot be undone.`,
+                      )
+                    ) {
+                      clearCurrentProject();
+                    }
+                  }}
+                  title="Delete all tasks in the current project"
+                  className="p-2.5 rounded-lg border border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 transition-colors"
+                  aria-label="Clear all tasks in current project"
+                >
+                  <Trash2 className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => setShowOwnerManager(true)}
@@ -5650,6 +5650,7 @@ export default function WorkdayTaskBoardApp() {
                 >
                   {dark ? '☀️' : '🌙'}
                 </button>
+                <ProjectSelector />
               </div>
             </div>
           </header>
@@ -5660,10 +5661,6 @@ export default function WorkdayTaskBoardApp() {
             {viewMode === 'board' ? <Board /> : <BacklogView />}
 
             <footer className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-800">
-              <SelfTestResults />
-              <div className="mt-2 text-xs text-slate-500 dark:text-slate-400 text-center">
-                💡 Tip: Use keyboard shortcuts and drag tasks between columns for faster workflow
-              </div>
             </footer>
           </main>
         </div>
