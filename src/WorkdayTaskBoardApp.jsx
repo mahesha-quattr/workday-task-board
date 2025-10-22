@@ -36,6 +36,8 @@ import {
   Users,
   Search,
   UserCheck,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -1932,7 +1934,7 @@ function ProjectSelector() {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors text-sm"
           aria-haspopup="listbox"
           aria-expanded={isOpen}
         >
@@ -1940,17 +1942,10 @@ function ProjectSelector() {
             className="w-2 h-2 rounded-full"
             style={{ backgroundColor: currentProject.color }}
           />
-          <span className="font-medium">{currentProject.name}</span>
-          {currentProject.isDefault && (
-            <svg className="w-3 h-3 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-          )}
-          <ChevronDown className="w-4 h-4 text-slate-500" />
+          <span className="font-medium text-slate-700 dark:text-slate-200">
+            {currentProject.name}
+          </span>
+          <ChevronDown className="w-4 h-4 text-slate-400" />
           {hasActiveTimerInOther() && (
             <button
               className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse cursor-pointer"
@@ -1980,17 +1975,17 @@ function ProjectSelector() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="absolute md:top-full top-0 md:mt-1 mt-0 w-full md:w-64 bg-white dark:bg-slate-800 md:rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-[100] md:left-0 left-0 md:right-auto right-0 md:max-h-96 max-h-screen overflow-auto"
+                className="absolute md:top-full top-0 md:mt-2 mt-0 w-full md:w-72 bg-white dark:bg-slate-800 md:rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-[100] md:left-0 left-0 md:right-auto right-0 md:max-h-96 max-h-screen overflow-auto"
               >
-                <div className="p-2">
-                  <div className="flex items-center justify-between px-2 py-1 text-xs text-slate-500 dark:text-slate-400 uppercase">
+                <div className="p-3">
+                  <div className="flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     <span>Projects</span>
                     <button
                       onClick={() => {
                         setShowManager(true);
                         setIsOpen(false);
                       }}
-                      className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                      className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
                       title="Manage Projects"
                     >
                       <svg
@@ -3263,15 +3258,18 @@ const Column = React.memo(function Column({ status, tasks }) {
     <div
       data-col={status}
       className={clsx(
-        'flex-1 min-w-[280px] max-w-[520px] rounded-2xl p-3 border shadow-sm transition-colors',
-        'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600',
-        highlight && 'ring-2 ring-indigo-400 border-indigo-300',
+        'flex-1 min-w-[280px] max-w-[520px] rounded-lg p-3 border transition-all',
+        'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700',
+        highlight && 'ring-2 ring-blue-400 border-blue-300 shadow-lg',
+        !highlight && 'shadow-sm',
       )}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <GripVertical className="w-4 h-4 text-slate-400" />
-        <h3 className="font-semibold text-slate-800 dark:text-slate-100">{meta.label}</h3>
-        <span className="text-xs text-slate-700 dark:text-slate-400">{meta.hint}</span>
+      <div className="flex items-center gap-2 mb-3">
+        <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{meta.label}</h3>
+        <span className="text-xs text-slate-500 dark:text-slate-500">{meta.hint}</span>
+        <span className="ml-auto text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full">
+          {tasks.length}
+        </span>
       </div>
       <div className="space-y-2 min-h-24">
         {tasks.length === 0 ? (
@@ -3287,7 +3285,7 @@ const Column = React.memo(function Column({ status, tasks }) {
 // Owner display components
 function OwnerBadge({ owner }) {
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
       {owner}
     </span>
   );
@@ -3413,10 +3411,10 @@ function TokenHelpTooltip({ visible, onDismiss }) {
 // getPriorityBorderClass - Returns Tailwind classes for priority color (FR-006 to FR-012)
 function getPriorityBorderClass(priority) {
   const colors = {
-    P0: 'border-red-500 dark:border-red-400',
-    P1: 'border-orange-500 dark:border-orange-400',
-    P2: 'border-yellow-500 dark:border-yellow-400',
-    P3: 'border-slate-600 dark:border-gray-500',
+    P0: 'border-l-red-500 dark:border-l-red-400 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
+    P1: 'border-l-orange-500 dark:border-l-orange-400 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
+    P2: 'border-l-yellow-500 dark:border-l-yellow-400 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
+    P3: 'border-l-slate-300 dark:border-l-slate-600 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
   };
   return colors[priority] || colors.P3;
 }
@@ -3437,11 +3435,11 @@ const EmptyColumnState = React.memo(({ columnName }) => {
   const message = messages[columnName] || { text: 'No tasks', emoji: '' };
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="text-6xl mb-4 p-4 rounded-full bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-700 dark:to-slate-600 shadow-lg hover:scale-110 transition-transform duration-300">
+    <div className="flex flex-col items-center justify-center py-8 text-center">
+      <div className="text-4xl mb-3 p-3 rounded-full bg-slate-100 dark:bg-slate-700/50">
         {message.emoji}
       </div>
-      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{message.text}</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400">{message.text}</p>
     </div>
   );
 });
@@ -3498,10 +3496,10 @@ function TaskCard({ task }) {
         useStore.getState().clearDrag();
       }}
       className={clsx(
-        'cursor-grab active:cursor-grabbing rounded-xl border-2 p-3 relative',
-        'bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm',
-        'shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden',
-        isSelected && 'ring-2 ring-rose-400 shadow-lg',
+        'cursor-grab active:cursor-grabbing rounded-lg border-l-4 border-t border-r border-b p-3 relative',
+        'bg-white dark:bg-slate-800',
+        'shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden',
+        isSelected && 'ring-2 ring-blue-400 shadow-md',
         getPriorityBorderClass(task.priorityBucket),
       )}
     >
@@ -4605,7 +4603,7 @@ function Toolbar({ viewMode, onChangeView }) {
                   }
                 }}
                 placeholder="Add a task... (type @ for assignment, # for project, ! for priority)"
-                className="w-full px-4 pl-10 pr-10 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-4 pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
               />
               <Plus className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
               {/* Help button */}
@@ -4650,33 +4648,33 @@ function Toolbar({ viewMode, onChangeView }) {
               }}
               disabled={!speechSupported}
               className={clsx(
-                'px-3 py-2 rounded-xl border',
+                'p-2 rounded-lg transition-colors',
                 isListening
-                  ? 'bg-rose-600 text-white border-rose-600 hover:bg-rose-700'
-                  : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800',
+                  ? 'bg-red-500 text-white hover:bg-red-600'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800',
                 !speechSupported && 'opacity-50 cursor-not-allowed',
               )}
             >
-              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
             <button
               onClick={onAdd}
-              className="px-4 py-2.5 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 font-medium"
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
             >
               Add Task
             </button>
           </div>
           <div className="flex flex-wrap items-center gap-2 justify-end">
-            <div className="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 overflow-hidden">
+            <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
               <button
                 type="button"
                 onClick={() => onChangeView('board')}
                 aria-pressed={viewMode === 'board'}
                 className={clsx(
-                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-all duration-200 rounded-lg',
+                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-colors rounded-md',
                   viewMode === 'board'
-                    ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white dark:from-blue-600 dark:to-blue-700 shadow-md'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105',
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
                 )}
               >
                 <Kanban className="w-4 h-4" /> Board
@@ -4686,10 +4684,10 @@ function Toolbar({ viewMode, onChangeView }) {
                 onClick={() => onChangeView('backlog')}
                 aria-pressed={viewMode === 'backlog'}
                 className={clsx(
-                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1 transition-all duration-200 rounded-lg',
+                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-colors rounded-md',
                   viewMode === 'backlog'
-                    ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white dark:from-purple-600 dark:to-purple-700 shadow-md'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400 hover:scale-105',
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
                 )}
               >
                 <List className="w-4 h-4" /> Backlog
@@ -4699,14 +4697,14 @@ function Toolbar({ viewMode, onChangeView }) {
               <button
                 onClick={() => setShowOwnerDropdown(!showOwnerDropdown)}
                 className={clsx(
-                  'p-2 rounded-xl border transition-colors',
+                  'p-2 rounded-lg transition-colors',
                   ownerFilter
-                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                    : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20',
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800',
                 )}
                 title={ownerFilter ? `Filtering by: ${ownerFilter}` : 'Filter by Owner'}
               >
-                <Users className="w-4 h-4" />
+                <Users className="w-5 h-5" />
               </button>
               {showOwnerDropdown && (
                 <div className="absolute top-full mt-1 right-0 w-48 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
@@ -4741,7 +4739,7 @@ function Toolbar({ viewMode, onChangeView }) {
               value={filters.q}
               onChange={(e) => setFilters({ q: e.target.value })}
               placeholder="Filter text"
-              className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-shadow"
             />
           </div>
         </div>
@@ -5045,7 +5043,7 @@ function BacklogView() {
           {!collapsed.has(status) && (
             <div
               className={clsx(
-                'min-h-[40px] transition-colors rounded-2xl bg-slate-50/40 dark:bg-slate-900/20 p-2',
+                'min-h-[40px] transition-colors rounded-lg bg-slate-50/40 dark:bg-slate-900/20 p-2',
                 dropTarget?.status === status && draggingTask && 'bg-blue-50 dark:bg-blue-900/20',
               )}
               onDragOver={(e) => handleDragOver(e, status, 0)}
@@ -5058,10 +5056,10 @@ function BacklogView() {
               {(grouped[status]?.length || 0) === 0 ? (
                 <div
                   className={clsx(
-                    'px-4 py-6 text-center text-sm border border-dashed border-slate-200/80 dark:border-slate-700/60 rounded-xl bg-white/60 dark:bg-slate-900/30',
+                    'px-4 py-4 text-center text-sm border border-dashed border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900/50',
                     dropTarget?.status === status &&
                       draggingTask &&
-                      'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+                      'text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-800',
                   )}
                 >
                   {dropTarget?.status === status && draggingTask ? (
@@ -5092,23 +5090,25 @@ function BacklogView() {
 
 function BacklogHeader({ statusLabel, statusHint, count, collapsed, onToggle }) {
   return (
-    <div className="bg-slate-50/95 dark:bg-slate-900/50 shadow-sm backdrop-blur-sm overflow-hidden transition-all sticky top-0 z-10 border-b border-slate-200/70 dark:border-slate-800/60">
+    <div className="bg-slate-50 dark:bg-slate-900/80 overflow-hidden transition-all sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
       >
         <div className="flex items-center gap-2">
           <ChevronDown
             className={clsx(
-              'w-4 h-4 transition-transform text-slate-500 dark:text-slate-300',
+              'w-4 h-4 transition-transform text-slate-500 dark:text-slate-400',
               collapsed ? '-rotate-90' : 'rotate-0',
             )}
           />
-          <span className="font-semibold text-slate-800 dark:text-slate-100">{statusLabel}</span>
-          <span className="text-xs text-slate-600 dark:text-slate-400">{statusHint}</span>
+          <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+            {statusLabel}
+          </span>
+          <span className="text-xs text-slate-500">{statusHint}</span>
         </div>
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-400">
           {count} task{count === 1 ? '' : 's'}
         </span>
       </button>
@@ -5136,15 +5136,15 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       className={clsx(
-        'mt-2 first:mt-0 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 transition-colors cursor-grab active:cursor-grabbing relative border border-slate-200/80 dark:border-slate-800/70 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800/60',
-        isSelected && 'bg-rose-50 dark:bg-rose-900/40 border-rose-200 dark:border-rose-800',
-        isDragging && 'opacity-60 ring-2 ring-blue-200 dark:ring-blue-900/40',
+        'mt-2 first:mt-0 px-4 py-3 rounded-lg bg-white dark:bg-slate-900 transition-all cursor-grab active:cursor-grabbing relative border border-slate-200 dark:border-slate-700 hover:shadow-md',
+        isSelected &&
+          'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 shadow-sm',
+        isDragging && 'opacity-60 ring-2 ring-blue-300 dark:ring-blue-900/40',
       )}
     >
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2 min-w-0">
-            <GripVertical className="w-4 h-4 mt-1 text-slate-400 cursor-grab flex-shrink-0" />
             <input
               type="checkbox"
               className="mt-1 cursor-pointer accent-blue-600 dark:accent-blue-400"
@@ -5165,15 +5165,13 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
                   {task.priorityBucket}
                 </Badge>
                 {task.ownerType === 'ai' && (
-                  <Badge className="bg-indigo-100 text-indigo-700 border-indigo-300">
+                  <Badge variant="primary">
                     <Bot className="w-3.5 h-3.5 mr-1" /> AI
                   </Badge>
                 )}
-                {task.ownerType === 'other' && (
-                  <Badge className="bg-slate-100 text-slate-700 border-slate-300">Shared</Badge>
-                )}
+                {task.ownerType === 'other' && <Badge variant="default">Shared</Badge>}
                 {task.status === 'blocked' && (
-                  <Badge className="bg-rose-100 text-rose-700 border-rose-300">
+                  <Badge variant="danger">
                     <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Blocked
                   </Badge>
                 )}
@@ -5195,10 +5193,8 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
                 {task.dueAt && (
                   <span
                     className={clsx(
-                      'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-slate-600 dark:text-slate-300',
-                      overdue
-                        ? 'border-rose-300 bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200'
-                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900',
+                      'inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
+                      overdue && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
                     )}
                   >
                     <Clock className="w-3 h-3" />
@@ -5206,16 +5202,16 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
                   </span>
                 )}
                 {task.expectedBy && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-500/60 dark:bg-indigo-900/30 dark:text-indigo-200">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                     <Clock className="w-3 h-3" /> Expect {humanDue(task.expectedBy)}
                   </span>
                 )}
                 {(elapsedSecs > 0 || isRunning) && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                     <TimerIcon className="w-3 h-3" /> {formatDurationShort(elapsedSecs)}
                   </span>
                 )}
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                   Score {task.score}
                 </span>
               </div>
@@ -5226,7 +5222,7 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
           <select
             value={task.status}
             onChange={(e) => moveTask(task.id, /** @type{Status} */ (e.target.value))}
-            className="px-2 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900"
+            className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-shadow"
           >
             {statusOrder.map((status) => (
               <option key={status} value={status}>
@@ -5237,7 +5233,7 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
           {isRunning ? (
             <button
               onClick={() => stopTimer(task.id)}
-              className="px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800"
+              className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               title="Pause timer"
             >
               <Pause className="w-4 h-4" />
@@ -5245,7 +5241,7 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
           ) : (
             <button
               onClick={() => startTimer(task.id)}
-              className="px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800"
+              className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               title="Start focus timer"
             >
               <Play className="w-4 h-4" />
@@ -5575,17 +5571,21 @@ export default function WorkdayTaskBoardApp() {
           <header className="relative z-30 px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/70 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 bg-clip-text text-transparent">
-                  Workday Task Board
-                </h1>
+                <img
+                  src={
+                    dark ? '/assets/dark/flowtrackr-logo.png' : '/assets/light/flowtrackr-logo.png'
+                  }
+                  alt="FlowTrackr"
+                  className="h-20 w-auto"
+                />
                 <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                   Streamline your workflow with intelligent task management
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowWorkflowSettings(true)}
-                  className="p-2.5 rounded-lg border border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 transition-colors"
+                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   title="Workflow Settings"
                 >
                   <Kanban className="w-5 h-5" />
@@ -5606,35 +5606,25 @@ export default function WorkdayTaskBoardApp() {
                     }
                   }}
                   title="Delete all tasks in the current project"
-                  className="p-2.5 rounded-lg border border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 transition-colors"
+                  className="p-2 rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   aria-label="Clear all tasks in current project"
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => setShowOwnerManager(true)}
-                  className="p-2.5 rounded-lg border border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 transition-colors"
+                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   title="Manage Owners"
                 >
                   <Settings className="w-5 h-5" />
                 </button>
+                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
                 <button
                   onClick={() => setDark((v) => !v)}
-                  className="p-2.5 rounded-lg border transition-colors"
+                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-                  style={
-                    dark
-                      ? {
-                          borderColor: '#fbbf24',
-                          color: '#f59e0b',
-                        }
-                      : {
-                          borderColor: '#3b82f6',
-                          color: '#3b82f6',
-                        }
-                  }
                 >
-                  {dark ? '☀️' : '🌙'}
+                  {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </button>
                 <ProjectSelector />
               </div>
