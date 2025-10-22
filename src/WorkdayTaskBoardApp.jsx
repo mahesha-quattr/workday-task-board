@@ -5573,11 +5573,7 @@ export default function WorkdayTaskBoardApp() {
           <header className="relative z-30 px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/70 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <div>
-                <img
-                  src={dark ? logoDark : logoLight}
-                  alt="FlowTrackr"
-                  className="h-20 w-auto"
-                />
+                <img src={dark ? logoDark : logoLight} alt="FlowTrackr" className="h-20 w-auto" />
                 <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                   Streamline your workflow with intelligent task management
                 </p>
