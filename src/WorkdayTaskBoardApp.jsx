@@ -4448,9 +4448,6 @@ function Toolbar({ viewMode, onChangeView }) {
   const selectedIds = useStore((s) => s.selectedIds);
   const deleteSelected = useStore((s) => s.deleteSelected);
   const clearSelection = useStore((s) => s.clearSelection);
-  const clearCurrentProject = useStore((s) => s.clearCurrentProject);
-  const getProjectTaskCount = useStore((s) => s.getProjectTaskCount);
-  const currentProjectId = useStore((s) => s.currentProjectId);
   const [input, setInput] = useState('');
   const inputRef = useRef(null);
   const [showOwnerDropdown, setShowOwnerDropdown] = useState(false);
@@ -5517,17 +5514,6 @@ function runSelfTests() {
 
 // DISABLED: Self-tests were modifying the actual store and persisting test data
 // const SELF_TEST_RESULTS = runSelfTests();
-const SELF_TEST_RESULTS = [];
-
-function SelfTestResults() {
-  const ok = SELF_TEST_RESULTS.filter((r) => r.ok).length;
-  const total = SELF_TEST_RESULTS.length;
-  return (
-    <div className={clsx('mt-6 text-xs', ok === total ? 'text-slate-500' : 'text-rose-600')}>
-      Self-tests: {ok}/{total} passed.
-    </div>
-  );
-}
 
 export default function WorkdayTaskBoardApp() {
   const persist = useStore((s) => s.persist);
@@ -5660,8 +5646,7 @@ export default function WorkdayTaskBoardApp() {
             <WipBanner />
             {viewMode === 'board' ? <Board /> : <BacklogView />}
 
-            <footer className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-800">
-            </footer>
+            <footer className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-800"></footer>
           </main>
         </div>
 
