@@ -40,6 +40,8 @@ import {
   Moon,
 } from 'lucide-react';
 import clsx from 'clsx';
+import logoLight from '/assets/light/flowtrackr-logo.png';
+import logoDark from '/assets/dark/flowtrackr-logo.png';
 
 /**
  * Workday Task Board — MVP Prototype (single-file)
@@ -5572,9 +5574,7 @@ export default function WorkdayTaskBoardApp() {
             <div className="flex items-center justify-between">
               <div>
                 <img
-                  src={
-                    dark ? '/assets/dark/flowtrackr-logo.png' : '/assets/light/flowtrackr-logo.png'
-                  }
+                  src={dark ? logoDark : logoLight}
                   alt="FlowTrackr"
                   className="h-20 w-auto"
                 />
