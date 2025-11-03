@@ -60,7 +60,7 @@ import logoDark from '/assets/dark/flowtrackr-logo.png';
 
 // ----- Types -----
 
-/** @typedef {"backlog"|"ready"|"in_progress"|"waiting_ai"|"waiting_other"|"blocked"|"in_review"|"done"} Status */
+/** @typedef {"backlog"|"delegated_ai"|"in_progress"|"done"} Status */
 /** @typedef {"self"|"ai"|"other"} OwnerType */
 /** @typedef {"board"|"backlog"} ViewMode */
 
@@ -68,13 +68,9 @@ import logoDark from '/assets/dark/flowtrackr-logo.png';
 
 const STATUS_META = /** @type{Record<Status,{label:string, key:string, hint:string}>} */ ({
   backlog: { label: 'Backlog', key: '1', hint: 'Ideas and unsorted' },
-  ready: { label: 'Ready', key: '2', hint: 'Triage done' },
-  in_progress: { label: 'In Progress', key: '3', hint: 'Actively doing' },
-  waiting_ai: { label: 'Waiting on AI', key: '4', hint: 'Delegated to agent' },
-  waiting_other: { label: 'Waiting on Others', key: '5', hint: 'Blocked by a human' },
-  blocked: { label: 'Blocked', key: '6', hint: 'Needs unblocking' },
-  in_review: { label: 'In Review', key: '7', hint: 'PR/review/QA' },
-  done: { label: 'Done', key: '8', hint: 'Completed' },
+  in_progress: { label: 'In Progress', key: '2', hint: 'Actively doing' },
+  delegated_ai: { label: 'Delegated to AI', key: '3', hint: 'AI is working on this' },
+  done: { label: 'Done', key: '4', hint: 'Completed' },
 });
 
 const STATUS_ORDER = /** @type{Status[]} */ (Object.keys(STATUS_META));
@@ -186,10 +182,43 @@ function formatDurationShort(totalSeconds) {
 
 function getStatusFromPoint(x, y) {
   if (typeof document === 'undefined' || !document.elementsFromPoint) return null;
-  const els = document.elementsFromPoint(x, y);
-  for (const el of els) {
-    const anyEl = /** @type {any} */ (el);
-    if (anyEl?.dataset?.col) return /** @type {Status} */ (anyEl.dataset.col);
+  try {
+    // Use elementsFromPoint to get all elements at this position
+    const els = document.elementsFromPoint(x, y);
+    
+    // First, check if any element directly has data-col
+    for (const el of els) {
+      const anyEl = /** @type {any} */ (el);
+      if (anyEl?.dataset?.col) {
+        return /** @type {Status} */ (anyEl.dataset.col);
+      }
+    }
+    
+    // If not found, check if any element is inside a column by traversing up the DOM tree
+    for (const el of els) {
+      let current = el;
+      // Traverse up to 10 levels to find a column
+      for (let i = 0; i < 10 && current; i++) {
+        const anyEl = /** @type {any} */ (current);
+        if (anyEl?.dataset?.col) {
+          return /** @type {Status} */ (anyEl.dataset.col);
+        }
+        current = current.parentElement;
+      }
+    }
+    
+    // Also try using closest method if available
+    for (const el of els) {
+      const anyEl = /** @type {any} */ (el);
+      if (anyEl.closest) {
+        const colEl = anyEl.closest('[data-col]');
+        if (colEl?.dataset?.col) {
+          return /** @type {Status} */ (colEl.dataset.col);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error in getStatusFromPoint:', e);
   }
   return null;
 }
@@ -318,7 +347,7 @@ function migrateToV2_1(data) {
     return data;
   }
 
-  // Initialize with the 8 default statuses from STATUS_META
+  // Initialize with 4 essential default statuses
   const now = new Date().toISOString();
   data.statusConfig = {
     statuses: [
@@ -334,9 +363,9 @@ function migrateToV2_1(data) {
         canDelete: true,
       },
       {
-        id: 'ready',
-        label: 'Ready',
-        description: 'Triage done',
+        id: 'in_progress',
+        label: 'In Progress',
+        description: 'Actively doing',
         order: 1,
         isDefault: false,
         isCompletionState: false,
@@ -345,9 +374,9 @@ function migrateToV2_1(data) {
         canDelete: true,
       },
       {
-        id: 'in_progress',
-        label: 'In Progress',
-        description: 'Actively doing',
+        id: 'delegated_ai',
+        label: 'Delegated to AI',
+        description: 'AI is working on this',
         order: 2,
         isDefault: false,
         isCompletionState: false,
@@ -356,57 +385,13 @@ function migrateToV2_1(data) {
         canDelete: true,
       },
       {
-        id: 'waiting_ai',
-        label: 'Waiting on AI',
-        description: 'Delegated to agent',
-        order: 3,
-        isDefault: false,
-        isCompletionState: false,
-        keyboardShortcut: '4',
-        createdAt: now,
-        canDelete: true,
-      },
-      {
-        id: 'waiting_other',
-        label: 'Waiting on Others',
-        description: 'Blocked by a human',
-        order: 4,
-        isDefault: false,
-        isCompletionState: false,
-        keyboardShortcut: '5',
-        createdAt: now,
-        canDelete: true,
-      },
-      {
-        id: 'blocked',
-        label: 'Blocked',
-        description: 'Needs unblocking',
-        order: 5,
-        isDefault: false,
-        isCompletionState: false,
-        keyboardShortcut: '6',
-        createdAt: now,
-        canDelete: true,
-      },
-      {
-        id: 'in_review',
-        label: 'In Review',
-        description: 'PR/review/QA',
-        order: 6,
-        isDefault: false,
-        isCompletionState: false,
-        keyboardShortcut: '7',
-        createdAt: now,
-        canDelete: true,
-      },
-      {
         id: 'done',
         label: 'Done',
         description: 'Completed',
-        order: 7,
+        order: 3,
         isDefault: false,
         isCompletionState: true,
-        keyboardShortcut: '8',
+        keyboardShortcut: '4',
         createdAt: now,
         canDelete: true,
       },
@@ -461,7 +446,7 @@ const seedTasks = () => {
     {
       id: uid(),
       title: 'Delegate test data generation to AI',
-      status: 'waiting_ai',
+      status: 'delegated_ai',
       impact: 3,
       urgency: 3,
       effort: 1,
@@ -474,7 +459,7 @@ const seedTasks = () => {
     {
       id: uid(),
       title: 'Prep for requirements call',
-      status: 'ready',
+      status: 'backlog',
       impact: 3,
       urgency: 4,
       effort: 1,
@@ -486,7 +471,7 @@ const seedTasks = () => {
     {
       id: uid(),
       title: 'Refactor payment webhook',
-      status: 'blocked',
+      status: 'backlog',
       impact: 4,
       urgency: 2,
       effort: 3,
@@ -1532,7 +1517,7 @@ const useStore = create((set, get) => ({
   restoreDefaultStatuses() {
     const { tasks } = get();
 
-    // Get the 8 default statuses
+    // Get the 4 default statuses
     const defaultStatusConfig = migrateToV2_1({}).statusConfig;
 
     // Build a mapping of old status IDs to new default status IDs
@@ -1548,8 +1533,19 @@ const useStore = create((set, get) => ({
         return;
       }
 
-      // Otherwise map to default status (backlog)
-      statusMapping[currentStatus.id] = 'backlog';
+      // Map removed statuses to sensible defaults
+      if (currentStatus.id === 'waiting_ai' || currentStatus.id === 'waiting_other') {
+        statusMapping[currentStatus.id] = 'delegated_ai';
+      } else if (currentStatus.id === 'blocked') {
+        statusMapping[currentStatus.id] = 'delegated_ai';
+      } else if (currentStatus.id === 'ready') {
+        statusMapping[currentStatus.id] = 'delegated_ai';
+      } else if (currentStatus.id === 'in_review') {
+        statusMapping[currentStatus.id] = 'done';
+      } else {
+        // Otherwise map to default status (backlog)
+        statusMapping[currentStatus.id] = 'backlog';
+      }
     });
 
     // Migrate all tasks to default statuses
@@ -1660,7 +1656,7 @@ const useStore = create((set, get) => ({
         const now = new Date();
         const started = t.timerStartedAt ? new Date(t.timerStartedAt) : null;
         const add = started ? Math.floor((now - started) / 1000) : 0;
-        const newStatus = s.autoReturnOnStop && t.status === 'in_progress' ? 'ready' : t.status;
+        const newStatus = s.autoReturnOnStop && t.status === 'in_progress' ? 'backlog' : t.status;
         return {
           ...t,
           timeLogSecs: (t.timeLogSecs || 0) + add,
@@ -1694,6 +1690,12 @@ const useStore = create((set, get) => ({
     }
 
     const { projects } = get();
+    // Defensive check: ensure projects is an array
+    if (!Array.isArray(projects)) {
+      console.error('Projects is not an array:', projects);
+      return { error: 'Projects data is corrupted. Please refresh the page.' };
+    }
+
     if (projects.some((p) => p.name.toLowerCase() === trimmedName.toLowerCase())) {
       return { error: 'Project name already exists' };
     }
@@ -1706,7 +1708,11 @@ const useStore = create((set, get) => ({
       createdAt: Date.now(),
     };
 
-    set((s) => ({ projects: [...s.projects, newProject] }));
+    set((s) => {
+      // Defensive check: ensure s.projects is an array before spreading
+      const currentProjects = Array.isArray(s.projects) ? s.projects : [];
+      return { projects: [...currentProjects, newProject] };
+    });
     get().persist();
     return { success: true, projectId: newProject.id };
   },
@@ -2112,12 +2118,17 @@ function ProjectManager({ onClose }) {
 
   const handleCreateProject = (e) => {
     e.preventDefault();
-    const result = createProject(newProjectName);
-    if (result.error) {
-      setError(result.error);
-    } else {
-      setNewProjectName('');
-      setError('');
+    try {
+      const result = createProject(newProjectName);
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        setNewProjectName('');
+        setError('');
+      }
+    } catch (err) {
+      console.error('Error creating project:', err);
+      setError('Failed to create project. Please try again.');
     }
   };
 
@@ -2511,22 +2522,23 @@ function WorkflowSettingsModal({ onClose }) {
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-slate-800 z-10">
-          <div>
-            <h2 className="text-lg font-semibold">Workflow Configuration</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-slate-800 z-10">
+          <div className="flex-1 min-w-0 pr-2">
+            <h2 className="text-base sm:text-lg font-semibold">Workflow Configuration</h2>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               Customize your workflow statuses
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded touch-manipulation flex-shrink-0"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-4">
+        <div className="p-3 sm:p-4">
           {error && (
             <div className="mb-4 p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-sm">
               {error}
@@ -3231,16 +3243,18 @@ function parseQuickAdd(input) {
 
 function Badge({ children, className, variant = 'default' }) {
   const variants = {
-    default: 'bg-slate-100 text-gray-700 dark:bg-slate-800 dark:text-slate-300',
-    primary: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-    success: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-    warning: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
-    danger: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+    default: 'bg-slate-100 text-slate-700 dark:bg-slate-700/60 dark:text-slate-300',
+    primary: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+    success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+    warning: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+    danger: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
   };
   return (
     <span
       className={clsx(
-        'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium',
+        'badge-base',
+        'px-2.5 py-1 rounded-md text-xs font-semibold',
+        'transition-colors duration-200',
         variants[variant] || variants.default,
         className,
       )}
@@ -3250,44 +3264,249 @@ function Badge({ children, className, variant = 'default' }) {
   );
 }
 
-const Column = React.memo(function Column({ status, tasks }) {
+function Column({ status, tasks }) {
   const dragHoverStatus = useStore((s) => s.dragHoverStatus);
+  const draggingId = useStore((s) => s.draggingId);
+  const moveTask = useStore((s) => s.moveTask);
+  const setTasksForStatus = useStore((s) => s.setTasksForStatus);
+  const setDragHoverStatus = useStore((s) => s.setDragHoverStatus);
   const statusMeta = useStore((s) => s.getStatusMetaMap());
+  const tasksList = useStore((s) => s.tasks);
   const highlight = dragHoverStatus === status;
   const meta = statusMeta[status] || { label: status, hint: '' };
+  
+  const [dropTargetIndex, setDropTargetIndex] = useState(null);
+  
+  // Get the dragged task to check its current status
+  const draggedTask = draggingId ? tasksList.find((t) => t.id === draggingId) : null;
+  const isDraggingFromSameColumn = draggedTask?.status === status;
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggingId) {
+      setDragHoverStatus(status);
+    }
+  };
+
+  const handleColumnDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggingId && !isDraggingFromSameColumn) {
+      // Moving to a different status - move to end of column
+      moveTask(draggingId, status);
+      useStore.getState().clearDrag();
+      setDropTargetIndex(null);
+    }
+  };
+
+  const handleTaskDragOver = (e, taskIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggingId) {
+      setDragHoverStatus(status);
+      // Determine if we're dropping above or below the task
+      const rect = e.currentTarget.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const midpoint = rect.height / 2;
+      // Drop above if in upper half, below if in lower half
+      setDropTargetIndex(y < midpoint ? taskIndex : taskIndex + 1);
+    }
+  };
+
+  const handleTaskDrop = (e, targetIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('🎯 [DROP]', { draggingId, status, targetIndex, isDraggingFromSameColumn });
+    
+    if (!draggingId) {
+      console.log('❌ No draggingId');
+      return;
+    }
+
+    if (isDraggingFromSameColumn) {
+      // Reordering within the same column
+      const draggedIndex = tasks.findIndex((t) => t.id === draggingId);
+      
+      if (draggedIndex === -1) {
+        console.log('❌ Task not found in tasks array');
+        return;
+      }
+      
+      if (draggedIndex === targetIndex) {
+        // Same position, no need to reorder
+        useStore.getState().clearDrag();
+        setDropTargetIndex(null);
+        return;
+      }
+
+      // Create a copy of the tasks array to avoid mutating the prop
+      const reorderedTasks = [...tasks];
+      
+      // Remove the dragged task from its current position
+      const [draggedTask] = reorderedTasks.splice(draggedIndex, 1);
+      
+      // Adjust target index if needed (when moving down, we need to account for the removed item)
+      const adjustedTargetIndex = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
+      
+      // Insert at the new position
+      reorderedTasks.splice(adjustedTargetIndex, 0, draggedTask);
+      
+      // Update the store using the existing method that properly handles the update
+      setTasksForStatus(status, reorderedTasks);
+      
+    } else {
+      // Moving to a different status
+      moveTask(draggingId, status);
+      
+      requestAnimationFrame(() => {
+        const store = useStore.getState();
+        const newTasks = store.tasks.filter((t) => t.status === status);
+        const newIndex = newTasks.findIndex((t) => t.id === draggingId);
+        if (newIndex !== -1 && newIndex !== targetIndex) {
+          store.reorderTask(draggingId, status, newIndex, targetIndex);
+        }
+      });
+    }
+    
+    useStore.getState().clearDrag();
+    setDropTargetIndex(null);
+  };
+
+  const handleDragLeave = (e) => {
+    // Only clear if we're leaving the column entirely
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      if (dragHoverStatus === status) {
+        setDragHoverStatus(null);
+      }
+      setDropTargetIndex(null);
+    }
+  };
 
   return (
     <div
       data-col={status}
       className={clsx(
-        'flex-1 min-w-[280px] max-w-[520px] rounded-lg p-3 border transition-all',
-        'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700',
-        highlight && 'ring-2 ring-blue-400 border-blue-300 shadow-lg',
-        !highlight && 'shadow-sm',
+        'flex-1 min-w-[260px] sm:min-w-[280px] max-w-[520px] rounded-xl p-4 border transition-all duration-200',
+        'bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/50',
+        'shadow-sm hover:shadow-md',
+        highlight && 'ring-2 ring-indigo-400 dark:ring-indigo-500 border-indigo-300 dark:border-indigo-600 shadow-lg scale-105',
       )}
+      onDragOver={handleDragOver}
+      onDrop={handleColumnDrop}
+      onDragLeave={handleDragLeave}
     >
-      <div className="flex items-center gap-2 mb-3">
-        <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{meta.label}</h3>
-        <span className="text-xs text-slate-500 dark:text-slate-500">{meta.hint}</span>
-        <span className="ml-auto text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full">
+      <div className="flex items-center gap-2 mb-4">
+        <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm tracking-tight">{meta.label}</h3>
+        <span className="text-xs text-slate-500 dark:text-slate-400">{meta.hint}</span>
+        <span className="ml-auto text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/60 px-2.5 py-1 rounded-full">
           {tasks.length}
         </span>
       </div>
-      <div className="space-y-2 min-h-24">
+      <div className="space-y-3 min-h-24">
         {tasks.length === 0 ? (
           <EmptyColumnState columnName={meta.label} />
         ) : (
-          tasks.map((t) => <TaskCard key={t.id} task={t} />)
+          tasks.map((t, index) => (
+            <React.Fragment key={t.id}>
+              {/* Drop zone above task - visible when dragging */}
+              {draggingId && (
+                <div
+                  className={clsx(
+                    'transition-all relative z-10 rounded-full',
+                    dropTargetIndex === index
+                      ? 'h-3 bg-indigo-400 dark:bg-indigo-500 -my-2 opacity-100'
+                      : 'h-3 bg-indigo-200 dark:bg-indigo-800 -my-1.5 opacity-30 hover:opacity-60'
+                  )}
+                  style={{
+                    minHeight: '12px',
+                    pointerEvents: 'auto',
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (draggingId) {
+                      setDragHoverStatus(status);
+                      setDropTargetIndex(index);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('[Drop zone] Dropping at index:', index);
+                    handleTaskDrop(e, index);
+                  }}
+                />
+              )}
+              <div
+                className="relative"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleTaskDragOver(e, index);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // Always use dropTargetIndex if it's set, otherwise calculate from position
+                  if (draggingId) {
+                    const finalTargetIndex = dropTargetIndex !== null ? dropTargetIndex : (() => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const y = e.clientY - rect.top;
+                      const midpoint = rect.height / 2;
+                      return y < midpoint ? index : index + 1;
+                    })();
+                    handleTaskDrop(e, finalTargetIndex);
+                  }
+                }}
+              >
+                <TaskCard task={t} />
+              </div>
+            </React.Fragment>
+          ))
+        )}
+        {/* Drop zone at the end */}
+        {draggingId && tasks.length > 0 && (
+          <div
+            className={clsx(
+              'transition-all relative z-10 rounded-full',
+              dropTargetIndex === tasks.length
+                ? 'h-3 bg-indigo-400 dark:bg-indigo-500 -my-2 opacity-100'
+                : 'h-3 bg-indigo-200 dark:bg-indigo-800 -my-1.5 opacity-30 hover:opacity-60'
+            )}
+            style={{
+              minHeight: '12px',
+              pointerEvents: 'auto',
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              e.dataTransfer.dropEffect = 'move';
+              if (draggingId) {
+                setDragHoverStatus(status);
+                setDropTargetIndex(tasks.length);
+              }
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('[Drop zone] Dropping at end, index:', tasks.length);
+              handleTaskDrop(e, tasks.length);
+            }}
+          />
         )}
       </div>
     </div>
   );
-});
+}
 
 // Owner display components
 function OwnerBadge({ owner }) {
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300 transition-colors duration-200">
       {owner}
     </span>
   );
@@ -3413,10 +3632,10 @@ function TokenHelpTooltip({ visible, onDismiss }) {
 // getPriorityBorderClass - Returns Tailwind classes for priority color (FR-006 to FR-012)
 function getPriorityBorderClass(priority) {
   const colors = {
-    P0: 'border-l-red-500 dark:border-l-red-400 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
-    P1: 'border-l-orange-500 dark:border-l-orange-400 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
-    P2: 'border-l-yellow-500 dark:border-l-yellow-400 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
-    P3: 'border-l-slate-300 dark:border-l-slate-600 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
+    P0: 'border-l-red-500 dark:border-l-red-400 border-t-slate-200/80 dark:border-t-slate-700/50 border-r-slate-200/80 dark:border-r-slate-700/50 border-b-slate-200/80 dark:border-b-slate-700/50',
+    P1: 'border-l-orange-500 dark:border-l-orange-400 border-t-slate-200/80 dark:border-t-slate-700/50 border-r-slate-200/80 dark:border-r-slate-700/50 border-b-slate-200/80 dark:border-b-slate-700/50',
+    P2: 'border-l-amber-500 dark:border-l-amber-400 border-t-slate-200/80 dark:border-t-slate-700/50 border-r-slate-200/80 dark:border-r-slate-700/50 border-b-slate-200/80 dark:border-b-slate-700/50',
+    P3: 'border-l-slate-300 dark:border-l-slate-600 border-t-slate-200/80 dark:border-t-slate-700/50 border-r-slate-200/80 dark:border-r-slate-700/50 border-b-slate-200/80 dark:border-b-slate-700/50',
   };
   return colors[priority] || colors.P3;
 }
@@ -3425,23 +3644,19 @@ function getPriorityBorderClass(priority) {
 const EmptyColumnState = React.memo(({ columnName }) => {
   const messages = {
     Backlog: { text: 'Add your ideas here', emoji: '💡' },
-    Ready: { text: 'Tasks ready for work will appear here', emoji: '✅' },
+    'Delegated to AI': { text: 'Tasks delegated to AI will appear here', emoji: '🤖' },
     'In Progress': { text: 'Start working on a task', emoji: '🚀' },
-    'Waiting on AI': { text: 'Delegate to AI agents', emoji: '🤖' },
-    'Waiting on Others': { text: 'No blockers yet 👍', emoji: '' },
-    Blocked: { text: 'Nothing blocked right now', emoji: '🎉' },
-    'In Review': { text: 'Ready for PR review', emoji: '👀' },
     Done: { text: 'Ready to ship!', emoji: '🎯' },
   };
 
   const message = messages[columnName] || { text: 'No tasks', emoji: '' };
 
   return (
-    <div className="flex flex-col items-center justify-center py-8 text-center">
-      <div className="text-4xl mb-3 p-3 rounded-full bg-slate-100 dark:bg-slate-700/50">
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="text-5xl mb-4 p-4 rounded-2xl bg-slate-100/80 dark:bg-slate-700/40 backdrop-blur-sm">
         {message.emoji}
       </div>
-      <p className="text-sm text-slate-500 dark:text-slate-400">{message.text}</p>
+      <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{message.text}</p>
     </div>
   );
 });
@@ -3455,9 +3670,11 @@ function TaskCard({ task }) {
   const startTimer = useStore((s) => s.startTimer);
   const toggleSelected = useStore((s) => s.toggleSelected);
   const selectedIds = useStore((s) => s.selectedIds);
+  const draggingId = useStore((s) => s.draggingId);
   const projects = useStore((s) => s.projects);
   const currentProjectId = useStore((s) => s.currentProjectId);
   const [open, setOpen] = useState(false);
+  const cardRef = useRef(null);
   const overdue = task.dueAt ? isBefore(new Date(task.dueAt), new Date()) : false;
 
   const taskProject = projects.find((p) => p.id === task.projectId);
@@ -3474,52 +3691,74 @@ function TaskCard({ task }) {
   const elapsedLabel = formatDurationShort(elapsedSecs);
   const isRunning = !!task.timerStartedAt;
   const isSelected = selectedIds.includes(task.id);
+  const isDragging = draggingId === task.id;
 
   return (
-    <motion.div
-      layout
-      drag
-      dragSnapToOrigin
-      onDragStart={() => {
-        useStore.getState().setDraggingId(task.id);
-      }}
-      onDrag={(e, info) => {
-        // Throttle: only check every 100ms to avoid performance issues
-        const now = Date.now();
-        if (!useStore.getState().lastDragCheck || now - useStore.getState().lastDragCheck > 100) {
-          const status = getStatusFromPoint(info.point.x, info.point.y);
-          useStore.getState().setDragHoverStatus(status);
-          useStore.getState().setLastDragCheck(now);
-        }
-      }}
-      onDragEnd={(e, info) => {
-        const status = getStatusFromPoint(info.point.x, info.point.y);
-        if (status) move(task.id, status);
-        useStore.getState().clearDrag();
-      }}
+    <div
+      ref={cardRef}
       className={clsx(
-        'cursor-grab active:cursor-grabbing rounded-lg border-l-4 border-t border-r border-b p-3 relative',
-        'bg-white dark:bg-slate-800',
-        'shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden',
-        isSelected && 'ring-2 ring-blue-400 shadow-md',
+        'cursor-grab active:cursor-grabbing rounded-xl border-l-4 border-t border-r border-b p-4',
+        'bg-white dark:bg-slate-800/90',
+        'shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200',
+        isSelected && 'ring-2 ring-indigo-500 dark:ring-indigo-400 shadow-md',
+        isDragging && 'opacity-50',
         getPriorityBorderClass(task.priorityBucket),
       )}
+      style={{ position: 'relative' }}
+      draggable
+      onDragStart={(e) => {
+        useStore.getState().setDraggingId(task.id);
+        // Set drag image
+        if (cardRef.current) {
+          e.dataTransfer.effectAllowed = 'move';
+          const clone = cardRef.current.cloneNode(true);
+          clone.style.position = 'absolute';
+          clone.style.top = '-1000px';
+          document.body.appendChild(clone);
+          e.dataTransfer.setDragImage(clone, e.clientX - cardRef.current.getBoundingClientRect().left, e.clientY - cardRef.current.getBoundingClientRect().top);
+          setTimeout(() => document.body.removeChild(clone), 0);
+        }
+      }}
+      onDrag={(e) => {
+        if (e.clientX === 0 && e.clientY === 0) return; // Ignore invalid coordinates
+        const status = getStatusFromPoint(e.clientX, e.clientY);
+        if (status) {
+          useStore.getState().setDragHoverStatus(status);
+        }
+      }}
+      onDragEnd={(e) => {
+        // Only move if draggingId is still set (meaning column didn't handle the drop)
+        const currentDraggingId = useStore.getState().draggingId;
+        const currentDragHoverStatus = useStore.getState().dragHoverStatus;
+        if (currentDraggingId === task.id) {
+          // Only handle cross-column moves here, not same-column reordering
+          if (currentDragHoverStatus && currentDragHoverStatus !== task.status) {
+            const status = getStatusFromPoint(e.clientX, e.clientY);
+            if (status && status !== task.status) {
+              move(task.id, status);
+            }
+          }
+        }
+        useStore.getState().clearDrag();
+      }}
     >
       <div className="group">
         <div className="flex items-start gap-2">
           <input
             type="checkbox"
-            className="mt-1 cursor-pointer accent-blue-600 dark:accent-blue-400"
+            className="mt-1 cursor-pointer accent-indigo-600 dark:accent-indigo-400 focus-ring rounded"
             checked={isSelected}
             onClick={(e) => e.stopPropagation()}
             onChange={() => toggleSelected(task.id)}
             title="Select task"
+            aria-label={`Select task: ${task.title}`}
           />
           <div className="flex-1 min-w-0">
             <button
-              className="text-left font-medium text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate block w-full"
+              className="text-left font-medium text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200 truncate block w-full leading-relaxed focus-ring rounded px-1 -mx-1"
               title={task.title}
               onClick={() => setOpen(true)}
+              aria-label={`Open task: ${task.title}`}
             >
               {task.title}
             </button>
@@ -3564,37 +3803,37 @@ function TaskCard({ task }) {
                 <OwnersList owners={task.owners} />
               </div>
             )}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
               {task.project && (
-                <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">
+                <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300 rounded-md font-medium whitespace-nowrap transition-colors duration-200">
                   #{task.project}
                 </span>
               )}
               {task.tags?.map((t) => (
-                <span key={t} className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">
+                <span key={t} className="px-2 py-1 bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300 rounded-md font-medium whitespace-nowrap transition-colors duration-200">
                   +{t}
                 </span>
               ))}
               {task.dueAt && (
                 <span
                   className={clsx(
-                    'inline-flex items-center gap-0.5',
+                    'inline-flex items-center gap-1 px-2 py-1 rounded-md font-medium whitespace-nowrap transition-colors duration-200',
                     overdue
-                      ? 'text-red-500 dark:text-red-400 font-medium'
-                      : 'text-blue-500 dark:text-blue-400',
+                      ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                      : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400',
                   )}
                 >
-                  <Clock className="w-3 h-3" />
-                  {humanDue(task.dueAt)}
+                  <Clock className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">{humanDue(task.dueAt)}</span>
                 </span>
               )}
             </div>
           </div>
         </div>
-        <div className="hidden group-hover:flex absolute bottom-2 right-2 items-center gap-0.5 bg-slate-700 dark:bg-slate-600 rounded-lg p-1">
+        <div className="flex sm:hidden absolute bottom-2 right-2 items-center gap-0.5 bg-slate-700 dark:bg-slate-600 rounded-lg p-1">
           <button
             title="Move left"
-            className="p-1 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-600/30 transition-colors"
+            className="p-1 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-600/30 transition-colors touch-manipulation"
             onClick={() => {
               const order = useStore.getState().getStatusOrder();
               const idx = order.indexOf(task.status);
@@ -3608,7 +3847,7 @@ function TaskCard({ task }) {
             <button
               title="Pause"
               onClick={() => stopTimer(task.id)}
-              className="p-1 rounded text-orange-400 hover:text-orange-300 hover:bg-orange-600/30 transition-colors"
+              className="p-1 rounded text-orange-400 hover:text-orange-300 hover:bg-orange-600/30 transition-colors touch-manipulation"
             >
               <Pause className="w-4 h-4" />
             </button>
@@ -3616,7 +3855,7 @@ function TaskCard({ task }) {
             <button
               title="Start focus timer"
               onClick={() => startTimer(task.id)}
-              className="p-1 rounded text-green-400 hover:text-green-300 hover:bg-green-600/30 transition-colors"
+              className="p-1 rounded text-green-400 hover:text-green-300 hover:bg-green-600/30 transition-colors touch-manipulation"
             >
               <Play className="w-4 h-4" />
             </button>
@@ -3629,7 +3868,50 @@ function TaskCard({ task }) {
               if (idx < order.length - 1)
                 useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx + 1]));
             }}
-            className="p-1 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-600/30 transition-colors"
+            className="p-1 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-600/30 transition-colors touch-manipulation"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="hidden sm:group-hover:flex absolute bottom-2 right-2 items-center gap-0.5 bg-slate-700 dark:bg-slate-600 rounded-lg p-1">
+          <button
+            title="Move left"
+            className="p-1 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-600/30 transition-colors touch-manipulation"
+            onClick={() => {
+              const order = useStore.getState().getStatusOrder();
+              const idx = order.indexOf(task.status);
+              if (idx > 0)
+                useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx - 1]));
+            }}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          {isRunning ? (
+            <button
+              title="Pause"
+              onClick={() => stopTimer(task.id)}
+              className="p-1 rounded text-orange-400 hover:text-orange-300 hover:bg-orange-600/30 transition-colors touch-manipulation"
+            >
+              <Pause className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              title="Start focus timer"
+              onClick={() => startTimer(task.id)}
+              className="p-1 rounded text-green-400 hover:text-green-300 hover:bg-green-600/30 transition-colors touch-manipulation"
+            >
+              <Play className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            title="Move right"
+            onClick={() => {
+              const order = useStore.getState().getStatusOrder();
+              const idx = order.indexOf(task.status);
+              if (idx < order.length - 1)
+                useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx + 1]));
+            }}
+            className="p-1 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-600/30 transition-colors touch-manipulation"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -3639,14 +3921,14 @@ function TaskCard({ task }) {
       <AnimatePresence>
         {open && <TaskDrawer task={task} onClose={() => setOpen(false)} />}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
 
 function Field({ label, children }) {
   return (
-    <div className="flex items-center gap-2 py-1">
-      <div className="w-28 text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 py-1">
+      <div className="w-full sm:w-28 text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">
         {label}
       </div>
       <div className="flex-1">{children}</div>
@@ -4018,7 +4300,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
         tabIndex={0}
         aria-label="Close panel"
       />
-      <div className="absolute right-0 top-0 bottom-0 w-96 bg-white dark:bg-slate-800 shadow-xl overflow-hidden flex flex-col">
+      <div className="absolute right-0 top-0 bottom-0 w-full sm:w-96 bg-white dark:bg-slate-800 shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
@@ -4250,7 +4532,7 @@ function TaskDrawer({ task, onClose }) {
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 40 }}
-        className="fixed right-4 top-4 bottom-4 w-[420px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl shadow-xl dark:shadow-2xl p-4 overflow-y-auto z-[301]"
+        className="fixed inset-4 sm:right-4 sm:top-4 sm:bottom-4 sm:left-auto w-auto sm:w-[420px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl shadow-xl dark:shadow-2xl p-4 overflow-y-auto z-[301]"
       >
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">Task</h3>
@@ -4392,18 +4674,6 @@ function TaskDrawer({ task, onClose }) {
             />
           </Field>
           <div className="flex items-center justify-between pt-2">
-            {task.status === 'waiting_ai' && (
-              <button
-                onClick={() =>
-                  useStore
-                    .getState()
-                    .updateTask(task.id, { status: 'ready', ownerType: 'self', expectedBy: null })
-                }
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700"
-              >
-                <Bot className="w-4 h-4" /> Simulate AI Update
-              </button>
-            )}
             <div className="flex-1" />
             <button
               onClick={() => {
@@ -4433,7 +4703,7 @@ const WipBanner = React.memo(function WipBanner() {
   if (wip <= 3) return null;
   return (
     <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 px-3 py-2 text-sm flex items-center gap-2">
-      <Flame className="w-4 h-4" /> High WIP ({wip}). Consider moving some to Ready or Waiting.
+        <Flame className="w-4 h-4" /> High WIP ({wip}). Consider moving some to Delegated to AI or Backlog.
     </div>
   );
 });
@@ -4547,8 +4817,6 @@ function Toolbar({ viewMode, onChangeView }) {
     const p = parseQuickAdd(input);
     const base = {
       title: p.title || 'Untitled',
-      // Only set status for AI tasks, let addTask() handle default for others
-      ...(p.ownerType === 'ai' && { status: 'waiting_ai' }),
       ownerType: p.ownerType,
       tags: p.tags,
       dueAt: p.dueAt,
@@ -4584,10 +4852,12 @@ function Toolbar({ viewMode, onChangeView }) {
 
   return (
     <div className="sticky top-0 z-10 mb-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
-      <div className="px-4 py-3">
-        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
-          <div className="flex-1 flex items-center gap-2">
-            <div className="relative flex-1 max-w-2xl">
+      <div className="px-3 sm:px-4 py-3">
+        {/* Single row on desktop, stacked on mobile */}
+        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+          {/* Input with buttons */}
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <div className="relative flex-1 max-w-2xl min-w-0">
               <input
                 ref={inputRef}
                 value={input}
@@ -4605,14 +4875,14 @@ function Toolbar({ viewMode, onChangeView }) {
                   }
                 }}
                 placeholder="Add a task... (type @ for assignment, # for project, ! for priority)"
-                className="w-full px-4 pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                className="w-full px-4 pl-10 pr-10 py-2.5 sm:py-2.5 text-sm sm:text-base rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
               />
-              <Plus className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+              <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               {/* Help button */}
               <button
                 type="button"
                 onClick={() => setShowTokenHelp(!showTokenHelp)}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors touch-manipulation"
                 title="Show token syntax help"
                 aria-label="Help"
               >
@@ -4650,7 +4920,7 @@ function Toolbar({ viewMode, onChangeView }) {
               }}
               disabled={!speechSupported}
               className={clsx(
-                'p-2 rounded-lg transition-colors',
+                'p-2 rounded-lg transition-colors touch-manipulation flex-shrink-0',
                 isListening
                   ? 'bg-red-500 text-white hover:bg-red-600'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800',
@@ -4661,22 +4931,23 @@ function Toolbar({ viewMode, onChangeView }) {
             </button>
             <button
               onClick={onAdd}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
+              className="btn-primary px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap touch-manipulation flex-shrink-0"
             >
               Add Task
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 justify-end">
+          {/* Controls - Board/Backlog toggle, filters */}
+          <div className="flex items-center gap-2 flex-shrink-0">
             <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
               <button
                 type="button"
                 onClick={() => onChangeView('board')}
                 aria-pressed={viewMode === 'board'}
                 className={clsx(
-                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-colors rounded-md',
+                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-all duration-200 rounded-md',
                   viewMode === 'board'
                     ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-700/50',
                 )}
               >
                 <Kanban className="w-4 h-4" /> Board
@@ -4686,10 +4957,10 @@ function Toolbar({ viewMode, onChangeView }) {
                 onClick={() => onChangeView('backlog')}
                 aria-pressed={viewMode === 'backlog'}
                 className={clsx(
-                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-colors rounded-md',
+                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-all duration-200 rounded-md',
                   viewMode === 'backlog'
                     ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-700/50',
                 )}
               >
                 <List className="w-4 h-4" /> Backlog
@@ -4699,17 +4970,18 @@ function Toolbar({ viewMode, onChangeView }) {
               <button
                 onClick={() => setShowOwnerDropdown(!showOwnerDropdown)}
                 className={clsx(
-                  'p-2 rounded-lg transition-colors',
+                  'p-2 rounded-lg transition-colors touch-manipulation',
                   ownerFilter
                     ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800',
                 )}
                 title={ownerFilter ? `Filtering by: ${ownerFilter}` : 'Filter by Owner'}
+                aria-label={ownerFilter ? `Filtering by: ${ownerFilter}` : 'Filter by Owner'}
               >
                 <Users className="w-5 h-5" />
               </button>
               {showOwnerDropdown && (
-                <div className="absolute top-full mt-1 right-0 w-48 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                <div className="absolute top-full mt-1 right-0 w-48 sm:w-56 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
                   <button
                     onClick={() => {
                       setOwnerFilter(null);
@@ -4741,7 +5013,7 @@ function Toolbar({ viewMode, onChangeView }) {
               value={filters.q}
               onChange={(e) => setFilters({ q: e.target.value })}
               placeholder="Filter text"
-              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-shadow"
+              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-shadow w-32 md:w-40"
             />
           </div>
         </div>
@@ -4842,10 +5114,6 @@ function Toolbar({ viewMode, onChangeView }) {
             }}
           />
         )}
-        <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          Tokens: !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5 urgency:0..5
-          effort:0..5 expect:today|YYYY-MM-DD
-        </div>
       </div>
     </div>
   );
@@ -4858,9 +5126,13 @@ function useFilteredTasks() {
   const ownerFilter = useStore((s) => s.ownerFilter);
   const statusOrder = useStore((s) => s.getStatusOrder());
 
+  console.log('🔄 useFilteredTasks called, total tasks:', tasks.length, 'tasks array ref:', tasks);
+
   // Memoize visible tasks to avoid recalculation
   const visibleTasks = useMemo(() => {
-    return tasks.filter((t) => t.projectId === currentProjectId);
+    const filtered = tasks.filter((t) => t.projectId === currentProjectId);
+    console.log('   Visible tasks for project:', filtered.map(t => t.title));
+    return filtered;
   }, [tasks, currentProjectId]);
 
   return useMemo(() => {
@@ -4905,12 +5177,19 @@ function groupTasksByStatus(tasks, statusOrder = null) {
   return grouped;
 }
 
-const Board = React.memo(function Board() {
+function Board() {
   const filtered = useFilteredTasks();
   const currentProjectId = useStore((s) => s.currentProjectId);
   const projects = useStore((s) => s.projects);
   const statusOrder = useStore((s) => s.getStatusOrder());
-  const grouped = useMemo(() => groupTasksByStatus(filtered, statusOrder), [filtered, statusOrder]);
+  // Don't use useMemo here - we want to re-group on every render to catch reordering
+  const grouped = groupTasksByStatus(filtered, statusOrder);
+  
+  console.log('🎨 Board rendering, tasks per status:', 
+    Object.entries(grouped).map(([status, tasks]) => 
+      `${status}: [${tasks.map(t => t.title).join(', ')}]`
+    ).join(' | ')
+  );
 
   const currentProject = projects.find((p) => p.id === currentProjectId);
   const hasNoTasks = filtered.length === 0;
@@ -4969,15 +5248,17 @@ const Board = React.memo(function Board() {
 
   return (
     <div
-      className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3"
-      style={{ position: 'relative', zIndex: 1 }}
+      className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0"
+      style={{ position: 'relative' }}
     >
-      {statusOrder.map((status) => (
-        <Column key={status} status={status} tasks={grouped[status] || []} />
-      ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 min-w-max md:min-w-0 pb-4 sm:pb-0">
+        {statusOrder.map((status, index) => (
+          <Column key={status} status={status} tasks={grouped[status] || []} />
+        ))}
+      </div>
     </div>
   );
-});
+}
 
 function BacklogView() {
   const filtered = useFilteredTasks();
@@ -5172,11 +5453,6 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
                   </Badge>
                 )}
                 {task.ownerType === 'other' && <Badge variant="default">Shared</Badge>}
-                {task.status === 'blocked' && (
-                  <Badge variant="danger">
-                    <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Blocked
-                  </Badge>
-                )}
               </div>
               <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-400">
                 {task.project && (
@@ -5568,23 +5844,30 @@ export default function WorkdayTaskBoardApp() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-black">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         <div className="max-w-[1400px] mx-auto">
-          <header className="relative z-30 px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/70 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <img src={dark ? logoDark : logoLight} alt="FlowTrackr" className="h-20 w-auto" />
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+          <header className="relative z-30 px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200/80 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md backdrop-saturate-150">
+            {/* Mobile: Logo and actions on same line, Desktop: Logo left, actions right */}
+            <div className="flex items-center justify-between gap-2 sm:gap-0">
+              {/* Logo section */}
+              <div className="flex flex-col items-center sm:items-start flex-1 min-w-0 sm:flex-1">
+                <img src={dark ? logoDark : logoLight} alt="FlowTrackr" className="h-10 sm:h-16 md:h-20 w-auto" />
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 hidden sm:block">
                   Streamline your workflow with intelligent task management
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              {/* Actions - compact on mobile, full on desktop */}
+              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                 <button
                   onClick={() => setShowWorkflowSettings(true)}
-                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="btn-ghost p-1.5 sm:p-2 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
                   title="Workflow Settings"
+                  aria-label="Workflow Settings"
                 >
-                  <Kanban className="w-5 h-5" />
+                  <Kanban className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 <button
                   onClick={() => {
@@ -5602,37 +5885,44 @@ export default function WorkdayTaskBoardApp() {
                     }
                   }}
                   title="Delete all tasks in the current project"
-                  className="p-2 rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  className="p-1.5 sm:p-2 rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 hover:scale-105 active:scale-95 focus-ring"
                   aria-label="Clear all tasks in current project"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 <button
                   onClick={() => setShowOwnerManager(true)}
-                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="btn-ghost p-1.5 sm:p-2 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
                   title="Manage Owners"
+                  aria-label="Manage Owners"
                 >
-                  <Settings className="w-5 h-5" />
+                  <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
+                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block" />
                 <button
                   onClick={() => setDark((v) => !v)}
-                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="btn-ghost p-1.5 sm:p-2 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 touch-manipulation"
                   title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+                  aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
                 >
-                  {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                  {dark ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
                 </button>
-                <ProjectSelector />
+                <div className="hidden sm:block">
+                  <ProjectSelector />
+                </div>
               </div>
             </div>
           </header>
 
           <Toolbar viewMode={viewMode} onChangeView={setViewMode} />
-          <main className="px-6 py-4">
+          <main id="main-content" className="px-4 sm:px-6 py-6">
+            <div className="sm:hidden mb-4">
+              <ProjectSelector />
+            </div>
             <WipBanner />
             {viewMode === 'board' ? <Board /> : <BacklogView />}
 
-            <footer className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-800"></footer>
+            <footer className="mt-12 pt-6 border-t border-slate-200/80 dark:border-slate-700/50"></footer>
           </main>
         </div>
 
