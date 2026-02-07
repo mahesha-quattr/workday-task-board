@@ -31,13 +31,14 @@ import {
   MicOff,
   Kanban,
   List,
-  Settings,
   Check,
   Users,
   Search,
   UserCheck,
   Sun,
   Moon,
+  Keyboard,
+  MoreVertical,
 } from 'lucide-react';
 import clsx from 'clsx';
 import logoLight from '/assets/light/flowtrackr-logo.png';
@@ -80,10 +81,10 @@ const STATUS_META = /** @type{Record<Status,{label:string, key:string, hint:stri
 const STATUS_ORDER = /** @type{Status[]} */ (Object.keys(STATUS_META));
 
 const PRIORITY_COLORS = {
-  P0: 'bg-red-50 text-red-600 border-l-4 border-l-red-500',
-  P1: 'bg-orange-50 text-orange-600 border-l-4 border-l-orange-500',
-  P2: 'bg-amber-50 text-amber-600 border-l-4 border-l-amber-500',
-  P3: 'bg-slate-50 text-slate-600 border-l-4 border-l-gray-400',
+  P0: 'bg-red-50 text-red-600 border-l-4 border-l-red-500 dark:bg-red-950 dark:text-red-400 dark:border-l-red-400',
+  P1: 'bg-orange-50 text-orange-600 border-l-4 border-l-orange-500 dark:bg-orange-950 dark:text-orange-400 dark:border-l-orange-400',
+  P2: 'bg-amber-50 text-amber-600 border-l-4 border-l-amber-500 dark:bg-amber-950 dark:text-amber-400 dark:border-l-amber-400',
+  P3: 'bg-slate-50 text-slate-600 border-l-4 border-l-gray-400 dark:bg-slate-800 dark:text-slate-300 dark:border-l-slate-500',
 };
 
 // ----- Helpers -----
@@ -547,7 +548,11 @@ const useStore = create((set, get) => ({
     set({ selectedIds: [] });
   },
   deleteSelected() {
+    const { tasks, selectedIds } = get();
+    const count = selectedIds.length;
+    get().pushUndo(`Deleted ${count} task${count !== 1 ? 's' : ''}`, { tasks: [...tasks] });
     set((s) => ({ tasks: filterOutByIds(s.tasks, s.selectedIds), selectedIds: [] }));
+    get().markDirty();
     get().persist();
   },
 
@@ -583,6 +588,52 @@ const useStore = create((set, get) => ({
   draggingId: /** @type{string|null} */ (null),
   dragHoverStatus: /** @type{Status|null} */ (null),
   lastDragCheck: /** @type{number|null} */ (null),
+
+  // Undo state
+  undoStack: [],
+  undoToast: null,
+  pushUndo(message, snapshot) {
+    const entry = { message, snapshot, timestamp: Date.now() };
+    set((s) => ({
+      undoStack: [...s.undoStack, entry],
+      undoToast: { message, timestamp: entry.timestamp },
+    }));
+    setTimeout(() => {
+      if (get().undoToast?.timestamp === entry.timestamp) {
+        set({ undoToast: null });
+      }
+    }, 5000);
+  },
+  performUndo() {
+    const { undoStack } = get();
+    if (undoStack.length === 0) return;
+    const last = undoStack[undoStack.length - 1];
+    set({ tasks: last.snapshot.tasks, undoStack: undoStack.slice(0, -1), undoToast: null });
+    get().markDirty();
+    get().persist();
+  },
+  dismissUndoToast() {
+    set({ undoToast: null });
+  },
+
+  // Notification toast state
+  notificationToast: null,
+  showNotification(message, type = 'success') {
+    const ts = Date.now();
+    set({ notificationToast: { message, type, timestamp: ts } });
+    setTimeout(() => {
+      if (get().notificationToast?.timestamp === ts) set({ notificationToast: null });
+    }, 3000);
+  },
+
+  // Last added task id
+  lastAddedTaskId: null,
+
+  // Persist optimization
+  _isDirty: false,
+  markDirty() {
+    set({ _isDirty: true });
+  },
 
   init() {
     try {
@@ -632,6 +683,7 @@ const useStore = create((set, get) => ({
           ownerRegistry: ownerRegistry,
           statusConfig: parsed.statusConfig || { statuses: [], version: 1 },
         });
+        get().cleanupStorage();
         return;
       }
     } catch (e) {
@@ -670,11 +722,13 @@ const useStore = create((set, get) => ({
     return false;
   },
 
+  persistIfDirty() {
+    if (!get()._isDirty) return;
+    get().persist();
+  },
   persist() {
+    set({ _isDirty: false });
     try {
-      // Run cleanup before persisting
-      get().cleanupStorage();
-
       const { tasks, autoReturnOnStop, projects, currentProjectId, ownerRegistry, statusConfig } =
         get();
 
@@ -722,8 +776,13 @@ const useStore = create((set, get) => ({
       });
     }
 
-    set((s) => ({ tasks: [...s.tasks, t] }));
+    set((s) => ({ tasks: [...s.tasks, t], lastAddedTaskId: t.id }));
+    // Auto-clear lastAddedTaskId after 2 seconds
+    setTimeout(() => {
+      if (get().lastAddedTaskId === t.id) set({ lastAddedTaskId: null });
+    }, 2000);
     get().updateOwnerStatistics();
+    get().markDirty();
     get().persist();
     return t.id;
   },
@@ -733,10 +792,15 @@ const useStore = create((set, get) => ({
         t.id === id ? finalizeTask({ ...t, ...patch, updatedAt: new Date().toISOString() }) : t,
       ),
     }));
+    get().markDirty();
     get().persist();
   },
   deleteTask(id) {
+    const { tasks } = get();
+    const deleted = tasks.find((t) => t.id === id);
+    get().pushUndo(`Deleted "${deleted?.title || 'task'}"`, { tasks: [...tasks] });
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+    get().markDirty();
     get().persist();
   },
 
@@ -2697,7 +2761,7 @@ function WorkflowSettingsModal({ onClose }) {
                           <p className="text-sm text-slate-500 dark:text-slate-400">
                             {status.description}
                           </p>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                          <p className="text-xs text-slate-400 dark:text-slate-400 mt-1">
                             {taskCount} task{taskCount !== 1 ? 's' : ''} • Key:{' '}
                             {status.keyboardShortcut || 'none'}
                           </p>
@@ -3268,8 +3332,8 @@ const Column = React.memo(function Column({ status, tasks }) {
     >
       <div className="flex items-center gap-2 mb-3">
         <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{meta.label}</h3>
-        <span className="text-xs text-slate-500 dark:text-slate-500">{meta.hint}</span>
-        <span className="ml-auto text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full">
+        <span className="text-xs text-slate-500 dark:text-slate-400">{meta.hint}</span>
+        <span className="ml-auto text-xs font-medium text-slate-400 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full">
           {tasks.length}
         </span>
       </div>
@@ -3363,46 +3427,58 @@ function TokenHelpTooltip({ visible, onDismiss }) {
       <div className="space-y-3 text-sm text-gray-700 dark:text-slate-300">
         <div>
           <strong className="text-slate-900 dark:text-slate-100">!p0..p3</strong> - Set priority
-          <div className="text-xs text-slate-500 ml-2">Example: !p0 (highest), !p3 (lowest)</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+            Example: !p0 (highest), !p3 (lowest)
+          </div>
         </div>
 
         <div>
           <strong className="text-slate-900 dark:text-slate-100">@owner</strong> - Assign owner
-          <div className="text-xs text-slate-500 ml-2">Example: @ai, @me, @john</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+            Example: @ai, @me, @john
+          </div>
         </div>
 
         <div>
           <strong className="text-slate-900 dark:text-slate-100">+tag</strong> - Add tag
-          <div className="text-xs text-slate-500 ml-2">Example: +bug, +feature</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+            Example: +bug, +feature
+          </div>
         </div>
 
         <div>
           <strong className="text-slate-900 dark:text-slate-100">due:</strong> - Set due date
-          <div className="text-xs text-slate-500 ml-2">
-            Example: due:today, due:tomorrow, due:2025-12-31, due:16:00
+          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+            Example: due:today, due:tomorrow, due:
+            {format(addDays(new Date(), 7), 'yyyy-MM-dd')}, due:16:00
           </div>
         </div>
 
         <div>
           <strong className="text-slate-900 dark:text-slate-100">impact:0..5</strong> - Set impact
-          <div className="text-xs text-slate-500 ml-2">Example: impact:5 (high impact)</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+            Example: impact:5 (high impact)
+          </div>
         </div>
 
         <div>
           <strong className="text-slate-900 dark:text-slate-100">urgency:0..5</strong> - Set urgency
-          <div className="text-xs text-slate-500 ml-2">Example: urgency:4</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">Example: urgency:4</div>
         </div>
 
         <div>
           <strong className="text-slate-900 dark:text-slate-100">effort:0..5</strong> - Set effort
-          <div className="text-xs text-slate-500 ml-2">Example: effort:2 (low effort)</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+            Example: effort:2 (low effort)
+          </div>
         </div>
 
         <div>
           <strong className="text-slate-900 dark:text-slate-100">expect:</strong> - Expected
           completion
-          <div className="text-xs text-slate-500 ml-2">
-            Example: expect:today, expect:2025-12-31
+          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+            Example: expect:today, expect:
+            {format(addDays(new Date(), 7), 'yyyy-MM-dd')}
           </div>
         </div>
       </div>
@@ -3457,8 +3533,10 @@ function TaskCard({ task }) {
   const selectedIds = useStore((s) => s.selectedIds);
   const projects = useStore((s) => s.projects);
   const currentProjectId = useStore((s) => s.currentProjectId);
+  const lastAddedTaskId = useStore((s) => s.lastAddedTaskId);
   const [open, setOpen] = useState(false);
   const overdue = task.dueAt ? isBefore(new Date(task.dueAt), new Date()) : false;
+  const isNewlyAdded = lastAddedTaskId === task.id;
 
   const taskProject = projects.find((p) => p.id === task.projectId);
 
@@ -3480,11 +3558,13 @@ function TaskCard({ task }) {
       layout
       drag
       dragSnapToOrigin
+      initial={isNewlyAdded ? { scale: 0.95, opacity: 0.7 } : false}
+      animate={isNewlyAdded ? { scale: 1, opacity: 1 } : undefined}
+      transition={isNewlyAdded ? { duration: 0.3 } : undefined}
       onDragStart={() => {
         useStore.getState().setDraggingId(task.id);
       }}
       onDrag={(e, info) => {
-        // Throttle: only check every 100ms to avoid performance issues
         const now = Date.now();
         if (!useStore.getState().lastDragCheck || now - useStore.getState().lastDragCheck > 100) {
           const status = getStatusFromPoint(info.point.x, info.point.y);
@@ -3502,6 +3582,7 @@ function TaskCard({ task }) {
         'bg-white dark:bg-slate-800',
         'shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden',
         isSelected && 'ring-2 ring-blue-400 shadow-md',
+        isNewlyAdded && 'ring-2 ring-green-400',
         getPriorityBorderClass(task.priorityBucket),
       )}
     >
@@ -4060,7 +4141,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
             <div className="text-center py-8">
               <Users className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
               <div className="text-slate-500 dark:text-slate-400">No owners yet</div>
-              <div className="text-sm text-slate-400 dark:text-slate-500 mt-1">
+              <div className="text-sm text-slate-400 dark:text-slate-400 mt-1">
                 Owners will appear here as you assign them to tasks
               </div>
             </div>
@@ -4219,6 +4300,62 @@ function TaskDrawer({ task, onClose }) {
   const [local, setLocal] = useState(task);
   useEffect(() => setLocal(task), [task]);
 
+  const drawerRef = useRef(null);
+  const previousFocusRef = useRef(null);
+
+  // Escape key handler
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  // Focus trapping
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement;
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+
+    const focusableSelectors =
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusableElements = drawer.querySelectorAll(focusableSelectors);
+    if (focusableElements.length > 0) {
+      focusableElements[0].focus();
+    }
+
+    const handleTab = (e) => {
+      if (e.key !== 'Tab') return;
+      const focusable = drawer.querySelectorAll(focusableSelectors);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleTab);
+    return () => {
+      document.removeEventListener('keydown', handleTab);
+      if (previousFocusRef.current && previousFocusRef.current.focus) {
+        previousFocusRef.current.focus();
+      }
+    };
+  }, []);
+
   function save(patch) {
     update(task.id, patch);
   }
@@ -4247,6 +4384,10 @@ function TaskDrawer({ task, onClose }) {
       />
       {/* Modal */}
       <motion.div
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Task details"
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 40 }}
@@ -4256,6 +4397,7 @@ function TaskDrawer({ task, onClose }) {
           <h3 className="font-semibold">Task</h3>
           <button
             onClick={onClose}
+            aria-label="Close task drawer"
             className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             <X className="w-4 h-4" />
@@ -4362,7 +4504,7 @@ function TaskDrawer({ task, onClose }) {
               >
                 Rescore
               </button>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 score = (2×impact + 1.5×urgency) − effort {local.dueAt ? ' + due boost' : ''}
               </span>
             </div>
@@ -4452,6 +4594,12 @@ function Toolbar({ viewMode, onChangeView }) {
   const inputRef = useRef(null);
   const [showOwnerDropdown, setShowOwnerDropdown] = useState(false);
   const [showTokenHelp, setShowTokenHelp] = useState(false);
+
+  // Real-time token preview
+  const parsedTokens = useMemo(() => {
+    if (!input.trim()) return null;
+    return parseQuickAdd(input);
+  }, [input]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -4553,13 +4701,18 @@ function Toolbar({ viewMode, onChangeView }) {
       tags: p.tags,
       dueAt: p.dueAt,
       expectedBy: p.expectedBy,
-      owners: p.owners || [], // Add owners from parsed data
+      owners: p.owners || [],
     };
     if (p.impact !== undefined) base.impact = p.impact;
     if (p.urgency !== undefined) base.urgency = p.urgency;
     if (p.effort !== undefined) base.effort = p.effort;
     if (p.priorityBucket) base.priorityBucket = p.priorityBucket;
     addTask(base);
+    // Show notification with column name
+    const statusMeta = useStore.getState().getStatusMetaMap();
+    const targetStatus = base.status || useStore.getState().getDefaultStatus()?.id || 'backlog';
+    const columnLabel = statusMeta[targetStatus]?.label || targetStatus;
+    useStore.getState().showNotification(`Task added to ${columnLabel}`, 'success');
     setInput('');
   };
 
@@ -4567,11 +4720,7 @@ function Toolbar({ viewMode, onChangeView }) {
   const [showAssignOwnerDialog, setShowAssignOwnerDialog] = useState(false);
 
   const onBulkDelete = () => {
-    let ok = true;
-    if (typeof window !== 'undefined' && window.confirm) {
-      ok = window.confirm(`Delete ${selectedIds.length} selected task(s)? This cannot be undone.`);
-    }
-    if (ok) deleteSelected();
+    deleteSelected();
   };
 
   const onBulkMove = () => {
@@ -4598,13 +4747,24 @@ function Toolbar({ viewMode, onChangeView }) {
                     setShowTokenHelp(false);
                   }
                 }}
+                onFocus={() => {
+                  try {
+                    const seen = localStorage.getItem('flowtrackr-token-help-seen');
+                    if (!seen) {
+                      setShowTokenHelp(true);
+                      localStorage.setItem('flowtrackr-token-help-seen', '1');
+                    }
+                  } catch (e) {
+                    /* ignore */
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     onAdd();
                   }
                 }}
-                placeholder="Add a task... (type @ for assignment, # for project, ! for priority)"
+                placeholder="Add a task... (type @ for assignment, ! for priority, due: for dates)"
                 className="w-full px-4 pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
               />
               <Plus className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
@@ -4627,6 +4787,64 @@ function Toolbar({ viewMode, onChangeView }) {
               </button>
               {/* Token help tooltip */}
               <TokenHelpTooltip visible={showTokenHelp} onDismiss={() => setShowTokenHelp(false)} />
+              {/* Token preview chips */}
+              {parsedTokens && input.trim() && (
+                <div className="absolute left-0 right-0 top-full mt-1 flex flex-wrap gap-1 z-20">
+                  {parsedTokens.priorityBucket && (
+                    <span
+                      className={clsx(
+                        'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+                        PRIORITY_COLORS[parsedTokens.priorityBucket],
+                      )}
+                    >
+                      {parsedTokens.priorityBucket}
+                    </span>
+                  )}
+                  {parsedTokens.ownerType === 'ai' && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                      <Bot className="w-3 h-3" /> AI
+                    </span>
+                  )}
+                  {parsedTokens.owners &&
+                    parsedTokens.owners.map((owner) => (
+                      <span
+                        key={owner}
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                      >
+                        @{owner}
+                      </span>
+                    ))}
+                  {parsedTokens.tags &&
+                    parsedTokens.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
+                      >
+                        +{tag}
+                      </span>
+                    ))}
+                  {parsedTokens.dueAt && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                      <Clock className="w-3 h-3" /> {humanDue(parsedTokens.dueAt)}
+                    </span>
+                  )}
+                  {parsedTokens.impact !== undefined && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                      impact:{parsedTokens.impact}
+                    </span>
+                  )}
+                  {parsedTokens.urgency !== undefined && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                      urgency:{parsedTokens.urgency}
+                    </span>
+                  )}
+                  {parsedTokens.effort !== undefined && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+                      effort:{parsedTokens.effort}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             {/* Mic toggle */}
             <button
@@ -4743,6 +4961,21 @@ function Toolbar({ viewMode, onChangeView }) {
               placeholder="Filter text"
               className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-shadow"
             />
+            {(ownerFilter || filters.q) && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium">
+                Filtered
+                <button
+                  onClick={() => {
+                    setFilters({ q: '' });
+                    setOwnerFilter(null);
+                  }}
+                  className="ml-0.5 hover:text-blue-900 dark:hover:text-blue-100"
+                  aria-label="Clear all filters"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
           </div>
         </div>
         {(isListening || speechErr) && (
@@ -4907,13 +5140,52 @@ function groupTasksByStatus(tasks, statusOrder = null) {
 
 const Board = React.memo(function Board() {
   const filtered = useFilteredTasks();
+  const allTasks = useStore((s) => s.tasks);
   const currentProjectId = useStore((s) => s.currentProjectId);
   const projects = useStore((s) => s.projects);
+  const filters = useStore((s) => s.filters);
+  const ownerFilter = useStore((s) => s.ownerFilter);
+  const setFilters = useStore((s) => s.setFilters);
+  const setOwnerFilter = useStore((s) => s.setOwnerFilter);
   const statusOrder = useStore((s) => s.getStatusOrder());
   const grouped = useMemo(() => groupTasksByStatus(filtered, statusOrder), [filtered, statusOrder]);
 
   const currentProject = projects.find((p) => p.id === currentProjectId);
+  const projectTasks = useMemo(
+    () => allTasks.filter((t) => t.projectId === currentProjectId),
+    [allTasks, currentProjectId],
+  );
   const hasNoTasks = filtered.length === 0;
+  const hasFiltersActive = !!(ownerFilter || filters.q);
+  const isFilteredEmpty = hasNoTasks && hasFiltersActive && projectTasks.length > 0;
+
+  if (isFilteredEmpty) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center max-w-md">
+          <div className="mb-4">
+            <Search className="w-16 h-16 mx-auto text-slate-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+            No tasks match your filters
+          </h3>
+          <div className="text-sm text-slate-600 dark:text-slate-400 mb-4 space-y-1">
+            {ownerFilter && <p>Owner: {ownerFilter}</p>}
+            {filters.q && <p>Search: &quot;{filters.q}&quot;</p>}
+          </div>
+          <button
+            onClick={() => {
+              setFilters({ q: '' });
+              setOwnerFilter(null);
+            }}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
+          >
+            Clear All Filters
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (hasNoTasks) {
     return (
@@ -4940,7 +5212,7 @@ const Board = React.memo(function Board() {
           <p className="text-slate-600 dark:text-slate-400 mb-4">
             Get started by adding your first task using the quick-add bar above.
           </p>
-          <div className="text-sm text-slate-500 dark:text-slate-500">
+          <div className="text-sm text-slate-500 dark:text-slate-400">
             <p className="mb-2">Quick tips:</p>
             <ul className="text-left inline-block">
               <li>
@@ -4981,6 +5253,18 @@ const Board = React.memo(function Board() {
 
 function BacklogView() {
   const filtered = useFilteredTasks();
+  const allTasks = useStore((s) => s.tasks);
+  const currentProjectId = useStore((s) => s.currentProjectId);
+  const filters = useStore((s) => s.filters);
+  const ownerFilter = useStore((s) => s.ownerFilter);
+  const setFilters = useStore((s) => s.setFilters);
+  const setOwnerFilter = useStore((s) => s.setOwnerFilter);
+  const projectTasks = useMemo(
+    () => allTasks.filter((t) => t.projectId === currentProjectId),
+    [allTasks, currentProjectId],
+  );
+  const hasFiltersActive = !!(ownerFilter || filters.q);
+  const isFilteredEmpty = filtered.length === 0 && hasFiltersActive && projectTasks.length > 0;
   const [collapsed, setCollapsed] = useState(() => new Set(['done']));
   const [draggingTask, setDraggingTask] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
@@ -5027,6 +5311,34 @@ function BacklogView() {
       return next;
     });
   };
+
+  if (isFilteredEmpty) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center max-w-md">
+          <div className="mb-4">
+            <Search className="w-16 h-16 mx-auto text-slate-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+            No tasks match your filters
+          </h3>
+          <div className="text-sm text-slate-600 dark:text-slate-400 mb-4 space-y-1">
+            {ownerFilter && <p>Owner: {ownerFilter}</p>}
+            {filters.q && <p>Search: &quot;{filters.q}&quot;</p>}
+          </div>
+          <button
+            onClick={() => {
+              setFilters({ q: '' });
+              setOwnerFilter(null);
+            }}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
+          >
+            Clear All Filters
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-0">
@@ -5108,7 +5420,7 @@ function BacklogHeader({ statusLabel, statusHint, count, collapsed, onToggle }) 
           <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
             {statusLabel}
           </span>
-          <span className="text-xs text-slate-500">{statusHint}</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">{statusHint}</span>
         </div>
         <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-400">
           {count} task{count === 1 ? '' : 's'}
@@ -5513,24 +5825,271 @@ function runSelfTests() {
 // DISABLED: Self-tests were modifying the actual store and persisting test data
 // const SELF_TEST_RESULTS = runSelfTests();
 
+// ----- Keyboard Shortcuts Modal -----
+function KeyboardShortcutsModal({ onClose }) {
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const shortcuts = [
+    { keys: ['?'], description: 'Show keyboard shortcuts' },
+    { keys: ['1', '-', '8'], description: 'Move selected tasks to column 1-8' },
+    { keys: ['n'], description: 'Focus quick-add input' },
+    { keys: ['Esc'], description: 'Close dialog / deselect tasks' },
+    { keys: ['Ctrl', 'K'], description: 'Open project switcher' },
+    { keys: ['Ctrl', 'Shift', 'N'], description: 'Create new project' },
+  ];
+
+  return ReactDOM.createPortal(
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-[400]"
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="fixed inset-0 flex items-center justify-center z-[401] pointer-events-none"
+      >
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl shadow-xl dark:shadow-2xl p-6 w-[420px] max-w-[90vw] pointer-events-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Keyboard className="w-5 h-5" /> Keyboard Shortcuts
+            </h2>
+            <button
+              onClick={onClose}
+              aria-label="Close shortcuts modal"
+              className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            {shortcuts.map((shortcut, idx) => (
+              <div key={idx} className="flex items-center justify-between">
+                <span className="text-sm text-slate-700 dark:text-slate-300">
+                  {shortcut.description}
+                </span>
+                <div className="flex items-center gap-1">
+                  {shortcut.keys.map((key, kidx) => (
+                    <span key={kidx}>
+                      {key === '-' ? (
+                        <span className="text-slate-400 text-xs mx-0.5">-</span>
+                      ) : (
+                        <kbd className="inline-flex items-center px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded">
+                          {key}
+                        </kbd>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
+            <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+              Press{' '}
+              <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-xs">
+                Esc
+              </kbd>{' '}
+              to close
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>,
+    document.body,
+  );
+}
+
+function OverflowMenu({ onDeleteAll }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    const handleClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener('keydown', handleEsc);
+    document.addEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('keydown', handleEsc);
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [isOpen]);
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setIsOpen((v) => !v)}
+        className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        aria-label="More actions"
+        title="More actions"
+      >
+        <MoreVertical className="w-5 h-5" />
+      </button>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.15 }}
+            role="menu"
+            className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-50 py-1"
+          >
+            <button
+              role="menuitem"
+              onClick={() => {
+                setIsOpen(false);
+                onDeleteAll();
+              }}
+              className="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete All Tasks in Project
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function UndoToast({ toast, onUndo, onDismiss }) {
+  return (
+    <AnimatePresence>
+      {toast && (
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 40 }}
+          transition={{ duration: 0.25 }}
+          className="fixed bottom-16 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-3 px-4 py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-lg shadow-xl"
+        >
+          <span className="text-sm">{toast.message}</span>
+          <button
+            onClick={onUndo}
+            className="px-3 py-1 text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            Undo
+          </button>
+          <button
+            onClick={onDismiss}
+            className="p-1 text-slate-400 hover:text-white transition-colors"
+            aria-label="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function NotificationToast({ toast }) {
+  return (
+    <AnimatePresence>
+      {toast && (
+        <motion.div
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 40 }}
+          transition={{ duration: 0.25 }}
+          className={clsx(
+            'fixed bottom-6 right-6 z-[500] px-4 py-3 rounded-lg shadow-xl text-white text-sm',
+            toast.type === 'success'
+              ? 'bg-green-600 dark:bg-green-700'
+              : 'bg-blue-600 dark:bg-blue-700',
+          )}
+        >
+          {toast.message}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export default function WorkdayTaskBoardApp() {
-  const persist = useStore((s) => s.persist);
+  const persistIfDirty = useStore((s) => s.persistIfDirty);
   const init = useStore((s) => s.init);
   const currentProjectId = useStore((s) => s.currentProjectId);
   const getProjectTaskCount = useStore((s) => s.getProjectTaskCount);
   const clearCurrentProject = useStore((s) => s.clearCurrentProject);
+  const undoToast = useStore((s) => s.undoToast);
+  const performUndo = useStore((s) => s.performUndo);
+  const dismissUndoToast = useStore((s) => s.dismissUndoToast);
+  const notificationToast = useStore((s) => s.notificationToast);
   useEffect(() => {
     init();
-    // Initialize owner registry after loading from storage
     useStore.getState().initializeOwnerRegistry();
   }, [init]);
   useEffect(() => {
-    const id = setInterval(() => persist(), 1000);
+    const id = setInterval(() => persistIfDirty(), 5000);
     return () => clearInterval(id);
-  }, [persist]);
+  }, [persistIfDirty]);
 
   const [showOwnerManager, setShowOwnerManager] = useState(false);
   const [showWorkflowSettings, setShowWorkflowSettings] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      const tag = (e.target.tagName || '').toUpperCase();
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.key === '?') {
+        e.preventDefault();
+        setShowShortcuts((v) => !v);
+        return;
+      }
+      if (e.key === 'n') {
+        e.preventDefault();
+        const quickAddInput = document.querySelector('[placeholder*="Add a task"]');
+        if (quickAddInput) quickAddInput.focus();
+        return;
+      }
+      if (e.key === 'Escape') {
+        const { selectedIds, clearSelection } = useStore.getState();
+        if (selectedIds.length > 0) {
+          e.preventDefault();
+          clearSelection();
+        }
+        return;
+      }
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= 8) {
+        const { selectedIds, getStatusOrder, moveTask } = useStore.getState();
+        if (selectedIds.length > 0) {
+          e.preventDefault();
+          const statusOrder = getStatusOrder();
+          const targetStatus = statusOrder[num - 1];
+          if (targetStatus) {
+            selectedIds.forEach((id) => moveTask(id, targetStatus));
+          }
+        }
+        return;
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   // Theme toggle with persistence
   const [dark, setDark] = useState(() => {
@@ -5579,42 +6138,25 @@ export default function WorkdayTaskBoardApp() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <ProjectSelector />
+                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
                 <button
                   onClick={() => setShowWorkflowSettings(true)}
-                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   title="Workflow Settings"
                 >
                   <Kanban className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => {
-                    const count = getProjectTaskCount(currentProjectId);
-                    if (count === 0) {
-                      alert('No tasks to delete in this project.');
-                      return;
-                    }
-                    if (
-                      window.confirm(
-                        `Delete all ${count} task(s) in this project? This cannot be undone.`,
-                      )
-                    ) {
-                      clearCurrentProject();
-                    }
-                  }}
-                  title="Delete all tasks in the current project"
-                  className="p-2 rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                  aria-label="Clear all tasks in current project"
-                >
-                  <Trash2 className="w-5 h-5" />
+                  <span className="hidden sm:inline text-sm">Workflow</span>
                 </button>
                 <button
                   onClick={() => setShowOwnerManager(true)}
-                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   title="Manage Owners"
                 >
-                  <Settings className="w-5 h-5" />
+                  <Users className="w-5 h-5" />
+                  <span className="hidden sm:inline text-sm">Owners</span>
                 </button>
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
+                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
                 <button
                   onClick={() => setDark((v) => !v)}
                   className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -5622,7 +6164,16 @@ export default function WorkdayTaskBoardApp() {
                 >
                   {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </button>
-                <ProjectSelector />
+                <OverflowMenu
+                  onDeleteAll={() => {
+                    const count = getProjectTaskCount(currentProjectId);
+                    if (count === 0) {
+                      useStore.getState().showNotification('No tasks to delete in this project.', 'info');
+                      return;
+                    }
+                    clearCurrentProject();
+                  }}
+                />
               </div>
             </div>
           </header>
@@ -5632,7 +6183,15 @@ export default function WorkdayTaskBoardApp() {
             <WipBanner />
             {viewMode === 'board' ? <Board /> : <BacklogView />}
 
-            <footer className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-800"></footer>
+            <footer className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-800">
+              <p className="text-xs text-slate-400 dark:text-slate-400 text-center">
+                Press{' '}
+                <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-xs font-medium">
+                  ?
+                </kbd>{' '}
+                for shortcuts
+              </p>
+            </footer>
           </main>
         </div>
 
@@ -5643,6 +6202,13 @@ export default function WorkdayTaskBoardApp() {
         {showWorkflowSettings && (
           <WorkflowSettingsModal onClose={() => setShowWorkflowSettings(false)} />
         )}
+
+        <AnimatePresence>
+          {showShortcuts && <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />}
+        </AnimatePresence>
+
+        <UndoToast toast={undoToast} onUndo={performUndo} onDismiss={dismissUndoToast} />
+        <NotificationToast toast={notificationToast} />
       </div>
     </ErrorBoundary>
   );
