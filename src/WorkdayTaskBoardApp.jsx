@@ -49,7 +49,7 @@ import logoDark from '/assets/dark/flowtrackr-logo.png';
  *
  * Patch 3: Focus timer UX
  * - ▶️ Play now starts a live timer chip on the card and auto-moves the task to In Progress.
- * - ⏸ Pause stops the timer, logs time, and (optionally) returns the card to Ready via a toggle.
+ * - ⏸ Pause stops the timer, logs time, and (optionally) returns the card to Next Up via a toggle.
  * - Inline time chip shows running elapsed or total logged time when paused.
  * - Added preferences: autoReturnOnStop (toggle in toolbar).
  * - Added pure helpers `computeElapsedSecs` and `formatDurationShort` + tests.
@@ -68,17 +68,40 @@ import logoDark from '/assets/dark/flowtrackr-logo.png';
 // ----- Constants -----
 
 const STATUS_META = /** @type{Record<Status,{label:string, key:string, hint:string}>} */ ({
-  backlog: { label: 'Backlog', key: '1', hint: 'Ideas and unsorted' },
-  ready: { label: 'Ready', key: '2', hint: 'Triage done' },
+  backlog: { label: 'Inbox', key: '1', hint: 'Capture and triage later' },
+  ready: { label: 'Next Up', key: '2', hint: 'Ready to pull next' },
   in_progress: { label: 'In Progress', key: '3', hint: 'Actively doing' },
-  waiting_ai: { label: 'Waiting on AI', key: '4', hint: 'Delegated to agent' },
-  waiting_other: { label: 'Waiting on Others', key: '5', hint: 'Blocked by a human' },
-  blocked: { label: 'Blocked', key: '6', hint: 'Needs unblocking' },
-  in_review: { label: 'In Review', key: '7', hint: 'PR/review/QA' },
+  in_review: { label: 'Review', key: '4', hint: 'Needs review or QA' },
+  waiting_ai: { label: 'Waiting on AI', key: '5', hint: 'Delegated to AI' },
+  waiting_other: { label: 'Waiting on Others', key: '6', hint: 'Waiting for teammate/external' },
+  blocked: { label: 'Blocked', key: '7', hint: 'Needs decision or unblock' },
   done: { label: 'Done', key: '8', hint: 'Completed' },
 });
 
 const STATUS_ORDER = /** @type{Status[]} */ (Object.keys(STATUS_META));
+
+const LEGACY_STATUS_META = {
+  backlog: { label: 'Backlog', hint: 'Ideas and unsorted' },
+  ready: { label: 'Ready', hint: 'Triage done' },
+  in_progress: { label: 'In Progress', hint: 'Actively doing' },
+  waiting_ai: { label: 'Waiting on AI', hint: 'Delegated to agent' },
+  waiting_other: { label: 'Waiting on Others', hint: 'Blocked by a human' },
+  blocked: { label: 'Blocked', hint: 'Needs unblocking' },
+  in_review: { label: 'In Review', hint: 'PR/review/QA' },
+  done: { label: 'Done', hint: 'Completed' },
+};
+
+const WAITING_STATUSES = ['waiting_ai', 'waiting_other', 'blocked'];
+const STANDARD_STATUS_ORDER = [
+  'backlog',
+  'ready',
+  'in_progress',
+  'in_review',
+  'waiting_ai',
+  'waiting_other',
+  'blocked',
+  'done',
+];
 
 const PRIORITY_COLORS = {
   P0: 'bg-red-50 text-red-600 border-l-4 border-l-red-500 dark:bg-red-950 dark:text-red-400 dark:border-l-red-400',
@@ -319,14 +342,14 @@ function migrateToV2_1(data) {
     return data;
   }
 
-  // Initialize with the 8 default statuses from STATUS_META
+  // Initialize with the default workday statuses from STATUS_META
   const now = new Date().toISOString();
   data.statusConfig = {
     statuses: [
       {
         id: 'backlog',
-        label: 'Backlog',
-        description: 'Ideas and unsorted',
+        label: 'Inbox',
+        description: 'Capture and triage later',
         order: 0,
         isDefault: true,
         isCompletionState: false,
@@ -336,8 +359,8 @@ function migrateToV2_1(data) {
       },
       {
         id: 'ready',
-        label: 'Ready',
-        description: 'Triage done',
+        label: 'Next Up',
+        description: 'Ready to pull next',
         order: 1,
         isDefault: false,
         isCompletionState: false,
@@ -357,9 +380,9 @@ function migrateToV2_1(data) {
         canDelete: true,
       },
       {
-        id: 'waiting_ai',
-        label: 'Waiting on AI',
-        description: 'Delegated to agent',
+        id: 'in_review',
+        label: 'Review',
+        description: 'Needs review or QA',
         order: 3,
         isDefault: false,
         isCompletionState: false,
@@ -368,9 +391,9 @@ function migrateToV2_1(data) {
         canDelete: true,
       },
       {
-        id: 'waiting_other',
-        label: 'Waiting on Others',
-        description: 'Blocked by a human',
+        id: 'waiting_ai',
+        label: 'Waiting on AI',
+        description: 'Delegated to AI',
         order: 4,
         isDefault: false,
         isCompletionState: false,
@@ -379,9 +402,9 @@ function migrateToV2_1(data) {
         canDelete: true,
       },
       {
-        id: 'blocked',
-        label: 'Blocked',
-        description: 'Needs unblocking',
+        id: 'waiting_other',
+        label: 'Waiting on Others',
+        description: 'Waiting for teammate/external',
         order: 5,
         isDefault: false,
         isCompletionState: false,
@@ -390,9 +413,9 @@ function migrateToV2_1(data) {
         canDelete: true,
       },
       {
-        id: 'in_review',
-        label: 'In Review',
-        description: 'PR/review/QA',
+        id: 'blocked',
+        label: 'Blocked',
+        description: 'Needs decision or unblock',
         order: 6,
         isDefault: false,
         isCompletionState: false,
@@ -416,6 +439,49 @@ function migrateToV2_1(data) {
   };
 
   return data;
+}
+
+// Normalize legacy default labels/hints to the workday-first language and order.
+function normalizeStatusConfig(statusConfig) {
+  if (!statusConfig || !Array.isArray(statusConfig.statuses)) {
+    return statusConfig;
+  }
+
+  const copiedStatuses = statusConfig.statuses.map((status) => {
+    const workdayMeta = STATUS_META[status.id];
+    const legacyMeta = LEGACY_STATUS_META[status.id];
+    if (!workdayMeta || !legacyMeta) return status;
+
+    const shouldReplaceLabel = !status.label || status.label === legacyMeta.label;
+    const shouldReplaceDescription = !status.description || status.description === legacyMeta.hint;
+
+    return {
+      ...status,
+      label: shouldReplaceLabel ? workdayMeta.label : status.label,
+      description: shouldReplaceDescription ? workdayMeta.hint : status.description,
+    };
+  });
+
+  const allAreDefaultStatuses = copiedStatuses.every((status) => STANDARD_STATUS_ORDER.includes(status.id));
+  const hasAllDefaults = STANDARD_STATUS_ORDER.every((statusId) =>
+    copiedStatuses.some((status) => status.id === statusId),
+  );
+
+  // Reorder only when the user still has the untouched default set.
+  if (!allAreDefaultStatuses || !hasAllDefaults) {
+    return { ...statusConfig, statuses: copiedStatuses };
+  }
+
+  const reordered = STANDARD_STATUS_ORDER.map((statusId, index) => {
+    const status = copiedStatuses.find((s) => s.id === statusId);
+    return {
+      ...status,
+      order: index,
+      keyboardShortcut: String(index + 1),
+    };
+  });
+
+  return { ...statusConfig, statuses: reordered };
 }
 
 // Owner name validation function
@@ -660,6 +726,7 @@ const useStore = create((set, get) => ({
 
         // Apply status config migration
         parsed = migrateToV2_1(parsed);
+        parsed.statusConfig = normalizeStatusConfig(parsed.statusConfig);
 
         // Convert stored owner registry to runtime format
         const ownerRegistry = {
@@ -691,7 +758,7 @@ const useStore = create((set, get) => ({
       console.error('Storage error:', e);
     }
     // Initialize with default project and seed tasks
-    const initialStatusConfig = migrateToV2_1({}).statusConfig;
+    const initialStatusConfig = normalizeStatusConfig(migrateToV2_1({}).statusConfig);
     set({
       tasks: seedTasks(),
       projects: [
@@ -1597,7 +1664,7 @@ const useStore = create((set, get) => ({
     const { tasks } = get();
 
     // Get the 8 default statuses
-    const defaultStatusConfig = migrateToV2_1({}).statusConfig;
+    const defaultStatusConfig = normalizeStatusConfig(migrateToV2_1({}).statusConfig);
 
     // Build a mapping of old status IDs to new default status IDs
     // Strategy: Map to closest matching default status by label similarity
@@ -2235,7 +2302,7 @@ function ProjectManager({ onClose }) {
 
   return ReactDOM.createPortal(
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4"
+      className="fixed inset-0 bg-black/60 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
       onClick={onClose}
       onKeyDown={(e) => {
         if (e.key === 'Escape') onClose();
@@ -2561,7 +2628,7 @@ function WorkflowSettingsModal({ onClose }) {
 
   return ReactDOM.createPortal(
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4"
+      className="fixed inset-0 bg-black/60 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
       onClick={onClose}
       onKeyDown={(e) => {
         if (e.key === 'Escape') onClose();
@@ -2571,20 +2638,22 @@ function WorkflowSettingsModal({ onClose }) {
       aria-label="Close workflow settings"
     >
       <div
-        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-auto relative z-[201]"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto relative z-[201]"
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-slate-800 z-10">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-10">
           <div>
-            <h2 className="text-lg font-semibold">Workflow Configuration</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              Workflow Configuration
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Customize your workflow statuses
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+            className="p-1 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -2592,7 +2661,7 @@ function WorkflowSettingsModal({ onClose }) {
 
         <div className="p-4">
           {error && (
-            <div className="mb-4 p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-sm">
+            <div className="mb-4 p-2 bg-red-100 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-300 rounded text-sm">
               {error}
             </div>
           )}
@@ -2600,16 +2669,16 @@ function WorkflowSettingsModal({ onClose }) {
           {/* Add New Status Form */}
           <form
             onSubmit={handleCreateStatus}
-            className="mb-6 p-4 bg-slate-50 dark:bg-gray-900 rounded-lg"
+            className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-lg"
           >
-            <h3 className="font-medium mb-3">Add New Status</h3>
+            <h3 className="font-medium mb-3 text-slate-900 dark:text-slate-100">Add New Status</h3>
             <div className="space-y-2">
               <input
                 type="text"
                 value={newStatusLabel}
                 onChange={(e) => setNewStatusLabel(e.target.value)}
                 placeholder="Status name (e.g., 'In Design')"
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-500 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 maxLength={30}
               />
               <input
@@ -2617,17 +2686,17 @@ function WorkflowSettingsModal({ onClose }) {
                 value={newStatusDesc}
                 onChange={(e) => setNewStatusDesc(e.target.value)}
                 placeholder="Description (e.g., 'Design work in progress')"
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-500 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 maxLength={50}
               />
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500 dark:text-slate-400">
+                <span className="text-xs text-slate-500 dark:text-slate-300">
                   {statuses.length} / 15 statuses
                 </span>
                 <button
                   type="submit"
                   disabled={statuses.length >= 15}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Add Status
                 </button>
@@ -2637,8 +2706,8 @@ function WorkflowSettingsModal({ onClose }) {
 
           {/* Status List */}
           <div className="space-y-2 mb-6">
-            <h3 className="font-medium mb-2">Current Statuses</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            <h3 className="font-medium mb-2 text-slate-900 dark:text-slate-100">Current Statuses</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-300 mb-3">
               Drag to reorder • Click to edit
             </p>
             {statuses.map((status, index) => {
@@ -2656,7 +2725,7 @@ function WorkflowSettingsModal({ onClose }) {
                   onDrop={(e) => handleDrop(e, index)}
                   onDragEnd={handleDragEnd}
                   className={clsx(
-                    'p-3 rounded-lg border transition-all',
+                    'p-3 rounded-lg border transition-all bg-white dark:bg-slate-800/60',
                     dragOverIndex === index && draggedStatus
                       ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
                       : 'border-gray-200 dark:border-gray-700',
@@ -2670,7 +2739,7 @@ function WorkflowSettingsModal({ onClose }) {
                         type="text"
                         value={editingLabel}
                         onChange={(e) => setEditingLabel(e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-500 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                         maxLength={30}
                       />
                       <input
@@ -2678,7 +2747,7 @@ function WorkflowSettingsModal({ onClose }) {
                         value={editingDesc}
                         onChange={(e) => setEditingDesc(e.target.value)}
                         placeholder="Description"
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-500 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                         maxLength={50}
                       />
                       <div className="flex gap-2">
@@ -2693,7 +2762,7 @@ function WorkflowSettingsModal({ onClose }) {
                             setEditingId(null);
                             setError('');
                           }}
-                          className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded text-sm hover:bg-gray-400 dark:hover:bg-slate-500"
+                          className="px-3 py-1 bg-slate-300 text-slate-700 dark:bg-slate-700 dark:text-slate-200 rounded text-sm hover:bg-slate-400 dark:hover:bg-slate-600 transition-colors"
                         >
                           Cancel
                         </button>
@@ -2710,7 +2779,7 @@ function WorkflowSettingsModal({ onClose }) {
                       <select
                         value={migrateToId}
                         onChange={(e) => setMigrateToId(e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-500 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                       >
                         <option value="">Select status...</option>
                         {statuses
@@ -2734,7 +2803,7 @@ function WorkflowSettingsModal({ onClose }) {
                             setMigrateToId('');
                             setError('');
                           }}
-                          className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded text-sm hover:bg-gray-400 dark:hover:bg-slate-500"
+                          className="px-3 py-1 bg-slate-300 text-slate-700 dark:bg-slate-700 dark:text-slate-200 rounded text-sm hover:bg-slate-400 dark:hover:bg-slate-600 transition-colors"
                         >
                           Cancel
                         </button>
@@ -2746,7 +2815,9 @@ function WorkflowSettingsModal({ onClose }) {
                         <GripVertical className="w-4 h-4 text-slate-400 cursor-grab" />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{status.label}</span>
+                            <span className="font-medium text-slate-900 dark:text-slate-100">
+                              {status.label}
+                            </span>
                             {status.isDefault && (
                               <span className="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
                                 Default
@@ -2758,7 +2829,7 @@ function WorkflowSettingsModal({ onClose }) {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                          <p className="text-sm text-slate-500 dark:text-slate-300">
                             {status.description}
                           </p>
                           <p className="text-xs text-slate-400 dark:text-slate-400 mt-1">
@@ -2774,7 +2845,7 @@ function WorkflowSettingsModal({ onClose }) {
                             setEditingLabel(status.label);
                             setEditingDesc(status.description);
                           }}
-                          className="px-2 py-1 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
+                          className="px-2 py-1 text-sm text-blue-600 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
                         >
                           Edit
                         </button>
@@ -2804,8 +2875,8 @@ function WorkflowSettingsModal({ onClose }) {
           {/* Restore Defaults */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             {restoreConfirm ? (
-              <div className="p-3 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
-                <p className="text-sm text-amber-800 dark:text-amber-400 mb-3">
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/25 border border-amber-200 dark:border-amber-700/40 rounded-lg">
+                <p className="text-sm text-amber-800 dark:text-amber-300 mb-3">
                   This will reset to 8 default statuses. All tasks will be migrated. Continue?
                 </p>
                 <div className="flex gap-2">
@@ -2817,7 +2888,7 @@ function WorkflowSettingsModal({ onClose }) {
                   </button>
                   <button
                     onClick={() => setRestoreConfirm(false)}
-                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400 dark:hover:bg-slate-500"
+                    className="px-4 py-2 bg-slate-300 text-slate-700 dark:bg-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-400 dark:hover:bg-slate-600 transition-colors"
                   >
                     Cancel
                   </button>
@@ -2826,7 +2897,7 @@ function WorkflowSettingsModal({ onClose }) {
             ) : (
               <button
                 onClick={() => setRestoreConfirm(true)}
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 Restore Default Statuses
               </button>
@@ -3314,32 +3385,45 @@ function Badge({ children, className, variant = 'default' }) {
   );
 }
 
-const Column = React.memo(function Column({ status, tasks }) {
+const Column = React.memo(function Column({
+  status,
+  tasks,
+  labelOverride = null,
+  hintOverride = null,
+  dropStatus = null,
+  tone = 'primary',
+}) {
   const dragHoverStatus = useStore((s) => s.dragHoverStatus);
   const statusMeta = useStore((s) => s.getStatusMetaMap());
-  const highlight = dragHoverStatus === status;
+  const effectiveDropStatus = dropStatus || status;
+  const highlight = dragHoverStatus === effectiveDropStatus;
   const meta = statusMeta[status] || { label: status, hint: '' };
+  const label = labelOverride || meta.label;
+  const hint = hintOverride || meta.hint;
+  const isSecondary = tone === 'secondary';
 
   return (
     <div
-      data-col={status}
+      data-col={effectiveDropStatus}
       className={clsx(
         'flex-1 min-w-[280px] max-w-[520px] rounded-lg p-3 border transition-all',
-        'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700',
+        isSecondary
+          ? 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-700/80'
+          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700',
         highlight && 'ring-2 ring-blue-400 border-blue-300 shadow-lg',
         !highlight && 'shadow-sm',
       )}
     >
       <div className="flex items-center gap-2 mb-3">
-        <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{meta.label}</h3>
-        <span className="text-xs text-slate-500 dark:text-slate-400">{meta.hint}</span>
+        <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{label}</h3>
+        <span className="text-xs text-slate-500 dark:text-slate-400">{hint}</span>
         <span className="ml-auto text-xs font-medium text-slate-400 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full">
           {tasks.length}
         </span>
       </div>
       <div className="space-y-2 min-h-24">
         {tasks.length === 0 ? (
-          <EmptyColumnState columnName={meta.label} />
+          <EmptyColumnState columnName={label} />
         ) : (
           tasks.map((t) => <TaskCard key={t.id} task={t} />)
         )}
@@ -3500,13 +3584,14 @@ function getPriorityBorderClass(priority) {
 // EmptyColumnState - Contextual empty state messages (FR-013 to FR-019)
 const EmptyColumnState = React.memo(({ columnName }) => {
   const messages = {
-    Backlog: { text: 'Add your ideas here', emoji: '💡' },
-    Ready: { text: 'Tasks ready for work will appear here', emoji: '✅' },
+    Inbox: { text: 'Capture ideas and requests here', emoji: '📥' },
+    'Next Up': { text: 'Pull your next task from here', emoji: '✅' },
     'In Progress': { text: 'Start working on a task', emoji: '🚀' },
+    Review: { text: 'Tasks waiting for PR/review/QA', emoji: '👀' },
+    Waiting: { text: 'Pending AI, people, or external dependencies', emoji: '⏳' },
     'Waiting on AI': { text: 'Delegate to AI agents', emoji: '🤖' },
-    'Waiting on Others': { text: 'No blockers yet 👍', emoji: '' },
-    Blocked: { text: 'Nothing blocked right now', emoji: '🎉' },
-    'In Review': { text: 'Ready for PR review', emoji: '👀' },
+    'Waiting on Others': { text: 'Waiting on teammate or external input', emoji: '🤝' },
+    Blocked: { text: 'Needs decision or unblock to continue', emoji: '🧱' },
     Done: { text: 'Ready to ship!', emoji: '🎯' },
   };
 
@@ -4564,6 +4649,91 @@ function TaskDrawer({ task, onClose }) {
   );
 }
 
+const TodayFocusBar = React.memo(function TodayFocusBar() {
+  const filtered = useFilteredTasks();
+  const completionStatuses = useStore((s) => s.getCompletionStatuses());
+
+  const completionIds = useMemo(
+    () => new Set(completionStatuses.map((status) => status.id)),
+    [completionStatuses],
+  );
+
+  const actionable = useMemo(
+    () => filtered.filter((task) => !completionIds.has(task.status)),
+    [filtered, completionIds],
+  );
+
+  const metrics = useMemo(() => {
+    const now = new Date();
+    const urgentNow = actionable.filter(
+      (task) => task.priorityBucket === 'P0' || task.priorityBucket === 'P1',
+    ).length;
+    const inProgress = actionable.filter((task) => task.status === 'in_progress').length;
+    const needsReview = actionable.filter((task) => task.status === 'in_review').length;
+    const waiting = actionable.filter((task) => WAITING_STATUSES.includes(task.status)).length;
+    const atRiskToday = actionable.filter((task) => {
+      if (!task.dueAt) return false;
+      const dueDate = new Date(task.dueAt);
+      return isToday(dueDate) || isBefore(dueDate, now);
+    }).length;
+
+    return [
+      {
+        label: 'Urgent now',
+        value: urgentNow,
+        hint: 'P0/P1 work',
+        tone: urgentNow > 0 ? 'text-rose-600 dark:text-rose-400' : '',
+      },
+      {
+        label: 'In progress',
+        value: inProgress,
+        hint: 'active tasks',
+        tone: '',
+      },
+      {
+        label: 'Needs my review',
+        value: needsReview,
+        hint: 'PR/review/QA',
+        tone: '',
+      },
+      {
+        label: 'Waiting',
+        value: waiting,
+        hint: 'AI / people / external',
+        tone: '',
+      },
+      {
+        label: 'At risk today',
+        value: atRiskToday,
+        hint: 'due today or overdue',
+        tone: atRiskToday > 0 ? 'text-amber-600 dark:text-amber-400' : '',
+      },
+    ];
+  }, [actionable]);
+
+  return (
+    <div className="mb-4">
+      <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+        Today Focus
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+        {metrics.map((metric) => (
+          <div
+            key={metric.label}
+            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2"
+          >
+            <div className="text-xs text-slate-500 dark:text-slate-400">{metric.label}</div>
+            <div className={clsx('text-lg font-semibold text-slate-900 dark:text-slate-100', metric.tone)}>
+              {metric.value}
+            </div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">{metric.hint}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
+
 const WipBanner = React.memo(function WipBanner() {
   const tasks = useStore((s) => s.tasks);
   const currentProjectId = useStore((s) => s.currentProjectId);
@@ -4575,7 +4745,7 @@ const WipBanner = React.memo(function WipBanner() {
   if (wip <= 3) return null;
   return (
     <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 px-3 py-2 text-sm flex items-center gap-2">
-      <Flame className="w-4 h-4" /> High WIP ({wip}). Consider moving some to Ready or Waiting.
+      <Flame className="w-4 h-4" /> High WIP ({wip}). Consider moving some to Next Up or Waiting.
     </div>
   );
 });
@@ -4764,7 +4934,7 @@ function Toolbar({ viewMode, onChangeView }) {
                     onAdd();
                   }
                 }}
-                placeholder="Add a task... (type @ for assignment, ! for priority, due: for dates)"
+                placeholder="Add a task... (@owner, !p1, due:tomorrow)"
                 className="w-full px-4 pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
               />
               <Plus className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
@@ -4910,7 +5080,7 @@ function Toolbar({ viewMode, onChangeView }) {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
                 )}
               >
-                <List className="w-4 h-4" /> Backlog
+                <List className="w-4 h-4" /> List
               </button>
             </div>
             <div className="relative owner-dropdown-container">
@@ -5076,8 +5246,7 @@ function Toolbar({ viewMode, onChangeView }) {
           />
         )}
         <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          Tokens: !p0..p3 due:today|tomorrow|YYYY-MM-DD|HH:mm @ai @me +tag impact:0..5 urgency:0..5
-          effort:0..5 expect:today|YYYY-MM-DD
+          Quick tokens: @ai @me !p0..p3 due:today +tag. Open help for advanced syntax.
         </div>
       </div>
     </div>
@@ -5149,6 +5318,32 @@ const Board = React.memo(function Board() {
   const setOwnerFilter = useStore((s) => s.setOwnerFilter);
   const statusOrder = useStore((s) => s.getStatusOrder());
   const grouped = useMemo(() => groupTasksByStatus(filtered, statusOrder), [filtered, statusOrder]);
+  const standardStatuses = useMemo(() => new Set(STANDARD_STATUS_ORDER), []);
+  const primaryStatuses = useMemo(
+    () => ['ready', 'in_progress', 'in_review'].filter((status) => statusOrder.includes(status)),
+    [statusOrder],
+  );
+  const waitingStatuses = useMemo(
+    () => WAITING_STATUSES.filter((status) => statusOrder.includes(status)),
+    [statusOrder],
+  );
+  const waitingTasks = useMemo(
+    () => waitingStatuses.flatMap((status) => grouped[status] || []),
+    [grouped, waitingStatuses],
+  );
+  const waitingDropStatus = waitingStatuses[0] || null;
+  const secondaryStatuses = useMemo(
+    () =>
+      statusOrder.filter(
+        (status) =>
+          status === 'backlog' ||
+          status === 'done' ||
+          (!primaryStatuses.includes(status) &&
+            !waitingStatuses.includes(status) &&
+            !standardStatuses.has(status)),
+      ),
+    [primaryStatuses, statusOrder, standardStatuses, waitingStatuses],
+  );
 
   const currentProject = projects.find((p) => p.id === currentProjectId);
   const projectTasks = useMemo(
@@ -5239,14 +5434,46 @@ const Board = React.memo(function Board() {
     );
   }
 
+  const showWaitingLane = waitingStatuses.length > 0;
+  const hasSecondary = secondaryStatuses.length > 0;
+
   return (
-    <div
-      className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3"
-      style={{ position: 'relative', zIndex: 1 }}
-    >
-      {statusOrder.map((status) => (
-        <Column key={status} status={status} tasks={grouped[status] || []} />
-      ))}
+    <div className="space-y-4" style={{ position: 'relative', zIndex: 1 }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        {primaryStatuses.map((status) => (
+          <Column key={status} status={status} tasks={grouped[status] || []} />
+        ))}
+        {showWaitingLane && (
+          <Column
+            status={waitingDropStatus}
+            dropStatus={waitingDropStatus}
+            labelOverride="Waiting"
+            hintOverride="AI, people, or external dependencies"
+            tasks={waitingTasks}
+          />
+        )}
+      </div>
+
+      {hasSecondary && (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h4 className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Secondary Lanes
+            </h4>
+            <span className="text-xs text-slate-400 dark:text-slate-500">Inbox + completed work</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {secondaryStatuses.map((status) => (
+              <Column
+                key={status}
+                status={status}
+                tasks={grouped[status] || []}
+                tone={status === 'backlog' || status === 'done' ? 'secondary' : 'primary'}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 });
@@ -6141,14 +6368,6 @@ export default function WorkdayTaskBoardApp() {
                 <ProjectSelector />
                 <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
                 <button
-                  onClick={() => setShowWorkflowSettings(true)}
-                  className="inline-flex items-center gap-1.5 px-2 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  title="Workflow Settings"
-                >
-                  <Kanban className="w-5 h-5" />
-                  <span className="hidden sm:inline text-sm">Workflow</span>
-                </button>
-                <button
                   onClick={() => setShowOwnerManager(true)}
                   className="inline-flex items-center gap-1.5 px-2 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   title="Manage Owners"
@@ -6180,6 +6399,7 @@ export default function WorkdayTaskBoardApp() {
 
           <Toolbar viewMode={viewMode} onChangeView={setViewMode} />
           <main className="px-6 py-4">
+            <TodayFocusBar />
             <WipBanner />
             {viewMode === 'board' ? <Board /> : <BacklogView />}
 
