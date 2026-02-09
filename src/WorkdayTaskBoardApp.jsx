@@ -462,7 +462,9 @@ function normalizeStatusConfig(statusConfig) {
     };
   });
 
-  const allAreDefaultStatuses = copiedStatuses.every((status) => STANDARD_STATUS_ORDER.includes(status.id));
+  const allAreDefaultStatuses = copiedStatuses.every((status) =>
+    STANDARD_STATUS_ORDER.includes(status.id),
+  );
   const hasAllDefaults = STANDARD_STATUS_ORDER.every((statusId) =>
     copiedStatuses.some((status) => status.id === statusId),
   );
@@ -2706,7 +2708,9 @@ function WorkflowSettingsModal({ onClose }) {
 
           {/* Status List */}
           <div className="space-y-2 mb-6">
-            <h3 className="font-medium mb-2 text-slate-900 dark:text-slate-100">Current Statuses</h3>
+            <h3 className="font-medium mb-2 text-slate-900 dark:text-slate-100">
+              Current Statuses
+            </h3>
             <p className="text-xs text-slate-500 dark:text-slate-300 mb-3">
               Drag to reorder • Click to edit
             </p>
@@ -4723,7 +4727,12 @@ const TodayFocusBar = React.memo(function TodayFocusBar() {
             className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2"
           >
             <div className="text-xs text-slate-500 dark:text-slate-400">{metric.label}</div>
-            <div className={clsx('text-lg font-semibold text-slate-900 dark:text-slate-100', metric.tone)}>
+            <div
+              className={clsx(
+                'text-lg font-semibold text-slate-900 dark:text-slate-100',
+                metric.tone,
+              )}
+            >
               {metric.value}
             </div>
             <div className="text-xs text-slate-400 dark:text-slate-500">{metric.hint}</div>
@@ -5460,7 +5469,9 @@ const Board = React.memo(function Board() {
             <h4 className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Secondary Lanes
             </h4>
-            <span className="text-xs text-slate-400 dark:text-slate-500">Inbox + completed work</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">
+              Inbox + completed work
+            </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {secondaryStatuses.map((status) => (
@@ -6387,7 +6398,9 @@ export default function WorkdayTaskBoardApp() {
                   onDeleteAll={() => {
                     const count = getProjectTaskCount(currentProjectId);
                     if (count === 0) {
-                      useStore.getState().showNotification('No tasks to delete in this project.', 'info');
+                      useStore
+                        .getState()
+                        .showNotification('No tasks to delete in this project.', 'info');
                       return;
                     }
                     clearCurrentProject();
