@@ -491,8 +491,7 @@ function normalizeStatusConfig(statusConfig) {
     const shouldReplaceDescription =
       !status.description ||
       status.description === legacyMeta.hint ||
-      (status.id === 'done_yesterday' &&
-        status.description === PREVIOUS_DONE_YESTERDAY_META.hint);
+      (status.id === 'done_yesterday' && status.description === PREVIOUS_DONE_YESTERDAY_META.hint);
 
     return {
       ...status,
