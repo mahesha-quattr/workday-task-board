@@ -61,7 +61,7 @@ import logoDark from '/assets/dark/flowtrackr-logo.png';
 
 // ----- Types -----
 
-/** @typedef {"backlog"|"ready"|"in_progress"|"waiting_ai"|"waiting_other"|"blocked"|"in_review"|"done"} Status */
+/** @typedef {"backlog"|"ready"|"in_progress"|"waiting_ai"|"waiting_other"|"blocked"|"in_review"|"done"|"done_yesterday"} Status */
 /** @typedef {"self"|"ai"|"other"} OwnerType */
 /** @typedef {"board"|"backlog"} ViewMode */
 
@@ -76,6 +76,7 @@ const STATUS_META = /** @type{Record<Status,{label:string, key:string, hint:stri
   waiting_other: { label: 'Waiting on Others', key: '6', hint: 'Waiting for teammate/external' },
   blocked: { label: 'Blocked', key: '7', hint: 'Needs decision or unblock' },
   done: { label: 'Done', key: '8', hint: 'Completed' },
+  done_yesterday: { label: 'Bin', key: '9', hint: 'Archived completed tasks' },
 });
 
 const STATUS_ORDER = /** @type{Status[]} */ (Object.keys(STATUS_META));
@@ -89,6 +90,12 @@ const LEGACY_STATUS_META = {
   blocked: { label: 'Blocked', hint: 'Needs unblocking' },
   in_review: { label: 'In Review', hint: 'PR/review/QA' },
   done: { label: 'Done', hint: 'Completed' },
+  done_yesterday: { label: 'Bin', hint: 'Archived completed tasks' },
+};
+
+const PREVIOUS_DONE_YESTERDAY_META = {
+  label: 'Done Yesterday',
+  hint: 'Completed yesterday',
 };
 
 const WAITING_STATUSES = ['waiting_ai', 'waiting_other', 'blocked'];
@@ -101,6 +108,7 @@ const STANDARD_STATUS_ORDER = [
   'waiting_other',
   'blocked',
   'done',
+  'done_yesterday',
 ];
 
 const PRIORITY_COLORS = {
@@ -447,6 +455,17 @@ function migrateToV2_1(data) {
         createdAt: now,
         canDelete: true,
       },
+      {
+        id: 'done_yesterday',
+        label: 'Bin',
+        description: 'Archived completed tasks',
+        order: 8,
+        isDefault: false,
+        isCompletionState: true,
+        keyboardShortcut: '9',
+        createdAt: now,
+        canDelete: true,
+      },
     ],
     version: 1,
   };
@@ -465,8 +484,15 @@ function normalizeStatusConfig(statusConfig) {
     const legacyMeta = LEGACY_STATUS_META[status.id];
     if (!workdayMeta || !legacyMeta) return status;
 
-    const shouldReplaceLabel = !status.label || status.label === legacyMeta.label;
-    const shouldReplaceDescription = !status.description || status.description === legacyMeta.hint;
+    const shouldReplaceLabel =
+      !status.label ||
+      status.label === legacyMeta.label ||
+      (status.id === 'done_yesterday' && status.label === PREVIOUS_DONE_YESTERDAY_META.label);
+    const shouldReplaceDescription =
+      !status.description ||
+      status.description === legacyMeta.hint ||
+      (status.id === 'done_yesterday' &&
+        status.description === PREVIOUS_DONE_YESTERDAY_META.hint);
 
     return {
       ...status,
@@ -481,6 +507,24 @@ function normalizeStatusConfig(statusConfig) {
   const hasAllDefaults = STANDARD_STATUS_ORDER.every((statusId) =>
     copiedStatuses.some((status) => status.id === statusId),
   );
+  const hasLegacyDefaultSet =
+    copiedStatuses.length === STANDARD_STATUS_ORDER.length - 1 &&
+    copiedStatuses.every((status) => STANDARD_STATUS_ORDER.includes(status.id)) &&
+    !copiedStatuses.some((status) => status.id === 'done_yesterday');
+
+  if (hasLegacyDefaultSet) {
+    copiedStatuses.push({
+      id: 'done_yesterday',
+      label: STATUS_META.done_yesterday.label,
+      description: STATUS_META.done_yesterday.hint,
+      order: copiedStatuses.length,
+      isDefault: false,
+      isCompletionState: true,
+      keyboardShortcut: STATUS_META.done_yesterday.key,
+      createdAt: new Date().toISOString(),
+      canDelete: true,
+    });
+  }
 
   // Reorder only when the user still has the untouched default set.
   if (!allAreDefaultStatuses || !hasAllDefaults) {
@@ -2375,7 +2419,9 @@ function ProjectManager({ onClose }) {
 
               // Calculate project statistics
               const tasks = useStore.getState().tasks.filter((t) => t.projectId === project.id);
-              const completedCount = tasks.filter((t) => t.status === 'done').length;
+              const completionStatuses = useStore.getState().getCompletionStatuses();
+              const completionIds = new Set(completionStatuses.map((status) => status.id));
+              const completedCount = tasks.filter((t) => completionIds.has(t.status)).length;
               const completionRate =
                 taskCount > 0 ? Math.round((completedCount / taskCount) * 100) : 0;
 
@@ -3409,9 +3455,11 @@ const Column = React.memo(function Column({
   hintOverride = null,
   dropStatus = null,
   tone = 'primary',
+  defaultCollapsed = false,
 }) {
   const dragHoverStatus = useStore((s) => s.dragHoverStatus);
   const statusMeta = useStore((s) => s.getStatusMetaMap());
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const effectiveDropStatus = dropStatus || status;
   const highlight = dragHoverStatus === effectiveDropStatus;
   const meta = statusMeta[status] || { label: status, hint: '' };
@@ -3432,19 +3480,33 @@ const Column = React.memo(function Column({
       )}
     >
       <div className="flex items-center gap-2 mb-3">
-        <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{label}</h3>
+        <button
+          type="button"
+          onClick={() => setCollapsed((prev) => !prev)}
+          className="flex items-center gap-2 min-w-0 text-left"
+        >
+          <ChevronDown
+            className={clsx(
+              'w-4 h-4 text-slate-400 transition-transform',
+              collapsed && '-rotate-90',
+            )}
+          />
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{label}</h3>
+        </button>
         <span className="text-xs text-slate-500 dark:text-slate-400">{hint}</span>
         <span className="ml-auto text-xs font-medium text-slate-400 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full">
           {tasks.length}
         </span>
       </div>
-      <div className="space-y-2 min-h-24">
-        {tasks.length === 0 ? (
-          <EmptyColumnState columnName={label} />
-        ) : (
-          tasks.map((t) => <TaskCard key={t.id} task={t} />)
-        )}
-      </div>
+      {!collapsed && (
+        <div className="space-y-2 min-h-24">
+          {tasks.length === 0 ? (
+            <EmptyColumnState columnName={label} />
+          ) : (
+            tasks.map((t) => <TaskCard key={t.id} task={t} />)
+          )}
+        </div>
+      )}
     </div>
   );
 });
@@ -3610,6 +3672,7 @@ const EmptyColumnState = React.memo(({ columnName }) => {
     'Waiting on Others': { text: 'Waiting on teammate or external input', emoji: '🤝' },
     Blocked: { text: 'Needs decision or unblock to continue', emoji: '🧱' },
     Done: { text: 'Ready to ship!', emoji: '🎯' },
+    Bin: { text: 'Dump older completed tasks here', emoji: '🗂️' },
   };
 
   const message = messages[columnName] || { text: 'No tasks', emoji: '' };
@@ -5360,6 +5423,7 @@ const Board = React.memo(function Board() {
         (status) =>
           status === 'backlog' ||
           status === 'done' ||
+          status === 'done_yesterday' ||
           (!primaryStatuses.includes(status) &&
             !waitingStatuses.includes(status) &&
             !standardStatuses.has(status)),
@@ -5492,7 +5556,12 @@ const Board = React.memo(function Board() {
                 key={status}
                 status={status}
                 tasks={grouped[status] || []}
-                tone={status === 'backlog' || status === 'done' ? 'secondary' : 'primary'}
+                tone={
+                  status === 'backlog' || status === 'done' || status === 'done_yesterday'
+                    ? 'secondary'
+                    : 'primary'
+                }
+                defaultCollapsed={status === 'done_yesterday'}
               />
             ))}
           </div>
@@ -5516,7 +5585,7 @@ function BacklogView() {
   );
   const hasFiltersActive = !!(ownerFilter || filters.q);
   const isFilteredEmpty = filtered.length === 0 && hasFiltersActive && projectTasks.length > 0;
-  const [collapsed, setCollapsed] = useState(() => new Set(['done']));
+  const [collapsed, setCollapsed] = useState(() => new Set(['done', 'done_yesterday']));
   const [draggingTask, setDraggingTask] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const updateTask = useStore((s) => s.updateTask);
