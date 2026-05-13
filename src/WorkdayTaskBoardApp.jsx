@@ -209,7 +209,20 @@ function formatDurationShort(totalSeconds) {
 }
 
 function getStatusFromPoint(x, y) {
-  if (typeof document === 'undefined' || !document.elementsFromPoint) return null;
+  if (typeof document === 'undefined') return null;
+
+  // Hit-test the lane rectangles directly so drops still register when the pointer
+  // is above another card or nested content inside the column.
+  const columns = document.querySelectorAll('[data-col]');
+  for (const column of columns) {
+    const rect = column.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      const status = column.getAttribute('data-col');
+      if (status) return /** @type {Status} */ (status);
+    }
+  }
+
+  if (!document.elementsFromPoint) return null;
   const els = document.elementsFromPoint(x, y);
   for (const el of els) {
     const anyEl = /** @type {any} */ (el);
@@ -5516,14 +5529,18 @@ function BacklogView() {
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragEnd = () => {
-    if (draggingTask && dropTarget) {
-      const targetStatus = dropTarget.status;
-      // Update the task's status
-      updateTask(draggingTask.id, { status: targetStatus });
+  const finishDrop = (targetStatus = null) => {
+    const resolvedStatus = targetStatus || dropTarget?.status;
+    if (draggingTask && resolvedStatus) {
+      updateTask(draggingTask.id, { status: resolvedStatus });
     }
     setDraggingTask(null);
     setDropTarget(null);
+  };
+
+  const handleDragEnd = (e) => {
+    const targetStatus = getStatusFromPoint(e.clientX, e.clientY);
+    finishDrop(targetStatus);
   };
 
   const handleDragOver = (e, status, index) => {
@@ -5594,6 +5611,7 @@ function BacklogView() {
           />
           {!collapsed.has(status) && (
             <div
+              data-col={status}
               className={clsx(
                 'min-h-[40px] transition-colors rounded-lg bg-slate-50/40 dark:bg-slate-900/20 p-2',
                 dropTarget?.status === status && draggingTask && 'bg-blue-50 dark:bg-blue-900/20',
@@ -5602,7 +5620,7 @@ function BacklogView() {
               onDragLeave={handleDragLeave}
               onDrop={(e) => {
                 e.preventDefault();
-                handleDragEnd();
+                finishDrop(status);
               }}
             >
               {(grouped[status]?.length || 0) === 0 ? (
