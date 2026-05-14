@@ -124,10 +124,6 @@ const PRIORITY_COLORS = {
 function toggleId(list, id) {
   return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 }
-function filterOutByIds(tasks, ids) {
-  const set = new Set(ids);
-  return tasks.filter((t) => !set.has(t.id));
-}
 
 function uid() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -246,7 +242,7 @@ function getStatusFromPoint(x, y) {
  *  impact:number; urgency:number; effort:number; priorityBucket:"P0"|"P1"|"P2"|"P3";
  *  score:number; dueAt?:string|null; ownerType:OwnerType; ownerRef?:string; owners:string[]; tags:string[];
  *  dependencies:string[]; createdAt:string; updatedAt:string; expectedBy?:string|null;
- *  timeLogSecs?:number; timerStartedAt?:string|null;
+ *  timeLogSecs?:number; timerStartedAt?:string|null; parentTaskId?:string|null; groupColor?:string|null;
  * }} Task */
 
 /** @typedef {{
@@ -255,7 +251,7 @@ function getStatusFromPoint(x, y) {
 
 const STORAGE_KEY = 'workday-board@v1';
 const VIEW_MODE_KEY = 'workday-board@view-mode';
-const STORAGE_VERSION = 2.1; // Version for migration tracking
+const STORAGE_VERSION = 2.3; // Version for migration tracking
 
 // Project color palette
 const PROJECT_COLORS = [
@@ -267,6 +263,17 @@ const PROJECT_COLORS = [
   '#EC4899', // pink
   '#14B8A6', // teal
   '#F97316', // orange
+];
+
+const SUBTASK_GROUP_COLORS = [
+  '#2563EB', // blue
+  '#0F766E', // teal
+  '#7C3AED', // violet
+  '#DB2777', // pink
+  '#D97706', // amber
+  '#16A34A', // green
+  '#DC2626', // red
+  '#4F46E5', // indigo
 ];
 
 // Migration function for v1 to v2
@@ -289,16 +296,101 @@ function migrateStorageV1toV2(data) {
     data.currentProjectId = 'default';
   }
 
-  // Add projectId to all tasks
   if (data.tasks) {
-    data.tasks = data.tasks.map((task) => ({
-      ...task,
-      projectId: task.projectId || 'default',
-    }));
+    data.tasks = migrateTaskHierarchy(data.tasks, data.currentProjectId || 'default');
   }
 
   data.version = STORAGE_VERSION;
   return data;
+}
+
+function pickTaskGroupColor(seed) {
+  const source = String(seed || '');
+  const total = Array.from(source).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return SUBTASK_GROUP_COLORS[total % SUBTASK_GROUP_COLORS.length];
+}
+
+function colorWithAlpha(hex, alpha) {
+  if (!hex || !hex.startsWith('#')) return hex;
+  const normalized =
+    hex.length === 4 ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex;
+  const value = normalized.slice(1);
+  const int = Number.parseInt(value, 16);
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function migrateTaskHierarchy(tasks = [], defaultProjectId = 'default') {
+  const migrated = [];
+
+  tasks.forEach((task) => {
+    const taskId = task.id || uid();
+    const parentColor =
+      task.groupColor ||
+      (Array.isArray(task.subtasks) && task.subtasks.length > 0
+        ? pickTaskGroupColor(taskId)
+        : null);
+
+    migrated.push({
+      ...task,
+      id: taskId,
+      projectId: task.projectId || defaultProjectId,
+      parentTaskId: task.parentTaskId || null,
+      groupColor: task.groupColor || parentColor,
+    });
+
+    if (Array.isArray(task.subtasks) && task.subtasks.length > 0) {
+      task.subtasks.forEach((subtask, index) => {
+        migrated.push({
+          id: subtask.id || uid(),
+          title: subtask.title || `Subtask ${index + 1}`,
+          description: '',
+          projectId: task.projectId || defaultProjectId,
+          status: task.status || 'backlog',
+          impact: 2,
+          urgency: 2,
+          effort: 1,
+          dueAt: null,
+          ownerType: task.ownerType || 'self',
+          ownerRef: undefined,
+          owners: [],
+          tags: [],
+          dependencies: [],
+          createdAt: subtask.createdAt || task.createdAt || new Date().toISOString(),
+          updatedAt: subtask.completedAt || task.updatedAt || new Date().toISOString(),
+          expectedBy: null,
+          timeLogSecs: 0,
+          timerStartedAt: null,
+          parentTaskId: taskId,
+          groupColor: parentColor || pickTaskGroupColor(taskId),
+        });
+      });
+    }
+  });
+
+  return migrated;
+}
+
+function getChildTasks(tasks = [], parentTaskId) {
+  return tasks.filter((task) => task.parentTaskId === parentTaskId);
+}
+
+function getParentTask(tasks = [], task) {
+  if (!task?.parentTaskId) return null;
+  return tasks.find((candidate) => candidate.id === task.parentTaskId) || null;
+}
+
+function getTaskGroupStats(tasks = [], taskId) {
+  const subtasks = getChildTasks(tasks, taskId);
+  const total = subtasks.length;
+  const completed = subtasks.filter(
+    (subtask) => subtask.status === 'done' || subtask.status === 'done_yesterday',
+  ).length;
+  const remaining = total - completed;
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+  return { total, completed, remaining, percent };
 }
 
 // Migration function to add owner registry
@@ -568,9 +660,14 @@ function generateProjectColor(index) {
 
 const seedTasks = () => {
   const now = new Date();
+  const alphaId = uid();
+  const alphaColor = pickTaskGroupColor(alphaId);
+  const aiTaskId = uid();
+  const aiColor = pickTaskGroupColor(aiTaskId);
+
   return [
     {
-      id: uid(),
+      id: alphaId,
       projectId: 'default',
       title: 'Fix login bug for Alpha',
       status: 'in_progress',
@@ -582,9 +679,40 @@ const seedTasks = () => {
       tags: ['bug', 'auth'],
       dependencies: [],
       expectedBy: null,
+      groupColor: alphaColor,
     },
     {
       id: uid(),
+      projectId: 'default',
+      title: 'Patch the auth callback flow',
+      status: 'in_progress',
+      impact: 2,
+      urgency: 3,
+      effort: 1,
+      dueAt: null,
+      ownerType: 'self',
+      tags: ['auth'],
+      dependencies: [],
+      parentTaskId: alphaId,
+      groupColor: alphaColor,
+    },
+    {
+      id: uid(),
+      projectId: 'default',
+      title: 'Verify the fix in staging',
+      status: 'review',
+      impact: 2,
+      urgency: 2,
+      effort: 1,
+      dueAt: null,
+      ownerType: 'self',
+      tags: ['qa'],
+      dependencies: [],
+      parentTaskId: alphaId,
+      groupColor: alphaColor,
+    },
+    {
+      id: aiTaskId,
       title: 'Delegate test data generation to AI',
       status: 'waiting_ai',
       impact: 3,
@@ -595,6 +723,21 @@ const seedTasks = () => {
       tags: ['agent'],
       dependencies: [],
       expectedBy: addHours(now, 8).toISOString(),
+      groupColor: aiColor,
+    },
+    {
+      id: uid(),
+      title: 'Create edge-case duplicates',
+      status: 'waiting_ai',
+      impact: 1,
+      urgency: 2,
+      effort: 1,
+      dueAt: null,
+      ownerType: 'ai',
+      tags: ['agent'],
+      dependencies: [],
+      parentTaskId: aiTaskId,
+      groupColor: aiColor,
     },
     {
       id: uid(),
@@ -655,10 +798,12 @@ function finalizeTask(partial) {
     tags: partial.tags ?? [],
     dependencies: partial.dependencies ?? [],
     createdAt: partial.createdAt ?? nowIso,
-    updatedAt: nowIso,
+    updatedAt: partial.updatedAt ?? nowIso,
     expectedBy: partial.expectedBy ?? null,
     timeLogSecs: partial.timeLogSecs ?? 0,
     timerStartedAt: partial.timerStartedAt ?? null,
+    parentTaskId: partial.parentTaskId ?? null,
+    groupColor: partial.groupColor ?? null,
   };
 }
 
@@ -674,8 +819,14 @@ const useStore = create((set, get) => ({
   deleteSelected() {
     const { tasks, selectedIds } = get();
     const count = selectedIds.length;
+    const idsToDelete = new Set(selectedIds);
+    tasks.forEach((task) => {
+      if (task.parentTaskId && idsToDelete.has(task.parentTaskId)) {
+        idsToDelete.add(task.id);
+      }
+    });
     get().pushUndo(`Deleted ${count} task${count !== 1 ? 's' : ''}`, { tasks: [...tasks] });
-    set((s) => ({ tasks: filterOutByIds(s.tasks, s.selectedIds), selectedIds: [] }));
+    set((s) => ({ tasks: s.tasks.filter((task) => !idsToDelete.has(task.id)), selectedIds: [] }));
     get().markDirty();
     get().persist();
   },
@@ -773,10 +924,8 @@ const useStore = create((set, get) => ({
 
         // Migrate owner fields to owners array
         const migratedTasks = (parsed.tasks || []).map((task) => {
-          if (!task.owners) {
-            task.owners = task.ownerRef ? [task.ownerRef] : [];
-          }
-          return task;
+          const owners = task.owners || (task.ownerRef ? [task.ownerRef] : []);
+          return finalizeTask({ ...task, owners });
         });
 
         // Apply owner registry migration
@@ -923,8 +1072,70 @@ const useStore = create((set, get) => ({
   deleteTask(id) {
     const { tasks } = get();
     const deleted = tasks.find((t) => t.id === id);
+    const idsToDelete = new Set([
+      id,
+      ...tasks.filter((task) => task.parentTaskId === id).map((task) => task.id),
+    ]);
     get().pushUndo(`Deleted "${deleted?.title || 'task'}"`, { tasks: [...tasks] });
-    set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+    set((s) => ({ tasks: s.tasks.filter((t) => !idsToDelete.has(t.id)) }));
+    get().markDirty();
+    get().persist();
+  },
+  addSubtask(taskId, title) {
+    const trimmed = title ? title.trim() : '';
+    if (!trimmed) return { success: false, error: 'Subtask title cannot be empty' };
+    const parentTask = get().tasks.find((task) => task.id === taskId);
+    if (!parentTask) return { success: false, error: 'Parent task not found' };
+
+    const color = parentTask.groupColor || pickTaskGroupColor(parentTask.id);
+    const newSubtask = finalizeTask({
+      title: trimmed,
+      projectId: parentTask.projectId,
+      status: parentTask.status,
+      impact: 1,
+      urgency: 1,
+      effort: 1,
+      dueAt: null,
+      ownerType: parentTask.ownerType === 'ai' ? 'ai' : 'self',
+      tags: [],
+      dependencies: [],
+      parentTaskId: parentTask.id,
+      groupColor: color,
+    });
+
+    set((s) => ({
+      tasks: s.tasks
+        .map((task) =>
+          task.id === parentTask.id
+            ? finalizeTask({
+                ...task,
+                groupColor: color,
+                updatedAt: new Date().toISOString(),
+              })
+            : task,
+        )
+        .concat(newSubtask),
+    }));
+    get().markDirty();
+    get().persist();
+    return { success: true, subtaskId: newSubtask.id };
+  },
+  deleteSubtask(taskId, subtaskId) {
+    void taskId;
+    get().deleteTask(subtaskId);
+  },
+  setTaskGroupColor(taskId, color) {
+    set((s) => ({
+      tasks: s.tasks.map((task) =>
+        task.id === taskId || task.parentTaskId === taskId
+          ? finalizeTask({
+              ...task,
+              groupColor: color,
+              updatedAt: new Date().toISOString(),
+            })
+          : task,
+      ),
+    }));
     get().markDirty();
     get().persist();
   },
@@ -3695,6 +3906,7 @@ function TaskCard({ task }) {
   const startTimer = useStore((s) => s.startTimer);
   const toggleSelected = useStore((s) => s.toggleSelected);
   const selectedIds = useStore((s) => s.selectedIds);
+  const tasks = useStore((s) => s.tasks);
   const projects = useStore((s) => s.projects);
   const currentProjectId = useStore((s) => s.currentProjectId);
   const lastAddedTaskId = useStore((s) => s.lastAddedTaskId);
@@ -3716,6 +3928,13 @@ function TaskCard({ task }) {
   const elapsedLabel = formatDurationShort(elapsedSecs);
   const isRunning = !!task.timerStartedAt;
   const isSelected = selectedIds.includes(task.id);
+  const childTasks = getChildTasks(tasks, task.id);
+  const parentTask = getParentTask(tasks, task);
+  const accentColor =
+    task.groupColor ||
+    parentTask?.groupColor ||
+    (childTasks.length > 0 ? pickTaskGroupColor(task.id) : null);
+  const isSubtask = !!task.parentTaskId;
 
   return (
     <motion.div
@@ -3749,6 +3968,14 @@ function TaskCard({ task }) {
         isNewlyAdded && 'ring-2 ring-green-400',
         getPriorityBorderClass(task.priorityBucket),
       )}
+      style={
+        accentColor
+          ? {
+              backgroundImage: `linear-gradient(135deg, ${colorWithAlpha(accentColor, 0.11)}, transparent 42%)`,
+              boxShadow: `inset 0 0 0 1px ${colorWithAlpha(accentColor, 0.22)}`,
+            }
+          : undefined
+      }
     >
       <div className="group">
         <div className="flex items-start gap-2">
@@ -3803,7 +4030,22 @@ function TaskCard({ task }) {
                   {isRunning && ' •'}
                 </Badge>
               )}
+              {(isSubtask || childTasks.length > 0) && accentColor && (
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accentColor }} />
+                  {isSubtask ? 'Subtask' : `${childTasks.length} subtasks`}
+                </div>
+              )}
             </div>
+            {isSubtask && parentTask && (
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: accentColor || pickTaskGroupColor(parentTask.id) }}
+                />
+                <span className="truncate">Subtask of {parentTask.title}</span>
+              </div>
+            )}
             {task.owners && task.owners.length > 0 && (
               <div className="mt-2">
                 <OwnersList owners={task.owners} />
@@ -3898,6 +4140,179 @@ function NumberInput({ value, onChange, min = 0, max = 5 }) {
       onChange={(e) => onChange(Number(e.target.value))}
       className="w-20 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
     />
+  );
+}
+
+function TaskColorSwatches({ activeColor, onSelect, label = 'Task color' }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="min-w-0">
+        <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+          {label}
+        </div>
+        <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          Color is applied to related task cards on the board.
+        </div>
+      </div>
+      <div className="ml-auto flex flex-wrap items-center gap-2">
+        {SUBTASK_GROUP_COLORS.map((color) => (
+          <button
+            key={color}
+            type="button"
+            onClick={() => onSelect(color)}
+            className={clsx(
+              'h-7 w-7 rounded-full border-2 transition-transform hover:scale-105',
+              activeColor === color
+                ? 'border-slate-900 dark:border-slate-100'
+                : 'border-white dark:border-slate-900',
+            )}
+            style={{ backgroundColor: color }}
+            aria-label={`Set task color ${color}`}
+            title="Choose task color"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChildTaskManager({ task }) {
+  const addSubtask = useStore((s) => s.addSubtask);
+  const deleteSubtask = useStore((s) => s.deleteSubtask);
+  const tasks = useStore((s) => s.tasks);
+  const [draftTitle, setDraftTitle] = useState('');
+  const childTasks = getChildTasks(tasks, task.id);
+  const accentColor =
+    task.groupColor || (childTasks.length > 0 ? pickTaskGroupColor(task.id) : null);
+  const { total, completed, remaining, percent } = getTaskGroupStats(tasks, task.id);
+
+  const handleAdd = () => {
+    const result = addSubtask(task.id, draftTitle);
+    if (result?.success) setDraftTitle('');
+  };
+
+  return (
+    <section
+      className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40"
+      style={accentColor ? { boxShadow: `inset 4px 0 0 ${accentColor}` } : undefined}
+    >
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">Subtasks</h4>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Create child tasks that show up as independent cards on the board.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <input
+          value={draftTitle}
+          onChange={(e) => setDraftTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
+          placeholder="Add a subtask..."
+          className="flex-1 rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
+        />
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={!draftTitle.trim()}
+          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
+        >
+          <Plus className="h-4 w-4" /> Add subtask
+        </button>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-900">
+          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+            Progress
+          </div>
+          <div className="mt-1 text-2xl font-semibold text-slate-950 dark:text-slate-50">
+            {percent}%
+          </div>
+        </div>
+        <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-900">
+          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+            Completed
+          </div>
+          <div className="mt-1 text-2xl font-semibold text-slate-950 dark:text-slate-50">
+            {completed}
+          </div>
+        </div>
+        <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-900">
+          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+            Remaining
+          </div>
+          <div className="mt-1 text-2xl font-semibold text-slate-950 dark:text-slate-50">
+            {remaining}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{
+            width: `${percent}%`,
+            backgroundColor: accentColor || pickTaskGroupColor(task.id),
+          }}
+        />
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {childTasks.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            No subtasks yet. Add one and it will appear as its own movable card on the board.
+          </div>
+        ) : (
+          childTasks.map((subtask) => (
+            <div
+              key={subtask.id}
+              className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 dark:border-slate-800 dark:bg-slate-900/70"
+            >
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: accentColor || pickTaskGroupColor(task.id) }}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {subtask.title}
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <span>
+                    {subtask.status === 'done' || subtask.status === 'done_yesterday'
+                      ? 'Completed'
+                      : 'Active'}
+                  </span>
+                  <span>•</span>
+                  <span>{subtask.status.replace(/_/g, ' ')}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => deleteSubtask(task.id, subtask.id)}
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
+                title="Delete subtask"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {total > 0 && completed === total && (
+        <div className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+          All subtasks are complete. This parent task is ready to wrap up.
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -4449,7 +4864,9 @@ function OwnerManagerPanel({ isOpen, onClose }) {
 function TaskDrawer({ task, onClose }) {
   const update = useStore((s) => s.updateTask);
   const del = useStore((s) => s.deleteTask);
+  const setTaskGroupColor = useStore((s) => s.setTaskGroupColor);
   const statusMeta = useStore((s) => s.getStatusMetaMap());
+  const tasks = useStore((s) => s.tasks);
   const [local, setLocal] = useState(task);
   useEffect(() => setLocal(task), [task]);
 
@@ -4527,6 +4944,13 @@ function TaskDrawer({ task, onClose }) {
   const dueSummary = local.dueAt ? humanDue(local.dueAt) : 'No due date';
   const isOverdue = local.dueAt ? isBefore(new Date(local.dueAt), new Date()) : false;
   const statusLabel = statusMeta[local.status]?.label || local.status;
+  const childTasks = getChildTasks(tasks, task.id);
+  const parentTask = getParentTask(tasks, task);
+  const isSubtask = !!task.parentTaskId;
+  const accentColor =
+    local.groupColor ||
+    parentTask?.groupColor ||
+    (childTasks.length > 0 ? pickTaskGroupColor(local.id) : pickTaskGroupColor(local.id));
   const statusInputId = `task-status-${task.id}`;
   const dueInputId = `task-due-${task.id}`;
   const ownersInputId = `task-owners-${task.id}`;
@@ -4629,6 +5053,35 @@ function TaskDrawer({ task, onClose }) {
                 </div>
               </div>
             </div>
+
+            {isSubtask ? (
+              <div className="mt-4 rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-3 dark:border-slate-700/70 dark:bg-slate-900/60">
+                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                  Parent task
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: accentColor }}
+                  />
+                  <span>{parentTask?.title || 'Linked parent task'}</span>
+                </div>
+                <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                  This subtask inherits the same color theme as its parent on the board.
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-3 dark:border-slate-700/70 dark:bg-slate-900/60">
+                <TaskColorSwatches
+                  activeColor={accentColor}
+                  label="Task color"
+                  onSelect={(color) => {
+                    setTaskGroupColor(task.id, color);
+                    setLocal((prev) => ({ ...prev, groupColor: color }));
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="max-h-[calc(88vh-180px)] overflow-y-auto px-6 py-5">
@@ -4773,6 +5226,7 @@ function TaskDrawer({ task, onClose }) {
                     />
                   </div>
                 </section>
+                {!isSubtask && <ChildTaskManager task={task} />}
               </div>
 
               <div className="space-y-5">
@@ -5852,6 +6306,7 @@ function BacklogHeader({ statusLabel, statusHint, count, collapsed, onToggle }) 
 function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
   const toggleSelected = useStore((s) => s.toggleSelected);
   const selectedIds = useStore((s) => s.selectedIds);
+  const tasks = useStore((s) => s.tasks);
   const startTimer = useStore((s) => s.startTimer);
   const stopTimer = useStore((s) => s.stopTimer);
   const moveTask = useStore((s) => s.moveTask);
@@ -5862,6 +6317,13 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
   const isRunning = !!task.timerStartedAt;
   const elapsedSecs = computeElapsedSecs(task);
   const overdue = task.dueAt ? isBefore(new Date(task.dueAt), new Date()) : false;
+  const childTasks = getChildTasks(tasks, task.id);
+  const parentTask = getParentTask(tasks, task);
+  const accentColor =
+    task.groupColor ||
+    parentTask?.groupColor ||
+    (childTasks.length > 0 ? pickTaskGroupColor(task.id) : null);
+  const isSubtask = !!task.parentTaskId;
 
   return (
     <div
@@ -5874,6 +6336,14 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
           'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 shadow-sm',
         isDragging && 'opacity-60 ring-2 ring-blue-300 dark:ring-blue-900/40',
       )}
+      style={
+        accentColor
+          ? {
+              backgroundImage: `linear-gradient(135deg, ${colorWithAlpha(accentColor, 0.1)}, transparent 42%)`,
+              boxShadow: `inset 0 0 0 1px ${colorWithAlpha(accentColor, 0.2)}`,
+            }
+          : undefined
+      }
     >
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="flex-1 min-w-0">
@@ -5908,7 +6378,25 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
                     <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Blocked
                   </Badge>
                 )}
+                {(isSubtask || childTasks.length > 0) && accentColor && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: accentColor }}
+                    />
+                    {isSubtask ? 'Subtask' : `${childTasks.length} subtasks`}
+                  </span>
+                )}
               </div>
+              {isSubtask && parentTask && (
+                <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: accentColor || pickTaskGroupColor(parentTask.id) }}
+                  />
+                  <span className="truncate">Subtask of {parentTask.title}</span>
+                </div>
+              )}
               <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-400">
                 {task.project && (
                   <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
