@@ -3888,17 +3888,6 @@ function TaskCard({ task }) {
   );
 }
 
-function Field({ label, children }) {
-  return (
-    <div className="flex items-center gap-2 py-1">
-      <div className="w-28 text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">
-        {label}
-      </div>
-      <div className="flex-1">{children}</div>
-    </div>
-  );
-}
-
 function NumberInput({ value, onChange, min = 0, max = 5 }) {
   return (
     <input
@@ -4535,288 +4524,394 @@ function TaskDrawer({ task, onClose }) {
     return { s, b };
   }, [local.impact, local.urgency, local.effort, local.dueAt]);
 
+  const dueSummary = local.dueAt ? humanDue(local.dueAt) : 'No due date';
+  const isOverdue = local.dueAt ? isBefore(new Date(local.dueAt), new Date()) : false;
+  const statusLabel = statusMeta[local.status]?.label || local.status;
+  const statusInputId = `task-status-${task.id}`;
+  const dueInputId = `task-due-${task.id}`;
+  const ownersInputId = `task-owners-${task.id}`;
+  const expectedByInputId = `task-expected-by-${task.id}`;
+  const tagsInputId = `task-tags-${task.id}`;
+  const notesInputId = `task-notes-${task.id}`;
+
   return ReactDOM.createPortal(
     <>
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-[300]"
+        className="fixed inset-0 z-[300] bg-slate-950/60 backdrop-blur-md"
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
       />
-      {/* Modal */}
-      <motion.div
-        ref={drawerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Task details"
-        initial={{ opacity: 0, x: 40 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 40 }}
-        className="fixed right-4 top-4 bottom-4 w-[420px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl shadow-xl dark:shadow-2xl p-4 overflow-y-auto z-[301]"
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold">Task</h3>
-          <button
-            onClick={onClose}
-            aria-label="Close task drawer"
-            className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="mt-2 space-y-2">
-          <Field label="Title">
-            <input
-              value={local.title}
-              onChange={(e) => setLocal({ ...local, title: e.target.value })}
-              onBlur={() => save({ title: local.title })}
-              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-            />
-          </Field>
-          <Field label="Status">
-            <select
-              value={local.status}
-              onChange={(e) => {
-                const v = /** @type{Status} */ (e.target.value);
-                setLocal({ ...local, status: v });
-                save({ status: v });
-              }}
-              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-            >
-              {Object.keys(statusMeta).map((k) => (
-                <option key={k} value={k}>
-                  {statusMeta[k].label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Owners">
-            <OwnerEditor taskId={task.id} owners={task.owners} />
-          </Field>
-          {local.ownerType === 'ai' && (
-            <Field label="Expected by">
-              <input
-                type="datetime-local"
-                value={
-                  local.expectedBy ? new Date(local.expectedBy).toISOString().slice(0, 16) : ''
-                }
-                onChange={(e) => {
-                  const iso = e.target.value ? new Date(e.target.value).toISOString() : null;
-                  setLocal({ ...local, expectedBy: iso });
-                  save({ expectedBy: iso });
-                }}
-                className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-              />
-            </Field>
-          )}
-          <Field label="Due">
-            <input
-              type="datetime-local"
-              value={local.dueAt ? new Date(local.dueAt).toISOString().slice(0, 16) : ''}
-              onChange={(e) => {
-                const iso = e.target.value ? new Date(e.target.value).toISOString() : null;
-                setLocal({ ...local, dueAt: iso });
-                save({ dueAt: iso });
-              }}
-              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-            />
-          </Field>
-          <Field label="Impact / Urgency / Effort">
-            <div className="flex items-center gap-3">
-              <NumberInput
-                value={local.impact}
-                onChange={(v) => {
-                  setLocal({ ...local, impact: v });
-                  save({ impact: v });
-                }}
-              />
-              <NumberInput
-                value={local.urgency}
-                onChange={(v) => {
-                  setLocal({ ...local, urgency: v });
-                  save({ urgency: v });
-                }}
-              />
-              <NumberInput
-                value={local.effort}
-                onChange={(v) => {
-                  setLocal({ ...local, effort: v });
-                  save({ effort: v });
-                }}
-              />
-            </div>
-          </Field>
-          <Field label="Priority">
-            <div className="flex items-center gap-2">
-              <Badge className={PRIORITY_COLORS[scoreMath.b]}>{scoreMath.b}</Badge>
+      <div className="fixed inset-0 z-[301] flex items-center justify-center p-4">
+        <motion.div
+          ref={drawerRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Task details"
+          initial={{ opacity: 0, y: 24, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 24, scale: 0.98 }}
+          className="w-[min(1040px,100%)] max-h-[88vh] overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.28)] dark:border-slate-700/80 dark:bg-slate-900 dark:shadow-[0_32px_90px_rgba(2,6,23,0.7)]"
+        >
+          <div className="border-b border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_40%),linear-gradient(135deg,_rgba(248,250,252,0.98),_rgba(241,245,249,0.92))] px-6 py-5 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_34%),linear-gradient(135deg,_rgba(15,23,42,0.96),_rgba(2,6,23,0.98))]">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <Badge
+                    variant="primary"
+                    className="bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300"
+                  >
+                    {statusLabel}
+                  </Badge>
+                  <Badge className={clsx('border-l-0', PRIORITY_COLORS[scoreMath.b])}>
+                    {scoreMath.b}
+                  </Badge>
+                  {isOverdue && (
+                    <Badge
+                      variant="warning"
+                      className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                    >
+                      Overdue
+                    </Badge>
+                  )}
+                </div>
+                <input
+                  value={local.title}
+                  onChange={(e) => setLocal({ ...local, title: e.target.value })}
+                  onBlur={() => save({ title: local.title })}
+                  className="w-full bg-transparent text-2xl font-semibold tracking-tight text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50 dark:placeholder:text-slate-500"
+                  placeholder="Task title"
+                />
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Keep this task crisp, contextual, and easy to act on.
+                </p>
+              </div>
               <button
-                onClick={() => {
-                  const s = priorityScore({
-                    impact: local.impact,
-                    urgency: local.urgency,
-                    effort: local.effort,
-                    dueAt: local.dueAt,
-                  });
-                  const b = scoreToBucket(s);
-                  setLocal({ ...local, priorityBucket: b });
-                  save({ score: s, priorityBucket: b });
-                }}
-                className="px-2 py-1 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 transition-colors"
+                onClick={onClose}
+                aria-label="Close task details"
+                className="rounded-full border border-slate-200 bg-white/80 p-2 text-slate-500 transition-colors hover:bg-white hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
               >
-                Rescore
+                <X className="h-4 w-4" />
               </button>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                score = (2×impact + 1.5×urgency) − effort {local.dueAt ? ' + due boost' : ''}
-              </span>
             </div>
-          </Field>
-          <Field label="Tags">
-            <input
-              value={local.tags?.join(' ') || ''}
-              placeholder="+tag +another"
-              onChange={(e) => {
-                const arr = e.target.value
-                  .split(/\s+/)
-                  .filter(Boolean)
-                  .map((s) => s.replace(/^\+/, ''));
-                setLocal({ ...local, tags: arr });
-                save({ tags: arr });
-              }}
-              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-            />
-          </Field>
-          <Field label="Notes">
-            <textarea
-              rows={6}
-              value={local.description || ''}
-              onChange={(e) => setLocal({ ...local, description: e.target.value })}
-              onBlur={() => save({ description: local.description })}
-              className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-            />
-          </Field>
-          <div className="flex items-center justify-between pt-2">
-            {task.status === 'waiting_ai' && (
-              <button
-                onClick={() =>
-                  useStore
-                    .getState()
-                    .updateTask(task.id, { status: 'ready', ownerType: 'self', expectedBy: null })
-                }
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700"
-              >
-                <Bot className="w-4 h-4" /> Simulate AI Update
-              </button>
-            )}
-            <div className="flex-1" />
-            <button
-              onClick={() => {
-                del(task.id);
-                onClose();
-              }}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-600 text-white hover:bg-rose-700"
-            >
-              <Trash2 className="w-4 h-4" /> Delete
-            </button>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-slate-700/80 dark:bg-slate-900/70">
+                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                  Due
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+                  <Clock className="h-4 w-4 text-slate-400" />
+                  <span>{dueSummary}</span>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-slate-700/80 dark:bg-slate-900/70">
+                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                  Priority Score
+                </div>
+                <div className="mt-1 flex items-end gap-2">
+                  <span className="text-2xl font-semibold text-slate-950 dark:text-slate-50">
+                    {scoreMath.s}
+                  </span>
+                  <span className="pb-1 text-xs text-slate-500 dark:text-slate-400">
+                    current score
+                  </span>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-slate-700/80 dark:bg-slate-900/70">
+                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                  Owners
+                </div>
+                <div className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {task.owners?.length ? `${task.owners.length} assigned` : 'No owners assigned'}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </motion.div>
+
+          <div className="max-h-[calc(88vh-180px)] overflow-y-auto px-6 py-5">
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.95fr)]">
+              <div className="space-y-5">
+                <section className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 dark:border-slate-800 dark:bg-slate-950/50">
+                  <div className="mb-4">
+                    <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">
+                      Core details
+                    </h4>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      Update the task so it is easy to understand and easy to progress.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label
+                        htmlFor={statusInputId}
+                        className="mb-1.5 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                      >
+                        Status
+                      </label>
+                      <select
+                        id={statusInputId}
+                        value={local.status}
+                        onChange={(e) => {
+                          const v = /** @type{Status} */ (e.target.value);
+                          setLocal({ ...local, status: v });
+                          save({ status: v });
+                        }}
+                        className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
+                      >
+                        {Object.keys(statusMeta).map((k) => (
+                          <option key={k} value={k}>
+                            {statusMeta[k].label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={dueInputId}
+                        className="mb-1.5 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                      >
+                        Due
+                      </label>
+                      <input
+                        id={dueInputId}
+                        type="datetime-local"
+                        value={local.dueAt ? new Date(local.dueAt).toISOString().slice(0, 16) : ''}
+                        onChange={(e) => {
+                          const iso = e.target.value
+                            ? new Date(e.target.value).toISOString()
+                            : null;
+                          setLocal({ ...local, dueAt: iso });
+                          save({ dueAt: iso });
+                        }}
+                        className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label
+                      htmlFor={ownersInputId}
+                      className="mb-1.5 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                    >
+                      Owners
+                    </label>
+                    <div id={ownersInputId}>
+                      <OwnerEditor taskId={task.id} owners={task.owners} />
+                    </div>
+                  </div>
+
+                  {local.ownerType === 'ai' && (
+                    <div className="mt-4">
+                      <label
+                        htmlFor={expectedByInputId}
+                        className="mb-1.5 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                      >
+                        Expected by
+                      </label>
+                      <input
+                        id={expectedByInputId}
+                        type="datetime-local"
+                        value={
+                          local.expectedBy
+                            ? new Date(local.expectedBy).toISOString().slice(0, 16)
+                            : ''
+                        }
+                        onChange={(e) => {
+                          const iso = e.target.value
+                            ? new Date(e.target.value).toISOString()
+                            : null;
+                          setLocal({ ...local, expectedBy: iso });
+                          save({ expectedBy: iso });
+                        }}
+                        className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
+                      />
+                    </div>
+                  )}
+
+                  <div className="mt-4">
+                    <label
+                      htmlFor={tagsInputId}
+                      className="mb-1.5 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                    >
+                      Tags
+                    </label>
+                    <input
+                      id={tagsInputId}
+                      value={local.tags?.join(' ') || ''}
+                      placeholder="+tag +another"
+                      onChange={(e) => {
+                        const arr = e.target.value
+                          .split(/\s+/)
+                          .filter(Boolean)
+                          .map((s) => s.replace(/^\+/, ''));
+                        setLocal({ ...local, tags: arr });
+                        save({ tags: arr });
+                      }}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <label
+                      htmlFor={notesInputId}
+                      className="mb-1.5 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                    >
+                      Notes
+                    </label>
+                    <textarea
+                      id={notesInputId}
+                      rows={9}
+                      value={local.description || ''}
+                      onChange={(e) => setLocal({ ...local, description: e.target.value })}
+                      onBlur={() => save({ description: local.description })}
+                      placeholder="Add context, next steps, links, or decisions..."
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
+                    />
+                  </div>
+                </section>
+              </div>
+
+              <div className="space-y-5">
+                <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+                  <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">
+                    Priority tuning
+                  </h4>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Tune the score so the board reflects true urgency, impact, and effort.
+                  </p>
+
+                  <div className="mt-4 grid gap-3">
+                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-900">
+                      <div className="mb-2 flex items-center justify-between text-sm">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          Impact
+                        </span>
+                        <span className="text-slate-500 dark:text-slate-400">{local.impact}</span>
+                      </div>
+                      <NumberInput
+                        value={local.impact}
+                        onChange={(v) => {
+                          setLocal({ ...local, impact: v });
+                          save({ impact: v });
+                        }}
+                      />
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-900">
+                      <div className="mb-2 flex items-center justify-between text-sm">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          Urgency
+                        </span>
+                        <span className="text-slate-500 dark:text-slate-400">{local.urgency}</span>
+                      </div>
+                      <NumberInput
+                        value={local.urgency}
+                        onChange={(v) => {
+                          setLocal({ ...local, urgency: v });
+                          save({ urgency: v });
+                        }}
+                      />
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-900">
+                      <div className="mb-2 flex items-center justify-between text-sm">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          Effort
+                        </span>
+                        <span className="text-slate-500 dark:text-slate-400">{local.effort}</span>
+                      </div>
+                      <NumberInput
+                        value={local.effort}
+                        onChange={(v) => {
+                          setLocal({ ...local, effort: v });
+                          save({ effort: v });
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                          Current priority
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          <Badge className={PRIORITY_COLORS[scoreMath.b]}>{scoreMath.b}</Badge>
+                          <span className="text-xl font-semibold text-slate-950 dark:text-slate-50">
+                            {scoreMath.s}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const s = priorityScore({
+                            impact: local.impact,
+                            urgency: local.urgency,
+                            effort: local.effort,
+                            dueAt: local.dueAt,
+                          });
+                          const b = scoreToBucket(s);
+                          setLocal({ ...local, priorityBucket: b });
+                          save({ score: s, priorityBucket: b });
+                        }}
+                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        Rescore
+                      </button>
+                    </div>
+                    <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                      Score = (2 × impact + 1.5 × urgency) − effort
+                      {local.dueAt ? ' + due-date boost' : ''}
+                    </p>
+                  </div>
+                </section>
+
+                <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+                  <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">
+                    Actions
+                  </h4>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Useful shortcuts for wrap-up, recovery, and cleanup.
+                  </p>
+
+                  <div className="mt-4 space-y-3">
+                    {task.status === 'waiting_ai' && (
+                      <button
+                        onClick={() =>
+                          useStore.getState().updateTask(task.id, {
+                            status: 'ready',
+                            ownerType: 'self',
+                            expectedBy: null,
+                          })
+                        }
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-indigo-700"
+                      >
+                        <Bot className="h-4 w-4" /> Simulate AI Update
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        del(task.id);
+                        onClose();
+                      }}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-rose-700"
+                    >
+                      <Trash2 className="h-4 w-4" /> Delete task
+                    </button>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
     </>,
     document.body,
   );
 }
-
-const TodayFocusBar = React.memo(function TodayFocusBar() {
-  const filtered = useFilteredTasks();
-  const completionStatuses = useStore((s) => s.getCompletionStatuses());
-
-  const completionIds = useMemo(
-    () => new Set(completionStatuses.map((status) => status.id)),
-    [completionStatuses],
-  );
-
-  const actionable = useMemo(
-    () => filtered.filter((task) => !completionIds.has(task.status)),
-    [filtered, completionIds],
-  );
-
-  const metrics = useMemo(() => {
-    const now = new Date();
-    const urgentNow = actionable.filter(
-      (task) => task.priorityBucket === 'P0' || task.priorityBucket === 'P1',
-    ).length;
-    const inProgress = actionable.filter((task) => task.status === 'in_progress').length;
-    const needsReview = actionable.filter((task) => task.status === 'in_review').length;
-    const waiting = actionable.filter((task) => WAITING_STATUSES.includes(task.status)).length;
-    const atRiskToday = actionable.filter((task) => {
-      if (!task.dueAt) return false;
-      const dueDate = new Date(task.dueAt);
-      return isToday(dueDate) || isBefore(dueDate, now);
-    }).length;
-
-    return [
-      {
-        label: 'Urgent now',
-        value: urgentNow,
-        hint: 'P0/P1 work',
-        tone: urgentNow > 0 ? 'text-rose-600 dark:text-rose-400' : '',
-      },
-      {
-        label: 'In progress',
-        value: inProgress,
-        hint: 'active tasks',
-        tone: '',
-      },
-      {
-        label: 'Needs my review',
-        value: needsReview,
-        hint: 'PR/review/QA',
-        tone: '',
-      },
-      {
-        label: 'Waiting',
-        value: waiting,
-        hint: 'AI / people / external',
-        tone: '',
-      },
-      {
-        label: 'At risk today',
-        value: atRiskToday,
-        hint: 'due today or overdue',
-        tone: atRiskToday > 0 ? 'text-amber-600 dark:text-amber-400' : '',
-      },
-    ];
-  }, [actionable]);
-
-  return (
-    <div className="mb-4">
-      <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
-        Today Focus
-      </div>
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
-        {metrics.map((metric) => (
-          <div
-            key={metric.label}
-            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2"
-          >
-            <div className="text-xs text-slate-500 dark:text-slate-400">{metric.label}</div>
-            <div
-              className={clsx(
-                'text-lg font-semibold text-slate-900 dark:text-slate-100',
-                metric.tone,
-              )}
-            >
-              {metric.value}
-            </div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">{metric.hint}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-});
 
 const WipBanner = React.memo(function WipBanner() {
   const tasks = useStore((s) => s.tasks);
@@ -6498,7 +6593,6 @@ export default function WorkdayTaskBoardApp() {
 
           <Toolbar viewMode={viewMode} onChangeView={setViewMode} />
           <main className="px-6 py-4">
-            <TodayFocusBar />
             <WipBanner />
             {viewMode === 'board' ? <Board /> : <BacklogView />}
 
