@@ -4193,7 +4193,7 @@ function ChildTaskManager({ task }) {
 
   return (
     <section
-      className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40"
+      className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40"
       style={accentColor ? { boxShadow: `inset 4px 0 0 ${accentColor}` } : undefined}
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -4228,34 +4228,23 @@ function ChildTaskManager({ task }) {
         </button>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-900">
-          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-            Progress
-          </div>
-          <div className="mt-1 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-            {percent}%
-          </div>
-        </div>
-        <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-900">
-          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-            Completed
-          </div>
-          <div className="mt-1 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-            {completed}
-          </div>
-        </div>
-        <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-900">
-          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-            Remaining
-          </div>
-          <div className="mt-1 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-            {remaining}
-          </div>
-        </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 font-medium text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+          <span
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: accentColor || pickTaskGroupColor(task.id) }}
+          />
+          {percent}% progress
+        </span>
+        <span className="inline-flex rounded-full bg-slate-100 px-3 py-1.5 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+          {completed} completed
+        </span>
+        <span className="inline-flex rounded-full bg-slate-100 px-3 py-1.5 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+          {remaining} remaining
+        </span>
       </div>
 
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
         <div
           className="h-full rounded-full transition-all"
           style={{
@@ -4265,7 +4254,7 @@ function ChildTaskManager({ task }) {
         />
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 max-h-[22rem] space-y-2 overflow-y-auto pr-1">
         {childTasks.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
             No subtasks yet. Add one and it will appear as its own movable card on the board.
@@ -5217,7 +5206,7 @@ function TaskDrawer({ task, onClose }) {
                     </label>
                     <textarea
                       id={notesInputId}
-                      rows={9}
+                      rows={5}
                       value={local.description || ''}
                       onChange={(e) => setLocal({ ...local, description: e.target.value })}
                       onBlur={() => save({ description: local.description })}
@@ -5225,8 +5214,9 @@ function TaskDrawer({ task, onClose }) {
                       className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
                     />
                   </div>
+
+                  {!isSubtask && <ChildTaskManager task={task} />}
                 </section>
-                {!isSubtask && <ChildTaskManager task={task} />}
               </div>
 
               <div className="space-y-5">
