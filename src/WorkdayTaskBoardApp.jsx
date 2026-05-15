@@ -5032,7 +5032,7 @@ function TaskDrawer({ task, onClose }) {
           initial={{ opacity: 0, y: 24, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 24, scale: 0.98 }}
-          className="pointer-events-auto w-[min(1040px,100%)] max-h-[88vh] overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.28)] dark:border-slate-700/80 dark:bg-slate-900 dark:shadow-[0_32px_90px_rgba(2,6,23,0.7)]"
+          className="pointer-events-auto flex max-h-[88vh] w-[min(1040px,100%)] flex-col overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.28)] dark:border-slate-700/80 dark:bg-slate-900 dark:shadow-[0_32px_90px_rgba(2,6,23,0.7)]"
         >
           <div className="border-b border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_40%),linear-gradient(135deg,_rgba(248,250,252,0.98),_rgba(241,245,249,0.92))] px-6 py-5 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_34%),linear-gradient(135deg,_rgba(15,23,42,0.96),_rgba(2,6,23,0.98))]">
             <div className="flex items-start justify-between gap-4">
@@ -5139,7 +5139,7 @@ function TaskDrawer({ task, onClose }) {
             )}
           </div>
 
-          <div className="max-h-[calc(88vh-180px)] overflow-y-auto px-6 py-5">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-12 pt-5">
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.95fr)]">
               <div className="space-y-5">
                 <section className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 dark:border-slate-800 dark:bg-slate-950/50">
