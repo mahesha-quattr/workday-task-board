@@ -4037,8 +4037,8 @@ function TaskCard({ task }) {
       style={
         accentColor
           ? {
-              backgroundImage: `linear-gradient(135deg, ${colorWithAlpha(accentColor, 0.11)}, transparent 42%)`,
-              boxShadow: `inset 0 0 0 1px ${colorWithAlpha(accentColor, 0.22)}`,
+              backgroundImage: `linear-gradient(135deg, ${colorWithAlpha(accentColor, 0.14)}, transparent 42%)`,
+              boxShadow: `inset 0 0 0 1px ${colorWithAlpha(accentColor, 0.22)}, inset 4px 0 0 0 ${colorWithAlpha(accentColor, 0.98)}, -8px 0 16px -12px ${colorWithAlpha(accentColor, 0.9)}`,
             }
           : undefined
       }
@@ -4320,7 +4320,7 @@ function ChildTaskManager({ task }) {
         />
       </div>
 
-      <div className="mt-4 max-h-[22rem] space-y-2 overflow-y-auto pr-1">
+      <div className="mt-4 space-y-2">
         {childTasks.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
             No subtasks yet. Add one and it will appear as its own movable card on the board.
@@ -5023,7 +5023,7 @@ function TaskDrawer({ task, onClose }) {
         className="fixed inset-0 z-[300] bg-slate-950/60 backdrop-blur-md"
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
       />
-      <div className="fixed inset-0 z-[301] flex items-center justify-center p-4">
+      <div className="pointer-events-none fixed inset-0 z-[301] flex items-center justify-center p-4">
         <motion.div
           ref={drawerRef}
           role="dialog"
@@ -5032,7 +5032,7 @@ function TaskDrawer({ task, onClose }) {
           initial={{ opacity: 0, y: 24, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 24, scale: 0.98 }}
-          className="w-[min(1040px,100%)] max-h-[88vh] overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.28)] dark:border-slate-700/80 dark:bg-slate-900 dark:shadow-[0_32px_90px_rgba(2,6,23,0.7)]"
+          className="pointer-events-auto w-[min(1040px,100%)] max-h-[88vh] overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.28)] dark:border-slate-700/80 dark:bg-slate-900 dark:shadow-[0_32px_90px_rgba(2,6,23,0.7)]"
         >
           <div className="border-b border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_40%),linear-gradient(135deg,_rgba(248,250,252,0.98),_rgba(241,245,249,0.92))] px-6 py-5 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_34%),linear-gradient(135deg,_rgba(15,23,42,0.96),_rgba(2,6,23,0.98))]">
             <div className="flex items-start justify-between gap-4">
@@ -6414,8 +6414,8 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
       style={
         accentColor
           ? {
-              backgroundImage: `linear-gradient(135deg, ${colorWithAlpha(accentColor, 0.1)}, transparent 42%)`,
-              boxShadow: `inset 0 0 0 1px ${colorWithAlpha(accentColor, 0.2)}`,
+              backgroundImage: `linear-gradient(135deg, ${colorWithAlpha(accentColor, 0.14)}, transparent 42%)`,
+              boxShadow: `inset 0 0 0 1px ${colorWithAlpha(accentColor, 0.2)}, inset 4px 0 0 0 ${colorWithAlpha(accentColor, 0.98)}, -8px 0 16px -12px ${colorWithAlpha(accentColor, 0.9)}`,
             }
           : undefined
       }
