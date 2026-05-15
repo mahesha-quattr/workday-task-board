@@ -61,14 +61,14 @@ import logoDark from '/assets/dark/flowtrackr-logo.png';
 
 // ----- Types -----
 
-/** @typedef {"backlog"|"ready"|"in_progress"|"waiting_ai"|"waiting_other"|"blocked"|"in_review"|"done"|"done_yesterday"} Status */
+/** @typedef {"inbox"|"ready"|"in_progress"|"waiting_ai"|"waiting_other"|"blocked"|"in_review"|"done"|"done_yesterday"|"backlog"} Status */
 /** @typedef {"self"|"ai"|"other"} OwnerType */
 /** @typedef {"board"|"backlog"} ViewMode */
 
 // ----- Constants -----
 
 const STATUS_META = /** @type{Record<Status,{label:string, key:string, hint:string}>} */ ({
-  backlog: { label: 'Inbox', key: '1', hint: 'Capture and triage later' },
+  inbox: { label: 'Inbox', key: '1', hint: 'Capture and triage later' },
   ready: { label: 'Next Up', key: '2', hint: 'Ready to pull next' },
   in_progress: { label: 'In Progress', key: '3', hint: 'Actively doing' },
   in_review: { label: 'Review', key: '4', hint: 'Needs review or QA' },
@@ -77,11 +77,13 @@ const STATUS_META = /** @type{Record<Status,{label:string, key:string, hint:stri
   blocked: { label: 'Blocked', key: '7', hint: 'Needs decision or unblock' },
   done: { label: 'Done', key: '8', hint: 'Completed' },
   done_yesterday: { label: 'Bin', key: '9', hint: 'Archived completed tasks' },
+  backlog: { label: 'Backlog', key: '0', hint: 'Longer-horizon work queue' },
 });
 
 const STATUS_ORDER = /** @type{Status[]} */ (Object.keys(STATUS_META));
 
 const LEGACY_STATUS_META = {
+  inbox: { label: 'Inbox', hint: 'Capture and triage later' },
   backlog: { label: 'Backlog', hint: 'Ideas and unsorted' },
   ready: { label: 'Ready', hint: 'Triage done' },
   in_progress: { label: 'In Progress', hint: 'Actively doing' },
@@ -100,7 +102,7 @@ const PREVIOUS_DONE_YESTERDAY_META = {
 
 const WAITING_STATUSES = ['waiting_ai', 'waiting_other', 'blocked'];
 const STANDARD_STATUS_ORDER = [
-  'backlog',
+  'inbox',
   'ready',
   'in_progress',
   'in_review',
@@ -109,6 +111,7 @@ const STANDARD_STATUS_ORDER = [
   'blocked',
   'done',
   'done_yesterday',
+  'backlog',
 ];
 
 const PRIORITY_COLORS = {
@@ -251,7 +254,7 @@ function getStatusFromPoint(x, y) {
 
 const STORAGE_KEY = 'workday-board@v1';
 const VIEW_MODE_KEY = 'workday-board@view-mode';
-const STORAGE_VERSION = 2.3; // Version for migration tracking
+const STORAGE_VERSION = 2.4; // Version for migration tracking
 
 // Project color palette
 const PROJECT_COLORS = [
@@ -301,6 +304,56 @@ function migrateStorageV1toV2(data) {
   }
 
   data.version = STORAGE_VERSION;
+  return data;
+}
+
+function migrateToV2_4(data) {
+  if (!data) return data;
+
+  if (Array.isArray(data.tasks)) {
+    const hasInboxStatus = (data.statusConfig?.statuses || []).some(
+      (status) => status.id === 'inbox',
+    );
+    if (!hasInboxStatus) {
+      data.tasks = data.tasks.map((task) =>
+        task.status === 'backlog' ? { ...task, status: 'inbox' } : task,
+      );
+    }
+  }
+
+  if (
+    data.statusConfig?.statuses &&
+    !data.statusConfig.statuses.some((status) => status.id === 'inbox')
+  ) {
+    const now = new Date().toISOString();
+    const remappedStatuses = data.statusConfig.statuses.map((status) =>
+      status.id === 'backlog'
+        ? {
+            ...status,
+            id: 'inbox',
+            label: 'Inbox',
+            description: 'Capture and triage later',
+            isDefault: true,
+            keyboardShortcut: '1',
+          }
+        : status,
+    );
+
+    remappedStatuses.push({
+      id: 'backlog',
+      label: 'Backlog',
+      description: 'Longer-horizon work queue',
+      order: remappedStatuses.length,
+      isDefault: false,
+      isCompletionState: false,
+      keyboardShortcut: '0',
+      createdAt: now,
+      canDelete: true,
+    });
+
+    data.statusConfig.statuses = remappedStatuses;
+  }
+
   return data;
 }
 
@@ -460,7 +513,7 @@ function migrateToV2_1(data) {
   data.statusConfig = {
     statuses: [
       {
-        id: 'backlog',
+        id: 'inbox',
         label: 'Inbox',
         description: 'Capture and triage later',
         order: 0,
@@ -558,6 +611,17 @@ function migrateToV2_1(data) {
         createdAt: now,
         canDelete: true,
       },
+      {
+        id: 'backlog',
+        label: 'Backlog',
+        description: 'Longer-horizon work queue',
+        order: 9,
+        isDefault: false,
+        isCompletionState: false,
+        keyboardShortcut: '0',
+        createdAt: now,
+        canDelete: true,
+      },
     ],
     version: 1,
   };
@@ -627,7 +691,7 @@ function normalizeStatusConfig(statusConfig) {
     return {
       ...status,
       order: index,
-      keyboardShortcut: String(index + 1),
+      keyboardShortcut: STATUS_META[statusId]?.key || String(index + 1),
     };
   });
 
@@ -785,7 +849,7 @@ function finalizeTask(partial) {
     title: partial.title ?? 'Untitled',
     description: partial.description ?? '',
     projectId: partial.projectId ?? 'default',
-    status: partial.status ?? 'backlog',
+    status: partial.status ?? 'inbox',
     impact,
     urgency,
     effort,
@@ -933,6 +997,7 @@ const useStore = create((set, get) => ({
 
         // Apply status config migration
         parsed = migrateToV2_1(parsed);
+        parsed = migrateToV2_4(parsed);
         parsed.statusConfig = normalizeStatusConfig(parsed.statusConfig);
 
         // Convert stored owner registry to runtime format
@@ -1034,7 +1099,7 @@ const useStore = create((set, get) => ({
     const { currentProjectId } = get();
     // Use default status if no status provided
     const defaultStatus = get().getDefaultStatus();
-    const status = partial.status || (defaultStatus ? defaultStatus.id : 'backlog');
+    const status = partial.status || (defaultStatus ? defaultStatus.id : 'inbox');
     const t = finalizeTask({
       ...partial,
       status,
@@ -1948,14 +2013,14 @@ const useStore = create((set, get) => ({
         return;
       }
 
-      // Otherwise map to default status (backlog)
-      statusMapping[currentStatus.id] = 'backlog';
+      // Otherwise map to default status (inbox)
+      statusMapping[currentStatus.id] = 'inbox';
     });
 
     // Migrate all tasks to default statuses
     const updatedTasks = tasks.map((t) => ({
       ...t,
-      status: statusMapping[t.status] || 'backlog',
+      status: statusMapping[t.status] || 'inbox',
       updatedAt: new Date().toISOString(),
     }));
 
@@ -3874,6 +3939,7 @@ function getPriorityBorderClass(priority) {
 const EmptyColumnState = React.memo(({ columnName }) => {
   const messages = {
     Inbox: { text: 'Capture ideas and requests here', emoji: '📥' },
+    Backlog: { text: 'Park lower-priority work here', emoji: '🗃️' },
     'Next Up': { text: 'Pull your next task from here', emoji: '✅' },
     'In Progress': { text: 'Start working on a task', emoji: '🚀' },
     Review: { text: 'Tasks waiting for PR/review/QA', emoji: '👀' },
@@ -5503,7 +5569,7 @@ function Toolbar({ viewMode, onChangeView }) {
     addTask(base);
     // Show notification with column name
     const statusMeta = useStore.getState().getStatusMetaMap();
-    const targetStatus = base.status || useStore.getState().getDefaultStatus()?.id || 'backlog';
+    const targetStatus = base.status || useStore.getState().getDefaultStatus()?.id || 'inbox';
     const columnLabel = statusMeta[targetStatus]?.label || targetStatus;
     useStore.getState().showNotification(`Task added to ${columnLabel}`, 'success');
     setInput('');
@@ -5955,16 +6021,18 @@ const Board = React.memo(function Board() {
     [grouped, waitingStatuses],
   );
   const waitingDropStatus = waitingStatuses[0] || null;
+  const backlogStatus = statusOrder.includes('backlog') ? 'backlog' : null;
   const secondaryStatuses = useMemo(
     () =>
       statusOrder.filter(
         (status) =>
-          status === 'backlog' ||
+          status === 'inbox' ||
           status === 'done' ||
           status === 'done_yesterday' ||
           (!primaryStatuses.includes(status) &&
             !waitingStatuses.includes(status) &&
-            !standardStatuses.has(status)),
+            !standardStatuses.has(status) &&
+            status !== 'backlog'),
       ),
     [primaryStatuses, statusOrder, standardStatuses, waitingStatuses],
   );
@@ -6060,6 +6128,7 @@ const Board = React.memo(function Board() {
 
   const showWaitingLane = waitingStatuses.length > 0;
   const hasSecondary = secondaryStatuses.length > 0;
+  const hasBacklogLane = !!backlogStatus;
 
   return (
     <div className="space-y-4" style={{ position: 'relative', zIndex: 1 }}>
@@ -6085,7 +6154,7 @@ const Board = React.memo(function Board() {
               Secondary Lanes
             </h4>
             <span className="text-xs text-slate-400 dark:text-slate-500">
-              Inbox + completed work
+              Inbox and completed work
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -6095,13 +6164,29 @@ const Board = React.memo(function Board() {
                 status={status}
                 tasks={grouped[status] || []}
                 tone={
-                  status === 'backlog' || status === 'done' || status === 'done_yesterday'
+                  status === 'inbox' || status === 'done' || status === 'done_yesterday'
                     ? 'secondary'
                     : 'primary'
                 }
                 defaultCollapsed={status === 'done_yesterday'}
               />
             ))}
+          </div>
+        </div>
+      )}
+
+      {hasBacklogLane && (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h4 className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Backlog
+            </h4>
+            <span className="text-xs text-slate-400 dark:text-slate-500">
+              Longer-horizon work queue
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            <Column status={backlogStatus} tasks={grouped[backlogStatus] || []} tone="secondary" />
           </div>
         </div>
       )}
