@@ -2392,7 +2392,7 @@ function ProjectSelector() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="absolute md:top-full top-0 md:mt-2 mt-0 w-full md:w-72 bg-white dark:bg-slate-800 md:rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-[100] md:left-0 left-0 md:right-auto right-0 md:max-h-96 max-h-screen overflow-auto"
+                className="absolute md:top-full top-0 md:mt-2 mt-0 w-full md:w-72 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 md:rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-[100] md:left-0 left-0 md:right-auto right-0 md:max-h-96 max-h-screen overflow-auto"
               >
                 <div className="p-3">
                   <div className="flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
@@ -2433,7 +2433,7 @@ function ProjectSelector() {
                         placeholder="Search projects..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700"
+                        className="w-full px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400"
                       />
                     </div>
                   )}
@@ -2596,7 +2596,7 @@ function ProjectManager({ onClose }) {
       aria-label="Close manager"
     >
       <div
-        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]"
+        className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]"
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
@@ -2624,7 +2624,7 @@ function ProjectManager({ onClose }) {
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
                 placeholder="New project name"
-                className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
+                className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400"
                 maxLength={15}
               />
               <button
@@ -2697,7 +2697,7 @@ function ProjectManager({ onClose }) {
                           if (e.key === 'Enter') handleRename(project.id);
                           if (e.key === 'Escape') setEditingId(null);
                         }}
-                        className="flex-1 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded"
+                        className="flex-1 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
                         maxLength={15}
                       />
                     ) : (
@@ -3225,7 +3225,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-96 max-w-full">
+      <div className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg shadow-xl w-96 max-w-full">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold">Assign Owner to {taskIds.length} Tasks</h3>
         </div>
@@ -3434,7 +3434,7 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
 
   return ReactDOM.createPortal(
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]">
+      <div className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]">
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold">Move Tasks to Project</h2>
           <button
@@ -3488,7 +3488,7 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
               id="target-project"
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
             >
               <option value="">Choose a project...</option>
               {availableProjects.map((project) => (
@@ -3502,7 +3502,7 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
           <div className="flex justify-end gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+              className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
             >
               Cancel
             </button>
@@ -4062,10 +4062,12 @@ function TaskCard({ task }) {
             </div>
           </div>
         </div>
-        <div className={clsx(
-          'absolute bottom-2 right-2 items-center gap-0.5 bg-slate-700 dark:bg-slate-600 rounded-lg p-1',
-          (isRunning || task.status === 'in_progress') ? 'flex' : 'hidden group-hover:flex'
-        )}>
+        <div
+          className={clsx(
+            'absolute bottom-2 right-2 items-center gap-0.5 bg-slate-700 dark:bg-slate-600 rounded-lg p-1',
+            isRunning || task.status === 'in_progress' ? 'flex' : 'hidden group-hover:flex',
+          )}
+        >
           <button
             title="Move left"
             className="p-1 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-600/30 transition-colors"
@@ -4609,7 +4611,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
         tabIndex={0}
         aria-label="Close panel"
       />
-      <div className="absolute right-0 top-0 bottom-0 w-96 bg-white dark:bg-slate-800 shadow-xl overflow-hidden flex flex-col">
+      <div className="absolute right-0 top-0 bottom-0 w-96 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
@@ -4659,7 +4661,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
 
           <div className="space-y-2">
             {filteredOwners.map((owner) => (
-              <div key={owner.name} className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+              <div key={owner.name} className="p-3 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="font-medium text-sm">{owner.name}</div>
@@ -4944,7 +4946,7 @@ function TaskDrawer({ task, onClose }) {
                           'h-5 w-5 rounded-full border-2 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-slate-900',
                           accentColor === color
                             ? 'border-white shadow-sm ring-1 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-slate-400'
-                            : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500'
+                            : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500',
                         )}
                         style={{ backgroundColor: color }}
                         aria-label={`Set color ${color}`}
@@ -4982,7 +4984,9 @@ function TaskDrawer({ task, onClose }) {
             <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-slate-700/80 dark:bg-slate-900/70">
               {/* Due */}
               <div className="flex items-center gap-2">
-                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Due</div>
+                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                  Due
+                </div>
                 <div className="flex items-center gap-1.5 text-sm font-medium text-slate-900 dark:text-slate-100">
                   <Clock className="h-4 w-4 text-slate-400" />
                   <span>{dueSummary}</span>
@@ -5003,7 +5007,9 @@ function TaskDrawer({ task, onClose }) {
 
               {/* Priority */}
               <div className="flex items-center gap-2">
-                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Priority</div>
+                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                  Priority
+                </div>
                 <select
                   id={priorityInputId}
                   value={local.priorityBucket}
@@ -5024,7 +5030,9 @@ function TaskDrawer({ task, onClose }) {
 
               {/* Status (moved into meta strip per design) */}
               <div className="flex items-center gap-2">
-                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Status</div>
+                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                  Status
+                </div>
                 <select
                   id={statusInputId}
                   value={local.status}
@@ -5051,10 +5059,16 @@ function TaskDrawer({ task, onClose }) {
                 {/* Notes - height matches the right Properties panel, user resizable */}
                 <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40 flex flex-col h-full">
                   <div className="mb-1.5 flex items-center justify-between flex-shrink-0">
-                    <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">Notes</h4>
-                    <span className="text-[11px] text-slate-400 dark:text-slate-500">context, decisions, next steps</span>
+                    <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">
+                      Notes
+                    </h4>
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                      context, decisions, next steps
+                    </span>
                   </div>
-                  <label htmlFor={notesInputId} className="sr-only">Notes</label>
+                  <label htmlFor={notesInputId} className="sr-only">
+                    Notes
+                  </label>
                   <textarea
                     id={notesInputId}
                     value={local.description || ''}
@@ -5072,7 +5086,10 @@ function TaskDrawer({ task, onClose }) {
               <div className="space-y-2.5 rounded-3xl border border-slate-200 bg-slate-100/70 p-4 min-h-[300px] flex flex-col dark:border-slate-800 dark:bg-slate-950/50">
                 {/* Tags */}
                 <div>
-                  <label htmlFor={tagsInputId} className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                  <label
+                    htmlFor={tagsInputId}
+                    className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                  >
                     Tags
                   </label>
                   <input
@@ -5080,7 +5097,10 @@ function TaskDrawer({ task, onClose }) {
                     value={local.tags?.join(' ') || ''}
                     placeholder="+tag +another"
                     onChange={(e) => {
-                      const arr = e.target.value.split(/\s+/).filter(Boolean).map((s) => s.replace(/^\+/, ''));
+                      const arr = e.target.value
+                        .split(/\s+/)
+                        .filter(Boolean)
+                        .map((s) => s.replace(/^\+/, ''));
                       setLocal({ ...local, tags: arr });
                       save({ tags: arr });
                     }}
@@ -5090,7 +5110,10 @@ function TaskDrawer({ task, onClose }) {
 
                 {/* Owners */}
                 <div>
-                  <label htmlFor={ownersInputId} className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                  <label
+                    htmlFor={ownersInputId}
+                    className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                  >
                     Owners
                   </label>
                   <div id={ownersInputId}>
@@ -5101,7 +5124,10 @@ function TaskDrawer({ task, onClose }) {
                 {/* Expected by (only for AI tasks) */}
                 {local.ownerType === 'ai' && (
                   <div>
-                    <label htmlFor={expectedByInputId} className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    <label
+                      htmlFor={expectedByInputId}
+                      className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                    >
                       Expected by
                     </label>
                     <input
@@ -5495,13 +5521,13 @@ function Toolbar({ viewMode, onChangeView }) {
                 <Users className="w-5 h-5" />
               </button>
               {showOwnerDropdown && (
-                <div className="absolute top-full mt-1 right-0 w-48 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                <div className="absolute top-full mt-1 right-0 w-48 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
                   <button
                     onClick={() => {
                       setOwnerFilter(null);
                       setShowOwnerDropdown(false);
                     }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm"
+                    className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-900 dark:text-slate-100"
                   >
                     All Owners
                   </button>
@@ -5514,10 +5540,10 @@ function Toolbar({ viewMode, onChangeView }) {
                           setOwnerFilter(owner.name);
                           setShowOwnerDropdown(false);
                         }}
-                        className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex justify-between"
+                        className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 flex justify-between"
                       >
                         <span>{owner.name}</span>
-                        <span className="text-slate-500">({owner.taskCount})</span>
+                        <span className="text-slate-500 dark:text-slate-400">({owner.taskCount})</span>
                       </button>
                     ))}
                 </div>
@@ -5929,7 +5955,14 @@ function BacklogView() {
       // ignore storage errors
     }
     return new Set([
-      'done', 'done_yesterday', 'inbox', 'review', 'waiting_others', 'blocked', 'bin', 'backlog'
+      'done',
+      'done_yesterday',
+      'inbox',
+      'review',
+      'waiting_others',
+      'blocked',
+      'bin',
+      'backlog',
     ]);
   });
 
@@ -6829,11 +6862,11 @@ export default function WorkdayTaskBoardApp() {
                 <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
                 <button
                   onClick={() => setShowOwnerManager(true)}
-                  className="inline-flex items-center gap-1.5 px-2 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   title="Manage Owners"
+                  aria-label="Manage Owners"
                 >
                   <Users className="w-5 h-5" />
-                  <span className="hidden sm:inline text-sm">Owners</span>
                 </button>
                 <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
                 {/* Visible keyboard shortcuts button for discoverability */}
