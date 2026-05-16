@@ -1,16 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { create } from 'zustand';
-import {
-  format,
-  parseISO,
-  isBefore,
-  addDays,
-  addHours,
-  isToday,
-  isTomorrow,
-  differenceInHours,
-} from 'date-fns';
+import { format, parseISO, isBefore, addDays, addHours, isToday, isTomorrow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -55,8 +46,8 @@ import logoDark from '/assets/dark/flowtrackr-logo.png';
  * - Added pure helpers `computeElapsedSecs` and `formatDurationShort` + tests.
  * - DnD remains hit-tested via elementsFromPoint; backward/forward moves work.
  *
- * Quick-add tokens: !p0..p3, due:today|tomorrow|YYYY-MM-DD|HH:mm, @ai, @me,
- * +tag, effort:1..5, impact:0..5, urgency:0..5, expect:today|YYYY-MM-DD
+ * Quick-add tokens: !p0..p4, due:today|tomorrow|YYYY-MM-DD|HH:mm, @ai, @me,
+ * +tag, expect:today|YYYY-MM-DD
  */
 
 // ----- Types -----
@@ -81,6 +72,16 @@ const STATUS_META = /** @type{Record<Status,{label:string, key:string, hint:stri
 });
 
 const STATUS_ORDER = /** @type{Status[]} */ (Object.keys(STATUS_META));
+
+/** Statuses that should appear in the Task Detail Modal's Status dropdown (main workflow columns only) */
+const MODAL_STATUS_OPTIONS = /** @type{Status[]} */ ([
+  'ready',           // Next Up
+  'in_progress',     // In Progress
+  'in_review',       // Review
+  'waiting_ai',      // Waiting on AI
+  'waiting_other',   // Waiting on Others
+  'blocked',         // Blocked
+]);
 
 const LEGACY_STATUS_META = {
   inbox: { label: 'Inbox', hint: 'Capture and triage later' },
@@ -119,7 +120,10 @@ const PRIORITY_COLORS = {
   P1: 'bg-orange-50 text-orange-600 border-l-4 border-l-orange-500 dark:bg-orange-950 dark:text-orange-400 dark:border-l-orange-400',
   P2: 'bg-amber-50 text-amber-600 border-l-4 border-l-amber-500 dark:bg-amber-950 dark:text-amber-400 dark:border-l-amber-400',
   P3: 'bg-slate-50 text-slate-600 border-l-4 border-l-gray-400 dark:bg-slate-800 dark:text-slate-300 dark:border-l-slate-500',
+  P4: 'bg-slate-50 text-slate-500 border-l-4 border-l-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-l-slate-600',
 };
+
+const PRIORITY_BUCKETS = ['P0', 'P1', 'P2', 'P3', 'P4'];
 
 // ----- Helpers -----
 
@@ -131,17 +135,6 @@ function toggleId(list, id) {
 function uid() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return Math.random().toString(36).slice(2);
-}
-
-function clamp(n, lo, hi) {
-  return Math.max(lo, Math.min(hi, n));
-}
-
-function scoreToBucket(score) {
-  if (score >= 80) return 'P0';
-  if (score >= 60) return 'P1';
-  if (score >= 40) return 'P2';
-  return 'P3';
 }
 
 function parseDueToken(parts) {
@@ -174,25 +167,16 @@ function humanDue(dueAt) {
   return base + (isToday(d) ? ' · today' : isTomorrow(d) ? ' · tomorrow' : '');
 }
 
-function priorityScore({
-  impact = 0,
-  urgency = 0,
-  effort = 0,
-  dueAt = null,
-  hasUnblockedDeps = false,
-  meetingContext = false,
-}) {
-  let score = 2 * impact + 1.5 * urgency - effort;
-  if (dueAt) {
-    const now = new Date();
-    const d = new Date(dueAt);
-    const hrs = differenceInHours(d, now);
-    if (hrs <= 24) score += 2;
-    else if (hrs <= 72) score += 1;
-  }
-  if (hasUnblockedDeps) score += 1;
-  if (meetingContext) score += 1;
-  return clamp(Math.round(score * 10) / 10, 0, 100);
+function toDateTimeLocalValue(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return '';
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 }
 
 // Timer helpers (pure, testable)
@@ -242,8 +226,7 @@ function getStatusFromPoint(x, y) {
 
 /** @typedef {{
  *  id:string; title:string; description?:string; projectId?:string; status:Status;
- *  impact:number; urgency:number; effort:number; priorityBucket:"P0"|"P1"|"P2"|"P3";
- *  score:number; dueAt?:string|null; ownerType:OwnerType; ownerRef?:string; owners:string[]; tags:string[];
+ *  priorityBucket:"P0"|"P1"|"P2"|"P3"|"P4"; dueAt?:string|null; ownerType:OwnerType; ownerRef?:string; owners:string[]; tags:string[];
  *  dependencies:string[]; createdAt:string; updatedAt:string; expectedBy?:string|null;
  *  timeLogSecs?:number; timerStartedAt?:string|null; parentTaskId?:string|null; groupColor?:string|null;
  * }} Task */
@@ -402,9 +385,6 @@ function migrateTaskHierarchy(tasks = [], defaultProjectId = 'default') {
           description: '',
           projectId: task.projectId || defaultProjectId,
           status: task.status || 'backlog',
-          impact: 2,
-          urgency: 2,
-          effort: 1,
           dueAt: null,
           ownerType: task.ownerType || 'self',
           ownerRef: undefined,
@@ -735,9 +715,6 @@ const seedTasks = () => {
       projectId: 'default',
       title: 'Fix login bug for Alpha',
       status: 'in_progress',
-      impact: 4,
-      urgency: 5,
-      effort: 2,
       dueAt: addHours(now, 20).toISOString(),
       ownerType: 'self',
       tags: ['bug', 'auth'],
@@ -750,9 +727,6 @@ const seedTasks = () => {
       projectId: 'default',
       title: 'Patch the auth callback flow',
       status: 'in_progress',
-      impact: 2,
-      urgency: 3,
-      effort: 1,
       dueAt: null,
       ownerType: 'self',
       tags: ['auth'],
@@ -765,9 +739,6 @@ const seedTasks = () => {
       projectId: 'default',
       title: 'Verify the fix in staging',
       status: 'review',
-      impact: 2,
-      urgency: 2,
-      effort: 1,
       dueAt: null,
       ownerType: 'self',
       tags: ['qa'],
@@ -779,9 +750,6 @@ const seedTasks = () => {
       id: aiTaskId,
       title: 'Delegate test data generation to AI',
       status: 'waiting_ai',
-      impact: 3,
-      urgency: 3,
-      effort: 1,
       dueAt: addHours(now, 36).toISOString(),
       ownerType: 'ai',
       tags: ['agent'],
@@ -793,9 +761,6 @@ const seedTasks = () => {
       id: uid(),
       title: 'Create edge-case duplicates',
       status: 'waiting_ai',
-      impact: 1,
-      urgency: 2,
-      effort: 1,
       dueAt: null,
       ownerType: 'ai',
       tags: ['agent'],
@@ -807,9 +772,6 @@ const seedTasks = () => {
       id: uid(),
       title: 'Prep for requirements call',
       status: 'ready',
-      impact: 3,
-      urgency: 4,
-      effort: 1,
       dueAt: addHours(now, 4).toISOString(),
       ownerType: 'self',
       tags: ['meeting'],
@@ -819,9 +781,6 @@ const seedTasks = () => {
       id: uid(),
       title: 'Refactor payment webhook',
       status: 'blocked',
-      impact: 4,
-      urgency: 2,
-      effort: 3,
       dueAt: null,
       ownerType: 'self',
       tags: ['tech-debt'],
@@ -832,11 +791,9 @@ const seedTasks = () => {
 
 function finalizeTask(partial) {
   const nowIso = new Date().toISOString();
-  const impact = partial.impact ?? 2;
-  const urgency = partial.urgency ?? 2;
-  const effort = partial.effort ?? 2;
-  const score = priorityScore({ impact, urgency, effort, dueAt: partial.dueAt });
-  const bucket = scoreToBucket(score);
+  const priorityBucket = PRIORITY_BUCKETS.includes(partial.priorityBucket)
+    ? partial.priorityBucket
+    : 'P3';
 
   // Initialize owners from ownerRef if needed (for migration)
   let owners = partial.owners ?? [];
@@ -850,11 +807,7 @@ function finalizeTask(partial) {
     description: partial.description ?? '',
     projectId: partial.projectId ?? 'default',
     status: partial.status ?? 'inbox',
-    impact,
-    urgency,
-    effort,
-    score,
-    priorityBucket: partial.priorityBucket ?? bucket,
+    priorityBucket,
     dueAt: partial.dueAt ?? null,
     ownerType: partial.ownerType ?? 'self',
     ownerRef: partial.ownerRef ?? undefined,
@@ -1157,9 +1110,6 @@ const useStore = create((set, get) => ({
       title: trimmed,
       projectId: parentTask.projectId,
       status: parentTask.status,
-      impact: 1,
-      urgency: 1,
-      effort: 1,
       dueAt: null,
       ownerType: parentTask.ownerType === 'ai' ? 'ai' : 'self',
       tags: [],
@@ -3623,9 +3573,6 @@ function parseQuickAdd(input) {
     ownerType = 'self',
     owners = [],
     tags = [],
-    impact = undefined,
-    urgency = undefined,
-    effort = undefined,
     priorityBucket = null,
     expectedBy = null;
   for (let i = 0; i < tokens.length; i++) {
@@ -3634,7 +3581,7 @@ function parseQuickAdd(input) {
       tags.push(raw.slice(1));
       continue;
     }
-    if (/^!p[0-3]$/i.test(raw)) {
+    if (/^!p[0-4]$/i.test(raw)) {
       priorityBucket = raw.toUpperCase().slice(1);
       continue;
     }
@@ -3649,18 +3596,6 @@ function parseQuickAdd(input) {
         // It's a specific owner name
         owners.push(ownerName);
       }
-      continue;
-    }
-    if (raw.startsWith('impact:')) {
-      impact = Number(raw.split(':')[1]) || undefined;
-      continue;
-    }
-    if (raw.startsWith('urgency:')) {
-      urgency = Number(raw.split(':')[1]) || undefined;
-      continue;
-    }
-    if (raw.startsWith('effort:')) {
-      effort = Number(raw.split(':')[1]) || undefined;
       continue;
     }
     if (raw.startsWith('due:')) {
@@ -3693,9 +3628,6 @@ function parseQuickAdd(input) {
   const title = titleParts.join(' ').trim();
   const base = { title, dueAt, ownerType, tags, expectedBy };
   if (owners.length > 0) base.owners = owners;
-  if (impact !== undefined) base.impact = impact;
-  if (urgency !== undefined) base.urgency = urgency;
-  if (effort !== undefined) base.effort = effort;
   if (priorityBucket) base.priorityBucket = priorityBucket;
   return base;
 }
@@ -3864,9 +3796,9 @@ function TokenHelpTooltip({ visible, onDismiss }) {
 
       <div className="space-y-3 text-sm text-gray-700 dark:text-slate-300">
         <div>
-          <strong className="text-slate-900 dark:text-slate-100">!p0..p3</strong> - Set priority
+          <strong className="text-slate-900 dark:text-slate-100">!p0..p4</strong> - Set priority
           <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
-            Example: !p0 (highest), !p3 (lowest)
+            Example: !p0 (highest), !p4 (lowest)
           </div>
         </div>
 
@@ -3893,25 +3825,6 @@ function TokenHelpTooltip({ visible, onDismiss }) {
         </div>
 
         <div>
-          <strong className="text-slate-900 dark:text-slate-100">impact:0..5</strong> - Set impact
-          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
-            Example: impact:5 (high impact)
-          </div>
-        </div>
-
-        <div>
-          <strong className="text-slate-900 dark:text-slate-100">urgency:0..5</strong> - Set urgency
-          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">Example: urgency:4</div>
-        </div>
-
-        <div>
-          <strong className="text-slate-900 dark:text-slate-100">effort:0..5</strong> - Set effort
-          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
-            Example: effort:2 (low effort)
-          </div>
-        </div>
-
-        <div>
           <strong className="text-slate-900 dark:text-slate-100">expect:</strong> - Expected
           completion
           <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
@@ -3931,6 +3844,7 @@ function getPriorityBorderClass(priority) {
     P1: 'border-l-orange-500 dark:border-l-orange-400 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
     P2: 'border-l-yellow-500 dark:border-l-yellow-400 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
     P3: 'border-l-slate-300 dark:border-l-slate-600 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
+    P4: 'border-l-slate-400 dark:border-l-slate-500 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
   };
   return colors[priority] || colors.P3;
 }
@@ -4002,6 +3916,10 @@ function TaskCard({ task }) {
     (childTasks.length > 0 ? pickTaskGroupColor(task.id) : null);
   const isSubtask = !!task.parentTaskId;
 
+  // Only apply priority color border when there's no group/accent color
+  const hasGroupColor = !!accentColor;
+  const priorityBorderClasses = hasGroupColor ? '' : getPriorityBorderClass(task.priorityBucket);
+
   return (
     <motion.div
       layout
@@ -4032,7 +3950,7 @@ function TaskCard({ task }) {
         'shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden',
         isSelected && 'ring-2 ring-blue-400 shadow-md',
         isNewlyAdded && 'ring-2 ring-green-400',
-        getPriorityBorderClass(task.priorityBucket),
+        priorityBorderClasses,   // only applied when no custom group color
       )}
       style={
         accentColor
@@ -4144,7 +4062,10 @@ function TaskCard({ task }) {
             </div>
           </div>
         </div>
-        <div className="hidden group-hover:flex absolute bottom-2 right-2 items-center gap-0.5 bg-slate-700 dark:bg-slate-600 rounded-lg p-1">
+        <div className={clsx(
+          'absolute bottom-2 right-2 items-center gap-0.5 bg-slate-700 dark:bg-slate-600 rounded-lg p-1',
+          (isRunning || task.status === 'in_progress') ? 'flex' : 'hidden group-hover:flex'
+        )}>
           <button
             title="Move left"
             className="p-1 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-600/30 transition-colors"
@@ -4196,52 +4117,6 @@ function TaskCard({ task }) {
   );
 }
 
-function NumberInput({ value, onChange, min = 0, max = 5 }) {
-  return (
-    <input
-      type="number"
-      value={value}
-      min={min}
-      max={max}
-      onChange={(e) => onChange(Number(e.target.value))}
-      className="w-20 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-    />
-  );
-}
-
-function TaskColorSwatches({ activeColor, onSelect, label = 'Task color' }) {
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="min-w-0">
-        <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-          {label}
-        </div>
-        <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Color is applied to related task cards on the board.
-        </div>
-      </div>
-      <div className="ml-auto flex flex-wrap items-center gap-2">
-        {SUBTASK_GROUP_COLORS.map((color) => (
-          <button
-            key={color}
-            type="button"
-            onClick={() => onSelect(color)}
-            className={clsx(
-              'h-7 w-7 rounded-full border-2 transition-transform hover:scale-105',
-              activeColor === color
-                ? 'border-slate-900 dark:border-slate-100'
-                : 'border-white dark:border-slate-900',
-            )}
-            style={{ backgroundColor: color }}
-            aria-label={`Set task color ${color}`}
-            title="Choose task color"
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function ChildTaskManager({ task }) {
   const addSubtask = useStore((s) => s.addSubtask);
   const deleteSubtask = useStore((s) => s.deleteSubtask);
@@ -4260,14 +4135,18 @@ function ChildTaskManager({ task }) {
   return (
     <section
       className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40"
-      style={accentColor ? { boxShadow: `inset 4px 0 0 ${accentColor}` } : undefined}
+      style={
+        accentColor
+          ? {
+              borderLeft: `5px solid ${accentColor}`,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            }
+          : undefined
+      }
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">Subtasks</h4>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Create child tasks that show up as independent cards on the board.
-          </p>
         </div>
       </div>
 
@@ -4281,33 +4160,38 @@ function ChildTaskManager({ task }) {
               handleAdd();
             }
           }}
+          id="add-subtask-input"
+          name="add-subtask"
+          aria-label="Add a new subtask title"
           placeholder="Add a subtask..."
-          className="flex-1 rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
+          className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
         />
         <button
           type="button"
           onClick={handleAdd}
           disabled={!draftTitle.trim()}
-          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
+          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 active:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
         >
           <Plus className="h-4 w-4" /> Add subtask
         </button>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 font-medium text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700 dark:bg-slate-900 dark:text-slate-200">
           <span
             className="h-2 w-2 rounded-full"
             style={{ backgroundColor: accentColor || pickTaskGroupColor(task.id) }}
           />
-          {percent}% progress
+          {percent}% complete
         </span>
-        <span className="inline-flex rounded-full bg-slate-100 px-3 py-1.5 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-          {completed} completed
+        <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+          {completed} of {total} done
         </span>
-        <span className="inline-flex rounded-full bg-slate-100 px-3 py-1.5 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-          {remaining} remaining
-        </span>
+        {remaining > 0 && (
+          <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+            {remaining} active
+          </span>
+        )}
       </div>
 
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
@@ -4322,40 +4206,38 @@ function ChildTaskManager({ task }) {
 
       <div className="mt-4 space-y-2">
         {childTasks.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-            No subtasks yet. Add one and it will appear as its own movable card on the board.
+          <div className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            No subtasks yet
           </div>
         ) : (
           childTasks.map((subtask) => (
             <div
               key={subtask.id}
-              className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 dark:border-slate-800 dark:bg-slate-900/70"
+              className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-slate-700"
             >
               <span
-                className="h-2.5 w-2.5 rounded-full"
+                className="h-2.5 w-2.5 rounded-full flex-shrink-0"
                 style={{ backgroundColor: accentColor || pickTaskGroupColor(task.id) }}
               />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
                   {subtask.title}
                 </div>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                  <span>
-                    {subtask.status === 'done' || subtask.status === 'done_yesterday'
-                      ? 'Completed'
-                      : 'Active'}
-                  </span>
-                  <span>•</span>
-                  <span>{subtask.status.replace(/_/g, ' ')}</span>
+                <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                  {subtask.status === 'done' || subtask.status === 'done_yesterday' ? (
+                    <span className="text-emerald-600 dark:text-emerald-400">Completed</span>
+                  ) : (
+                    <span>{subtask.status.replace(/_/g, ' ')}</span>
+                  )}
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => deleteSubtask(task.id, subtask.id)}
-                className="rounded-xl p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
+                className="rounded-lg p-1.5 text-slate-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
                 title="Delete subtask"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           ))
@@ -4492,6 +4374,8 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
           <input
             ref={inputRef}
             type="text"
+            name="owner-search"
+            aria-label="Search or add owner"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onFocus={() => {
@@ -4618,19 +4502,22 @@ function OwnerEditor({ taskId, owners = [] }) {
         {owners.map((owner) => (
           <div
             key={owner}
-            className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-700 rounded"
+            className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-800"
           >
-            <span className="text-sm">{owner}</span>
+            <span className="font-medium text-slate-900 dark:text-slate-100">{owner}</span>
             <button
               onClick={() => removeOwner(taskId, owner)}
-              className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors"
+              className="rounded p-1 text-red-500 transition-colors hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950"
+              aria-label={`Remove ${owner}`}
             >
-              <X className="w-3 h-3 text-red-500" />
+              <X className="h-3 w-3" />
             </button>
           </div>
         ))}
         {owners.length === 0 && (
-          <div className="text-sm text-slate-500 dark:text-slate-400">No owners assigned</div>
+          <div className="rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            No owners assigned
+          </div>
         )}
       </div>
 
@@ -4643,9 +4530,9 @@ function OwnerEditor({ taskId, owners = [] }) {
         {owners.length > 0 && (
           <button
             onClick={() => clearOwners(taskId)}
-            className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
           >
-            Clear All
+            Clear all owners
           </button>
         )}
       </div>
@@ -4917,6 +4804,11 @@ function OwnerManagerPanel({ isOpen, onClose }) {
 }
 
 function TaskDrawer({ task, onClose }) {
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 2026-05-15 MODAL REDESIGN v3 (Design Doc c5306299)
+  // Starting PR #1: Header + Compact Meta Strip (Due | Priority | Status)
+  // Behavior, store calls, local state, save logic, focus trap, and portal preserved.
+  // ═══════════════════════════════════════════════════════════════════════════════
   const update = useStore((s) => s.updateTask);
   const del = useStore((s) => s.deleteTask);
   const setTaskGroupColor = useStore((s) => s.setTaskGroupColor);
@@ -4985,17 +4877,6 @@ function TaskDrawer({ task, onClose }) {
     update(task.id, patch);
   }
 
-  const scoreMath = useMemo(() => {
-    const s = priorityScore({
-      impact: local.impact,
-      urgency: local.urgency,
-      effort: local.effort,
-      dueAt: local.dueAt,
-    });
-    const b = scoreToBucket(s);
-    return { s, b };
-  }, [local.impact, local.urgency, local.effort, local.dueAt]);
-
   const dueSummary = local.dueAt ? humanDue(local.dueAt) : 'No due date';
   const isOverdue = local.dueAt ? isBefore(new Date(local.dueAt), new Date()) : false;
   const statusLabel = statusMeta[local.status]?.label || local.status;
@@ -5007,6 +4888,7 @@ function TaskDrawer({ task, onClose }) {
     parentTask?.groupColor ||
     (childTasks.length > 0 ? pickTaskGroupColor(local.id) : pickTaskGroupColor(local.id));
   const statusInputId = `task-status-${task.id}`;
+  const priorityInputId = `task-priority-${task.id}`;
   const dueInputId = `task-due-${task.id}`;
   const ownersInputId = `task-owners-${task.id}`;
   const expectedByInputId = `task-expected-by-${task.id}`;
@@ -5044,9 +4926,32 @@ function TaskDrawer({ task, onClose }) {
                   >
                     {statusLabel}
                   </Badge>
-                  <Badge className={clsx('border-l-0', PRIORITY_COLORS[scoreMath.b])}>
-                    {scoreMath.b}
+                  <Badge className={clsx('border-l-0', PRIORITY_COLORS[local.priorityBucket])}>
+                    {local.priorityBucket}
                   </Badge>
+
+                  {/* Color picker in header - small and always visible (user request) */}
+                  <div className="flex items-center gap-1.5 ml-1.5">
+                    {SUBTASK_GROUP_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => {
+                          setTaskGroupColor(task.id, color);
+                          setLocal((prev) => ({ ...prev, groupColor: color }));
+                        }}
+                        className={clsx(
+                          'h-5 w-5 rounded-full border-2 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-slate-900',
+                          accentColor === color
+                            ? 'border-white shadow-sm ring-1 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-slate-400'
+                            : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500'
+                        )}
+                        style={{ backgroundColor: color }}
+                        aria-label={`Set color ${color}`}
+                      />
+                    ))}
+                  </div>
+
                   {isOverdue && (
                     <Badge
                       variant="warning"
@@ -5063,9 +4968,6 @@ function TaskDrawer({ task, onClose }) {
                   className="w-full bg-transparent text-2xl font-semibold tracking-tight text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50 dark:placeholder:text-slate-500"
                   placeholder="Task title"
                 />
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                  Keep this task crisp, contextual, and easy to act on.
-                </p>
               </div>
               <button
                 onClick={onClose}
@@ -5076,345 +4978,166 @@ function TaskDrawer({ task, onClose }) {
               </button>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-slate-700/80 dark:bg-slate-900/70">
-                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  Due
-                </div>
-                <div className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+            {/* PR #1: Compact Meta Strip — Due + Priority + Status in one dense row */}
+            <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-slate-700/80 dark:bg-slate-900/70">
+              {/* Due */}
+              <div className="flex items-center gap-2">
+                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Due</div>
+                <div className="flex items-center gap-1.5 text-sm font-medium text-slate-900 dark:text-slate-100">
                   <Clock className="h-4 w-4 text-slate-400" />
                   <span>{dueSummary}</span>
                 </div>
-              </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-slate-700/80 dark:bg-slate-900/70">
-                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  Priority Score
-                </div>
-                <div className="mt-1 flex items-end gap-2">
-                  <span className="text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    {scoreMath.s}
-                  </span>
-                  <span className="pb-1 text-xs text-slate-500 dark:text-slate-400">
-                    current score
-                  </span>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-slate-700/80 dark:bg-slate-900/70">
-                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  Owners
-                </div>
-                <div className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">
-                  {task.owners?.length ? `${task.owners.length} assigned` : 'No owners assigned'}
-                </div>
-              </div>
-            </div>
-
-            {isSubtask ? (
-              <div className="mt-4 rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-3 dark:border-slate-700/70 dark:bg-slate-900/60">
-                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  Parent task
-                </div>
-                <div className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-slate-100">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: accentColor }}
-                  />
-                  <span>{parentTask?.title || 'Linked parent task'}</span>
-                </div>
-                <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                  This subtask inherits the same color theme as its parent on the board.
-                </div>
-              </div>
-            ) : (
-              <div className="mt-4 rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-3 dark:border-slate-700/70 dark:bg-slate-900/60">
-                <TaskColorSwatches
-                  activeColor={accentColor}
-                  label="Task color"
-                  onSelect={(color) => {
-                    setTaskGroupColor(task.id, color);
-                    setLocal((prev) => ({ ...prev, groupColor: color }));
+                <input
+                  id={dueInputId}
+                  type="datetime-local"
+                  value={toDateTimeLocalValue(local.dueAt)}
+                  onChange={(e) => {
+                    const iso = e.target.value ? new Date(e.target.value).toISOString() : null;
+                    setLocal({ ...local, dueAt: iso });
+                    save({ dueAt: iso });
                   }}
+                  className="w-40 rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  aria-label="Due date and time"
                 />
               </div>
-            )}
-          </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-12 pt-5">
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.95fr)]">
-              <div className="space-y-5">
-                <section className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 dark:border-slate-800 dark:bg-slate-950/50">
-                  <div className="mb-4">
-                    <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">
-                      Core details
-                    </h4>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      Update the task so it is easy to understand and easy to progress.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label
-                        htmlFor={statusInputId}
-                        className="mb-1.5 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
-                      >
-                        Status
-                      </label>
-                      <select
-                        id={statusInputId}
-                        value={local.status}
-                        onChange={(e) => {
-                          const v = /** @type{Status} */ (e.target.value);
-                          setLocal({ ...local, status: v });
-                          save({ status: v });
-                        }}
-                        className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
-                      >
-                        {Object.keys(statusMeta).map((k) => (
-                          <option key={k} value={k}>
-                            {statusMeta[k].label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label
-                        htmlFor={dueInputId}
-                        className="mb-1.5 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
-                      >
-                        Due
-                      </label>
-                      <input
-                        id={dueInputId}
-                        type="datetime-local"
-                        value={local.dueAt ? new Date(local.dueAt).toISOString().slice(0, 16) : ''}
-                        onChange={(e) => {
-                          const iso = e.target.value
-                            ? new Date(e.target.value).toISOString()
-                            : null;
-                          setLocal({ ...local, dueAt: iso });
-                          save({ dueAt: iso });
-                        }}
-                        className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <label
-                      htmlFor={ownersInputId}
-                      className="mb-1.5 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
-                    >
-                      Owners
-                    </label>
-                    <div id={ownersInputId}>
-                      <OwnerEditor taskId={task.id} owners={task.owners} />
-                    </div>
-                  </div>
-
-                  {local.ownerType === 'ai' && (
-                    <div className="mt-4">
-                      <label
-                        htmlFor={expectedByInputId}
-                        className="mb-1.5 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
-                      >
-                        Expected by
-                      </label>
-                      <input
-                        id={expectedByInputId}
-                        type="datetime-local"
-                        value={
-                          local.expectedBy
-                            ? new Date(local.expectedBy).toISOString().slice(0, 16)
-                            : ''
-                        }
-                        onChange={(e) => {
-                          const iso = e.target.value
-                            ? new Date(e.target.value).toISOString()
-                            : null;
-                          setLocal({ ...local, expectedBy: iso });
-                          save({ expectedBy: iso });
-                        }}
-                        className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
-                      />
-                    </div>
-                  )}
-
-                  <div className="mt-4">
-                    <label
-                      htmlFor={tagsInputId}
-                      className="mb-1.5 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
-                    >
-                      Tags
-                    </label>
-                    <input
-                      id={tagsInputId}
-                      value={local.tags?.join(' ') || ''}
-                      placeholder="+tag +another"
-                      onChange={(e) => {
-                        const arr = e.target.value
-                          .split(/\s+/)
-                          .filter(Boolean)
-                          .map((s) => s.replace(/^\+/, ''));
-                        setLocal({ ...local, tags: arr });
-                        save({ tags: arr });
-                      }}
-                      className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
-                    />
-                  </div>
-
-                  <div className="mt-4">
-                    <label
-                      htmlFor={notesInputId}
-                      className="mb-1.5 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
-                    >
-                      Notes
-                    </label>
-                    <textarea
-                      id={notesInputId}
-                      rows={5}
-                      value={local.description || ''}
-                      onChange={(e) => setLocal({ ...local, description: e.target.value })}
-                      onBlur={() => save({ description: local.description })}
-                      placeholder="Add context, next steps, links, or decisions..."
-                      className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
-                    />
-                  </div>
-
-                  {!isSubtask && <ChildTaskManager task={task} />}
-                </section>
+              {/* Priority */}
+              <div className="flex items-center gap-2">
+                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Priority</div>
+                <select
+                  id={priorityInputId}
+                  value={local.priorityBucket}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setLocal({ ...local, priorityBucket: v });
+                    save({ priorityBucket: v });
+                  }}
+                  className="rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-sm font-medium text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
+                >
+                  {PRIORITY_BUCKETS.map((priority) => (
+                    <option key={priority} value={priority}>
+                      {priority}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div className="space-y-5">
-                <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-                  <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">
-                    Priority tuning
-                  </h4>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Tune the score so the board reflects true urgency, impact, and effort.
-                  </p>
-
-                  <div className="mt-4 grid gap-3">
-                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-900">
-                      <div className="mb-2 flex items-center justify-between text-sm">
-                        <span className="font-medium text-slate-700 dark:text-slate-300">
-                          Impact
-                        </span>
-                        <span className="text-slate-500 dark:text-slate-400">{local.impact}</span>
-                      </div>
-                      <NumberInput
-                        value={local.impact}
-                        onChange={(v) => {
-                          setLocal({ ...local, impact: v });
-                          save({ impact: v });
-                        }}
-                      />
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-900">
-                      <div className="mb-2 flex items-center justify-between text-sm">
-                        <span className="font-medium text-slate-700 dark:text-slate-300">
-                          Urgency
-                        </span>
-                        <span className="text-slate-500 dark:text-slate-400">{local.urgency}</span>
-                      </div>
-                      <NumberInput
-                        value={local.urgency}
-                        onChange={(v) => {
-                          setLocal({ ...local, urgency: v });
-                          save({ urgency: v });
-                        }}
-                      />
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-900">
-                      <div className="mb-2 flex items-center justify-between text-sm">
-                        <span className="font-medium text-slate-700 dark:text-slate-300">
-                          Effort
-                        </span>
-                        <span className="text-slate-500 dark:text-slate-400">{local.effort}</span>
-                      </div>
-                      <NumberInput
-                        value={local.effort}
-                        onChange={(v) => {
-                          setLocal({ ...local, effort: v });
-                          save({ effort: v });
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                          Current priority
-                        </div>
-                        <div className="mt-2 flex items-center gap-2">
-                          <Badge className={PRIORITY_COLORS[scoreMath.b]}>{scoreMath.b}</Badge>
-                          <span className="text-xl font-semibold text-slate-950 dark:text-slate-50">
-                            {scoreMath.s}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const s = priorityScore({
-                            impact: local.impact,
-                            urgency: local.urgency,
-                            effort: local.effort,
-                            dueAt: local.dueAt,
-                          });
-                          const b = scoreToBucket(s);
-                          setLocal({ ...local, priorityBucket: b });
-                          save({ score: s, priorityBucket: b });
-                        }}
-                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                      >
-                        Rescore
-                      </button>
-                    </div>
-                    <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                      Score = (2 × impact + 1.5 × urgency) − effort
-                      {local.dueAt ? ' + due-date boost' : ''}
-                    </p>
-                  </div>
-                </section>
-
-                <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-                  <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">
-                    Actions
-                  </h4>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Useful shortcuts for wrap-up, recovery, and cleanup.
-                  </p>
-
-                  <div className="mt-4 space-y-3">
-                    {task.status === 'waiting_ai' && (
-                      <button
-                        onClick={() =>
-                          useStore.getState().updateTask(task.id, {
-                            status: 'ready',
-                            ownerType: 'self',
-                            expectedBy: null,
-                          })
-                        }
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-indigo-700"
-                      >
-                        <Bot className="h-4 w-4" /> Simulate AI Update
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        del(task.id);
-                        onClose();
-                      }}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-rose-700"
-                    >
-                      <Trash2 className="h-4 w-4" /> Delete task
-                    </button>
-                  </div>
-                </section>
+              {/* Status (moved into meta strip per design) */}
+              <div className="flex items-center gap-2">
+                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Status</div>
+                <select
+                  id={statusInputId}
+                  value={local.status}
+                  onChange={(e) => {
+                    const v = /** @type{Status} */ (e.target.value);
+                    setLocal({ ...local, status: v });
+                    save({ status: v });
+                  }}
+                  className="rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-sm text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                >
+                  {MODAL_STATUS_OPTIONS.map((k) => (
+                    <option key={k} value={k}>
+                      {statusMeta[k].label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8 pt-4">
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.9fr)_minmax(280px,1fr)] mb-4">
+              <div>
+                {/* Notes - height matches the right Properties panel, user resizable */}
+                <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40 flex flex-col h-full">
+                  <div className="mb-1.5 flex items-center justify-between flex-shrink-0">
+                    <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">Notes</h4>
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500">context, decisions, next steps</span>
+                  </div>
+                  <label htmlFor={notesInputId} className="sr-only">Notes</label>
+                  <textarea
+                    id={notesInputId}
+                    value={local.description || ''}
+                    onChange={(e) => setLocal({ ...local, description: e.target.value })}
+                    onBlur={() => save({ description: local.description })}
+                    placeholder="Add context, decisions, links, or the next useful action..."
+                    className="flex-1 min-h-[120px] max-h-[380px] overflow-auto resize-y rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
+                  />
+                </section>
+
+                {/* Subtasks moved to full-width hero section below the 2-col grid (Image 2 target) */}
+              </div>
+
+              {/* Right sidebar: Tags + Owners + minimal delete */}
+              <div className="space-y-2.5 rounded-3xl border border-slate-200 bg-slate-100/70 p-4 min-h-[300px] flex flex-col dark:border-slate-800 dark:bg-slate-950/50">
+                {/* Tags */}
+                <div>
+                  <label htmlFor={tagsInputId} className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    Tags
+                  </label>
+                  <input
+                    id={tagsInputId}
+                    value={local.tags?.join(' ') || ''}
+                    placeholder="+tag +another"
+                    onChange={(e) => {
+                      const arr = e.target.value.split(/\s+/).filter(Boolean).map((s) => s.replace(/^\+/, ''));
+                      setLocal({ ...local, tags: arr });
+                      save({ tags: arr });
+                    }}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400"
+                  />
+                </div>
+
+                {/* Owners */}
+                <div>
+                  <label htmlFor={ownersInputId} className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    Owners
+                  </label>
+                  <div id={ownersInputId}>
+                    <OwnerEditor taskId={task.id} owners={task.owners} />
+                  </div>
+                </div>
+
+                {/* Expected by (only for AI tasks) */}
+                {local.ownerType === 'ai' && (
+                  <div>
+                    <label htmlFor={expectedByInputId} className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                      Expected by
+                    </label>
+                    <input
+                      id={expectedByInputId}
+                      type="datetime-local"
+                      value={toDateTimeLocalValue(local.expectedBy)}
+                      onChange={(e) => {
+                        const iso = e.target.value ? new Date(e.target.value).toISOString() : null;
+                        setLocal({ ...local, expectedBy: iso });
+                        save({ expectedBy: iso });
+                      }}
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    />
+                  </div>
+                )}
+
+                {/* Minimal Delete - pushed to bottom of the panel */}
+                <button
+                  onClick={() => {
+                    del(task.id);
+                    onClose();
+                  }}
+                  className="text-sm font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 transition-colors flex items-center gap-1.5 pt-4 mt-auto"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete task
+                </button>
+              </div>
+            </div>
+
+            {/* Full-width Subtasks hero section — brought closer for better flow */}
+            {!isSubtask && (
+              <div className="mt-4">
+                <ChildTaskManager task={task} />
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
@@ -5562,9 +5285,6 @@ function Toolbar({ viewMode, onChangeView }) {
       expectedBy: p.expectedBy,
       owners: p.owners || [],
     };
-    if (p.impact !== undefined) base.impact = p.impact;
-    if (p.urgency !== undefined) base.urgency = p.urgency;
-    if (p.effort !== undefined) base.effort = p.effort;
     if (p.priorityBucket) base.priorityBucket = p.priorityBucket;
     addTask(base);
     // Show notification with column name
@@ -5623,6 +5343,9 @@ function Toolbar({ viewMode, onChangeView }) {
                     onAdd();
                   }
                 }}
+                id="quick-add-input"
+                name="quick-add"
+                aria-label="Quick add task"
                 placeholder="Add a task... (@owner, !p1, due:tomorrow)"
                 className="w-full px-4 pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
               />
@@ -5687,21 +5410,6 @@ function Toolbar({ viewMode, onChangeView }) {
                       <Clock className="w-3 h-3" /> {humanDue(parsedTokens.dueAt)}
                     </span>
                   )}
-                  {parsedTokens.impact !== undefined && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                      impact:{parsedTokens.impact}
-                    </span>
-                  )}
-                  {parsedTokens.urgency !== undefined && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
-                      urgency:{parsedTokens.urgency}
-                    </span>
-                  )}
-                  {parsedTokens.effort !== undefined && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
-                      effort:{parsedTokens.effort}
-                    </span>
-                  )}
                 </div>
               )}
             </div>
@@ -5738,7 +5446,8 @@ function Toolbar({ viewMode, onChangeView }) {
             </button>
             <button
               onClick={onAdd}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
+              disabled={!input.trim()}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
             >
               Add Task
             </button>
@@ -5935,7 +5644,7 @@ function Toolbar({ viewMode, onChangeView }) {
           />
         )}
         <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          Quick tokens: @ai @me !p0..p3 due:today +tag. Open help for advanced syntax.
+          Quick tokens: @ai @me !p0..p4 due:today +tag. Open help for advanced syntax.
         </div>
       </div>
     </div>
@@ -5969,10 +5678,12 @@ function useFilteredTasks() {
         return true;
       })
       .sort((a, b) => {
-        // Sort by status lane then priority score desc then due date asc
+        // Sort by status lane, explicit priority, then due date asc.
         if (a.status !== b.status)
           return statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status);
-        if (a.score !== b.score) return b.score - a.score;
+        const ap = PRIORITY_BUCKETS.indexOf(a.priorityBucket);
+        const bp = PRIORITY_BUCKETS.indexOf(b.priorityBucket);
+        if (ap !== bp) return ap - bp;
         const ad = a.dueAt ? new Date(a.dueAt).getTime() : Infinity;
         const bd = b.dueAt ? new Date(b.dueAt).getTime() : Infinity;
         return ad - bd;
@@ -6208,7 +5919,28 @@ function BacklogView() {
   );
   const hasFiltersActive = !!(ownerFilter || filters.q);
   const isFilteredEmpty = filtered.length === 0 && hasFiltersActive && projectTasks.length > 0;
-  const [collapsed, setCollapsed] = useState(() => new Set(['done', 'done_yesterday']));
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem('flowtrackr-list-collapsed');
+      if (saved) {
+        return new Set(JSON.parse(saved));
+      }
+    } catch (e) {
+      // ignore storage errors
+    }
+    return new Set([
+      'done', 'done_yesterday', 'inbox', 'review', 'waiting_others', 'blocked', 'bin', 'backlog'
+    ]);
+  });
+
+  // Persist collapsed sections in List view
+  useEffect(() => {
+    try {
+      localStorage.setItem('flowtrackr-list-collapsed', JSON.stringify(Array.from(collapsed)));
+    } catch (e) {
+      // ignore storage errors
+    }
+  }, [collapsed]);
   const [draggingTask, setDraggingTask] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const updateTask = useStore((s) => s.updateTask);
@@ -6507,9 +6239,6 @@ function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
                     <TimerIcon className="w-3 h-3" /> {formatDurationShort(elapsedSecs)}
                   </span>
                 )}
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                  Score {task.score}
-                </span>
               </div>
             </div>
           </div>
@@ -6568,25 +6297,14 @@ function runSelfTests() {
 
   // Test: parseQuickAdd basics
   test('parseQuickAdd tokens', () => {
-    const p = parseQuickAdd(
-      'Fix login !p0 due:today 17:00 @ai +auth impact:4 urgency:5 effort:2 expect:today',
-    );
+    const p = parseQuickAdd('Fix login !p0 due:today 17:00 @ai +auth expect:today');
     return (
       p.ownerType === 'ai' &&
+      p.priorityBucket === 'P0' &&
       p.tags.includes('auth') &&
       !!p.dueAt &&
-      !!p.expectedBy &&
-      p.impact === 4 &&
-      p.urgency === 5 &&
-      p.effort === 2
+      !!p.expectedBy
     );
-  });
-
-  // Test: priority monotonicity
-  test('priorityScore higher impact -> higher score', () => {
-    const s1 = priorityScore({ impact: 1, urgency: 1, effort: 1 });
-    const s2 = priorityScore({ impact: 5, urgency: 1, effort: 1 });
-    return s2 > s1;
   });
 
   // Test: due parser includes time
@@ -6594,19 +6312,6 @@ function runSelfTests() {
     const iso = parseDueToken(['tomorrow', '16:00']);
     const d = new Date(iso);
     return d.getHours() === 16; // local hour check
-  });
-
-  // Test: bucket boundaries
-  test('scoreToBucket boundaries', () => {
-    return (
-      scoreToBucket(81) === 'P0' &&
-      scoreToBucket(80) === 'P0' &&
-      scoreToBucket(79) === 'P1' &&
-      scoreToBucket(60) === 'P1' &&
-      scoreToBucket(59) === 'P2' &&
-      scoreToBucket(40) === 'P2' &&
-      scoreToBucket(39) === 'P3'
-    );
   });
 
   // Test: timer computations
@@ -7131,6 +6836,16 @@ export default function WorkdayTaskBoardApp() {
                   <span className="hidden sm:inline text-sm">Owners</span>
                 </button>
                 <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
+                {/* Visible keyboard shortcuts button for discoverability */}
+                <button
+                  onClick={() => setShowShortcuts(true)}
+                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  title="Keyboard shortcuts (?)"
+                  aria-label="Show keyboard shortcuts"
+                >
+                  <Keyboard className="w-5 h-5" />
+                </button>
+                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
                 <button
                   onClick={() => setDark((v) => !v)}
                   className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -7158,16 +6873,6 @@ export default function WorkdayTaskBoardApp() {
           <main className="px-6 py-4">
             <WipBanner />
             {viewMode === 'board' ? <Board /> : <BacklogView />}
-
-            <footer className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-800">
-              <p className="text-xs text-slate-400 dark:text-slate-400 text-center">
-                Press{' '}
-                <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-xs font-medium">
-                  ?
-                </kbd>{' '}
-                for shortcuts
-              </p>
-            </footer>
           </main>
         </div>
 
