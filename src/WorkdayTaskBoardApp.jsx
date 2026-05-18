@@ -75,12 +75,12 @@ const STATUS_ORDER = /** @type{Status[]} */ (Object.keys(STATUS_META));
 
 /** Statuses that should appear in the Task Detail Modal's Status dropdown (main workflow columns only) */
 const MODAL_STATUS_OPTIONS = /** @type{Status[]} */ ([
-  'ready',           // Next Up
-  'in_progress',     // In Progress
-  'in_review',       // Review
-  'waiting_ai',      // Waiting on AI
-  'waiting_other',   // Waiting on Others
-  'blocked',         // Blocked
+  'ready', // Next Up
+  'in_progress', // In Progress
+  'in_review', // Review
+  'waiting_ai', // Waiting on AI
+  'waiting_other', // Waiting on Others
+  'blocked', // Blocked
 ]);
 
 const LEGACY_STATUS_META = {
@@ -224,8 +224,9 @@ function getTaskDropTargetIndex(status, x, y, draggingTaskId) {
   if (!columnEl) return 0;
 
   // Find all task card elements within that column, excluding the one being dragged
-  const cards = Array.from(columnEl.querySelectorAll('[data-task-id]'))
-    .filter((el) => el.getAttribute('data-task-id') !== draggingTaskId);
+  const cards = Array.from(columnEl.querySelectorAll('[data-task-id]')).filter(
+    (el) => el.getAttribute('data-task-id') !== draggingTaskId,
+  );
 
   // If there are no other cards, targetIndex is 0
   if (cards.length === 0) return 0;
@@ -241,7 +242,6 @@ function getTaskDropTargetIndex(status, x, y, draggingTaskId) {
 
   return cards.length;
 }
-
 
 // ----- Store -----
 
@@ -2023,7 +2023,11 @@ const useStore = create((set, get) => ({
       let insertIndex;
       if (targetStatusTasks.length === 0) {
         insertIndex = allTasks.length;
-      } else if (targetIndex === null || targetIndex === undefined || targetIndex >= targetStatusTasks.length) {
+      } else if (
+        targetIndex === null ||
+        targetIndex === undefined ||
+        targetIndex >= targetStatusTasks.length
+      ) {
         // Default to placing at the end of target status lane if no index or out of bounds
         const lastTask = targetStatusTasks[targetStatusTasks.length - 1];
         const lastTaskIndex = allTasks.indexOf(lastTask);
@@ -4001,7 +4005,7 @@ function TaskCard({ task }) {
         'shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden',
         isSelected && 'ring-2 ring-blue-400 shadow-md',
         isNewlyAdded && 'ring-2 ring-green-400',
-        priorityBorderClasses,   // only applied when no custom group color
+        priorityBorderClasses, // only applied when no custom group color
       )}
       style={
         accentColor
@@ -4712,7 +4716,10 @@ function OwnerManagerPanel({ isOpen, onClose }) {
 
           <div className="space-y-2">
             {filteredOwners.map((owner) => (
-              <div key={owner.name} className="p-3 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg">
+              <div
+                key={owner.name}
+                className="p-3 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg"
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="font-medium text-sm">{owner.name}</div>
@@ -5594,7 +5601,9 @@ function Toolbar({ viewMode, onChangeView }) {
                         className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 flex justify-between"
                       >
                         <span>{owner.name}</span>
-                        <span className="text-slate-500 dark:text-slate-400">({owner.taskCount})</span>
+                        <span className="text-slate-500 dark:text-slate-400">
+                          ({owner.taskCount})
+                        </span>
                       </button>
                     ))}
                 </div>
