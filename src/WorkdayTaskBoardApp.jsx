@@ -213,14 +213,35 @@ function getStatusFromPoint(x, y) {
     }
   }
 
-  if (!document.elementsFromPoint) return null;
-  const els = document.elementsFromPoint(x, y);
-  for (const el of els) {
-    const anyEl = /** @type {any} */ (el);
-    if (anyEl?.dataset?.col) return /** @type {Status} */ (anyEl.dataset.col);
-  }
   return null;
 }
+
+function getTaskDropTargetIndex(status, x, y, draggingTaskId) {
+  if (typeof document === 'undefined') return 0;
+
+  // Find the column element
+  const columnEl = document.querySelector(`[data-col="${status}"]`);
+  if (!columnEl) return 0;
+
+  // Find all task card elements within that column, excluding the one being dragged
+  const cards = Array.from(columnEl.querySelectorAll('[data-task-id]'))
+    .filter((el) => el.getAttribute('data-task-id') !== draggingTaskId);
+
+  // If there are no other cards, targetIndex is 0
+  if (cards.length === 0) return 0;
+
+  // Find the index based on vertical position
+  for (let i = 0; i < cards.length; i++) {
+    const rect = cards[i].getBoundingClientRect();
+    const centerY = rect.top + rect.height / 2;
+    if (y < centerY) {
+      return i;
+    }
+  }
+
+  return cards.length;
+}
+
 
 // ----- Store -----
 
@@ -1987,8 +2008,34 @@ const useStore = create((set, get) => ({
     return { success: true, tasksMigrated };
   },
 
-  moveTask(id, status) {
-    set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, status } : t)) }));
+  moveTask(id, status, targetIndex = null) {
+    set((s) => {
+      const allTasks = [...s.tasks];
+      const taskIndex = allTasks.findIndex((t) => t.id === id);
+      if (taskIndex === -1) return s;
+
+      const [taskToMove] = allTasks.splice(taskIndex, 1);
+      taskToMove.status = status;
+
+      // Filter tasks in the target status (excluding our task which is already spliced out)
+      const targetStatusTasks = allTasks.filter((t) => t.status === status);
+
+      let insertIndex;
+      if (targetStatusTasks.length === 0) {
+        insertIndex = allTasks.length;
+      } else if (targetIndex === null || targetIndex === undefined || targetIndex >= targetStatusTasks.length) {
+        // Default to placing at the end of target status lane if no index or out of bounds
+        const lastTask = targetStatusTasks[targetStatusTasks.length - 1];
+        const lastTaskIndex = allTasks.indexOf(lastTask);
+        insertIndex = lastTaskIndex + 1;
+      } else {
+        const referenceTask = targetStatusTasks[targetIndex];
+        insertIndex = allTasks.indexOf(referenceTask);
+      }
+
+      allTasks.splice(insertIndex, 0, taskToMove);
+      return { tasks: allTasks };
+    });
     get().persist();
   },
   reorderTask(id, status, fromIndex, toIndex) {
@@ -3925,6 +3972,7 @@ function TaskCard({ task }) {
       layout
       drag
       dragSnapToOrigin
+      data-task-id={task.id}
       initial={isNewlyAdded ? { scale: 0.95, opacity: 0.7 } : false}
       animate={isNewlyAdded ? { scale: 1, opacity: 1 } : undefined}
       transition={isNewlyAdded ? { duration: 0.3 } : undefined}
@@ -3941,7 +3989,10 @@ function TaskCard({ task }) {
       }}
       onDragEnd={(e, info) => {
         const status = getStatusFromPoint(info.point.x, info.point.y);
-        if (status) move(task.id, status);
+        if (status) {
+          const targetIndex = getTaskDropTargetIndex(status, info.point.x, info.point.y, task.id);
+          move(task.id, status, targetIndex);
+        }
         useStore.getState().clearDrag();
       }}
       className={clsx(
@@ -5704,15 +5755,11 @@ function useFilteredTasks() {
         return true;
       })
       .sort((a, b) => {
-        // Sort by status lane, explicit priority, then due date asc.
+        // Sort by status lane first
         if (a.status !== b.status)
           return statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status);
-        const ap = PRIORITY_BUCKETS.indexOf(a.priorityBucket);
-        const bp = PRIORITY_BUCKETS.indexOf(b.priorityBucket);
-        if (ap !== bp) return ap - bp;
-        const ad = a.dueAt ? new Date(a.dueAt).getTime() : Infinity;
-        const bd = b.dueAt ? new Date(b.dueAt).getTime() : Infinity;
-        return ad - bd;
+        // Within the same status, preserve store array order (manual order)
+        return visibleTasks.indexOf(a) - visibleTasks.indexOf(b);
       });
   }, [visibleTasks, filters, ownerFilter, statusOrder]);
 }
