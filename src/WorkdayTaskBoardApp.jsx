@@ -26,6 +26,7 @@ import {
   Keyboard,
   MoreVertical,
   SlidersHorizontal,
+  Pin,
 } from 'lucide-react';
 import clsx from 'clsx';
 import logoLight from '/assets/light/flowtrackr-logo.png';
@@ -873,6 +874,8 @@ const useStore = create((set, get) => ({
     { id: 'default', name: 'Default', color: '#6B7280', isDefault: true, createdAt: Date.now() },
   ]),
   currentProjectId: 'default',
+  // Pinned project always becomes the current project on load/refresh
+  pinnedProjectId: /** @type{string|null} */ (null),
 
   // Owner Registry state
   ownerRegistry: {
@@ -975,19 +978,25 @@ const useStore = create((set, get) => ({
           statistics: new Map(Object.entries(parsed.ownerRegistry?.statistics || {})),
         };
 
+        const restoredProjects = parsed.projects || [
+          {
+            id: 'default',
+            name: 'Default',
+            color: '#6B7280',
+            isDefault: true,
+            createdAt: Date.now(),
+          },
+        ];
+        // A pinned project always wins over the last-used project on load
+        const pinnedProjectId = restoredProjects.some((p) => p.id === parsed.pinnedProjectId)
+          ? parsed.pinnedProjectId
+          : null;
         set({
           tasks: migratedTasks,
           autoReturnOnStop: parsed.autoReturnOnStop ?? false,
-          projects: parsed.projects || [
-            {
-              id: 'default',
-              name: 'Default',
-              color: '#6B7280',
-              isDefault: true,
-              createdAt: Date.now(),
-            },
-          ],
-          currentProjectId: parsed.currentProjectId || 'default',
+          projects: restoredProjects,
+          currentProjectId: pinnedProjectId || parsed.currentProjectId || 'default',
+          pinnedProjectId,
           ownerRegistry: ownerRegistry,
           statusConfig: parsed.statusConfig || { statuses: [], version: 1 },
         });
@@ -1037,8 +1046,15 @@ const useStore = create((set, get) => ({
   persist() {
     set({ _isDirty: false });
     try {
-      const { tasks, autoReturnOnStop, projects, currentProjectId, ownerRegistry, statusConfig } =
-        get();
+      const {
+        tasks,
+        autoReturnOnStop,
+        projects,
+        currentProjectId,
+        pinnedProjectId,
+        ownerRegistry,
+        statusConfig,
+      } = get();
 
       // Convert ownerRegistry from runtime format to storage format
       const serializedRegistry = {
@@ -1054,6 +1070,7 @@ const useStore = create((set, get) => ({
             autoReturnOnStop,
             projects,
             currentProjectId,
+            pinnedProjectId,
             ownerRegistry: serializedRegistry,
             statusConfig,
             version: STORAGE_VERSION,
@@ -2173,7 +2190,7 @@ const useStore = create((set, get) => ({
   },
 
   deleteProject(projectId) {
-    const { projects, tasks, currentProjectId } = get();
+    const { projects, tasks, currentProjectId, pinnedProjectId } = get();
     const project = projects.find((p) => p.id === projectId);
 
     if (!project || project.isDefault) {
@@ -2190,6 +2207,7 @@ const useStore = create((set, get) => ({
       projects: projects.filter((p) => p.id !== projectId),
       tasks: remainingTasks,
       currentProjectId: newCurrentId,
+      pinnedProjectId: pinnedProjectId === projectId ? null : pinnedProjectId,
     });
     get().persist();
     return { success: true };
@@ -2248,6 +2266,16 @@ const useStore = create((set, get) => ({
     set({ currentProjectId: projectId });
     get().persist();
     return { success: true };
+  },
+
+  togglePinProject(projectId) {
+    const { projects, pinnedProjectId } = get();
+    if (!projects.some((p) => p.id === projectId)) {
+      return { error: 'Project not found' };
+    }
+    set({ pinnedProjectId: pinnedProjectId === projectId ? null : projectId });
+    get().persist();
+    return { success: true, pinned: get().pinnedProjectId === projectId };
   },
 
   moveTasksToProject(taskIds, targetProjectId) {
@@ -2334,6 +2362,7 @@ const useStore = create((set, get) => ({
 function ProjectSelector() {
   const projects = useStore((s) => s.projects);
   const currentProjectId = useStore((s) => s.currentProjectId);
+  const pinnedProjectId = useStore((s) => s.pinnedProjectId);
   const switchProject = useStore((s) => s.switchProject);
   const hasActiveTimerInOther = useStore((s) => s.hasActiveTimerInOtherProject);
   const getProjectWithTimer = useStore((s) => s.getProjectWithActiveTimer);
@@ -2514,18 +2543,8 @@ function ProjectSelector() {
                               >
                                 {project.name}
                               </span>
-                              {project.isDefault && (
-                                <svg
-                                  className="w-3 h-3 text-slate-400"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
+                              {project.id === pinnedProjectId && (
+                                <Pin className="w-3 h-3 text-amber-500 fill-current" />
                               )}
                             </div>
                             <span className="text-xs text-slate-500 dark:text-zinc-400">
@@ -2550,10 +2569,12 @@ function ProjectSelector() {
 function ProjectManager({ onClose }) {
   const projects = useStore((s) => s.projects);
   const currentProjectId = useStore((s) => s.currentProjectId);
+  const pinnedProjectId = useStore((s) => s.pinnedProjectId);
   const createProject = useStore((s) => s.createProject);
   const deleteProject = useStore((s) => s.deleteProject);
   const renameProject = useStore((s) => s.renameProject);
   const reorderProjects = useStore((s) => s.reorderProjects);
+  const togglePinProject = useStore((s) => s.togglePinProject);
   const getProjectTaskCount = useStore((s) => s.getProjectTaskCount);
 
   const [newProjectName, setNewProjectName] = useState('');
@@ -2728,6 +2749,27 @@ function ProjectManager({ onClose }) {
                     </div>
                   )}
                   <div className="flex items-center gap-2 flex-1 ml-6">
+                    <button
+                      onClick={() => togglePinProject(project.id)}
+                      className={clsx(
+                        'p-1 rounded transition-colors shrink-0',
+                        project.id === pinnedProjectId
+                          ? 'text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/30'
+                          : 'text-slate-400 hover:bg-gray-200 dark:hover:bg-zinc-800',
+                      )}
+                      title={
+                        project.id === pinnedProjectId
+                          ? 'Unpin project'
+                          : 'Pin project (always opens on refresh)'
+                      }
+                    >
+                      <Pin
+                        className={clsx(
+                          'w-4 h-4',
+                          project.id === pinnedProjectId && 'fill-current',
+                        )}
+                      />
+                    </button>
                     <span
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: project.color }}
@@ -2754,20 +2796,12 @@ function ProjectManager({ onClose }) {
                             (current)
                           </span>
                         )}
+                        {project.id === pinnedProjectId && (
+                          <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
+                            (pinned)
+                          </span>
+                        )}
                       </span>
-                    )}
-                    {project.isDefault && (
-                      <svg
-                        className="w-4 h-4 text-slate-400"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
                     )}
                   </div>
 
