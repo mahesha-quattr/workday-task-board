@@ -7,8 +7,6 @@ import {
   Plus,
   Bot,
   Clock,
-  Timer as TimerIcon,
-  Pause,
   X,
   ChevronRight,
   ChevronLeft,
@@ -16,12 +14,9 @@ import {
   Trash2,
   Play,
   Flame,
-  AlertTriangle,
   GripVertical,
   Mic,
   MicOff,
-  Kanban,
-  List,
   Check,
   Users,
   Search,
@@ -30,6 +25,7 @@ import {
   Moon,
   Keyboard,
   MoreVertical,
+  SlidersHorizontal,
 } from 'lucide-react';
 import clsx from 'clsx';
 import logoLight from '/assets/light/flowtrackr-logo.png';
@@ -116,11 +112,11 @@ const STANDARD_STATUS_ORDER = [
 ];
 
 const PRIORITY_COLORS = {
-  P0: 'bg-red-50 text-red-600 border-l-4 border-l-red-500 dark:bg-red-950 dark:text-red-400 dark:border-l-red-400',
-  P1: 'bg-orange-50 text-orange-600 border-l-4 border-l-orange-500 dark:bg-orange-950 dark:text-orange-400 dark:border-l-orange-400',
-  P2: 'bg-amber-50 text-amber-600 border-l-4 border-l-amber-500 dark:bg-amber-950 dark:text-amber-400 dark:border-l-amber-400',
-  P3: 'bg-slate-50 text-slate-600 border-l-4 border-l-gray-400 dark:bg-slate-800 dark:text-slate-300 dark:border-l-slate-500',
-  P4: 'bg-slate-50 text-slate-500 border-l-4 border-l-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-l-slate-600',
+  P0: 'bg-red-50 text-red-600 border-l-4 border-l-red-500 dark:bg-red-950/40 dark:text-red-400 dark:border-l-red-500',
+  P1: 'bg-orange-50 text-orange-600 border-l-4 border-l-orange-500 dark:bg-orange-950/40 dark:text-orange-400 dark:border-l-orange-500',
+  P2: 'bg-amber-50 text-amber-600 border-l-4 border-l-amber-500 dark:bg-amber-950/40 dark:text-amber-400 dark:border-l-amber-500',
+  P3: 'bg-slate-50 text-slate-600 border-l-4 border-l-slate-400 dark:bg-zinc-800 dark:text-zinc-300 dark:border-l-zinc-600',
+  P4: 'bg-slate-50 text-slate-500 border-l-4 border-l-slate-300 dark:bg-zinc-800 dark:text-zinc-400 dark:border-l-zinc-700',
 };
 
 const PRIORITY_BUCKETS = ['P0', 'P1', 'P2', 'P3', 'P4'];
@@ -257,7 +253,6 @@ function getTaskDropTargetIndex(status, x, y, draggingTaskId) {
  * }} Project */
 
 const STORAGE_KEY = 'workday-board@v1';
-const VIEW_MODE_KEY = 'workday-board@view-mode';
 const STORAGE_VERSION = 2.4; // Version for migration tracking
 
 // Project color palette
@@ -870,7 +865,7 @@ const useStore = create((set, get) => ({
   },
 
   tasks: /** @type{Task[]} */ ([]),
-  filters: { project: 'all', status: 'all', owner: 'all', q: '' },
+  filters: { project: 'all', status: 'all', owner: 'all', q: '', priority: 'all' },
   ownerFilter: /** @type{string|null} */ (null),
 
   // Projects state
@@ -2402,7 +2397,7 @@ function ProjectSelector() {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors text-sm"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors text-sm"
           aria-haspopup="listbox"
           aria-expanded={isOpen}
         >
@@ -2410,7 +2405,7 @@ function ProjectSelector() {
             className="w-2 h-2 rounded-full"
             style={{ backgroundColor: currentProject.color }}
           />
-          <span className="font-medium text-slate-700 dark:text-slate-200">
+          <span className="font-medium text-slate-700 dark:text-zinc-300">
             {currentProject.name}
           </span>
           <ChevronDown className="w-4 h-4 text-slate-400" />
@@ -2443,17 +2438,17 @@ function ProjectSelector() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="absolute md:top-full top-0 md:mt-2 mt-0 w-full md:w-72 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 md:rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-[100] md:left-0 left-0 md:right-auto right-0 md:max-h-96 max-h-screen overflow-auto"
+                className="absolute md:top-full top-0 md:mt-2 mt-0 w-full md:w-72 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 md:rounded-xl shadow-xl border border-slate-200/80 dark:border-zinc-800 z-[100] md:left-0 left-0 md:right-auto right-0 md:max-h-96 max-h-screen overflow-auto"
               >
                 <div className="p-3">
-                  <div className="flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  <div className="flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wide">
                     <span>Projects</span>
                     <button
                       onClick={() => {
                         setShowManager(true);
                         setIsOpen(false);
                       }}
-                      className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+                      className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded transition-colors"
                       title="Manage Projects"
                     >
                       <svg
@@ -2484,7 +2479,7 @@ function ProjectSelector() {
                         placeholder="Search projects..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400"
+                        className="w-full px-2 py-1 text-sm border border-slate-300 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500"
                       />
                     </div>
                   )}
@@ -2501,8 +2496,8 @@ function ProjectSelector() {
                           key={project.id}
                           onClick={() => handleProjectSwitch(project.id)}
                           className={clsx(
-                            'w-full text-left px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors',
-                            isActive && 'bg-slate-100 dark:bg-slate-700',
+                            'w-full text-left px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors',
+                            isActive && 'bg-slate-100 dark:bg-zinc-800/70',
                           )}
                         >
                           <div className="flex items-center justify-between">
@@ -2533,7 +2528,7 @@ function ProjectSelector() {
                                 </svg>
                               )}
                             </div>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                            <span className="text-xs text-slate-500 dark:text-zinc-400">
                               {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
                             </span>
                           </div>
@@ -2637,7 +2632,7 @@ function ProjectManager({ onClose }) {
 
   return ReactDOM.createPortal(
     <div
-      className="fixed inset-0 bg-black/60 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
+      className="fixed inset-0 bg-black/60 dark:bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
       onClick={onClose}
       onKeyDown={(e) => {
         if (e.key === 'Escape') onClose();
@@ -2647,15 +2642,15 @@ function ProjectManager({ onClose }) {
       aria-label="Close manager"
     >
       <div
-        className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]"
+        className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201] border border-slate-200 dark:border-zinc-800"
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-zinc-800">
           <h2 className="text-lg font-semibold">Manage Projects</h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+            className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -2675,12 +2670,12 @@ function ProjectManager({ onClose }) {
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
                 placeholder="New project name"
-                className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400"
+                className="flex-1 px-3 py-2 border border-slate-300 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                 maxLength={15}
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Create
               </button>
@@ -2710,10 +2705,10 @@ function ProjectManager({ onClose }) {
                   onDrop={(e) => handleDrop(e, index)}
                   onDragEnd={handleDragEnd}
                   className={clsx(
-                    'flex items-center justify-between p-3 rounded-lg transition-colors relative group',
+                    'flex items-center justify-between p-3 rounded-lg transition-colors relative group border',
                     dragOverIndex === index
-                      ? 'bg-blue-100 dark:bg-blue-900/30'
-                      : 'bg-slate-50 dark:bg-gray-900/50',
+                      ? 'bg-blue-100/50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900/40'
+                      : 'bg-slate-50 dark:bg-zinc-800/40 border-transparent dark:border-zinc-800/80',
                     !project.isDefault && 'cursor-move',
                   )}
                   animate={{
@@ -2748,11 +2743,11 @@ function ProjectManager({ onClose }) {
                           if (e.key === 'Enter') handleRename(project.id);
                           if (e.key === 'Escape') setEditingId(null);
                         }}
-                        className="flex-1 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        className="flex-1 px-2 py-1 border border-slate-300 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none"
                         maxLength={15}
                       />
                     ) : (
-                      <span className="font-medium">
+                      <span className="font-medium text-slate-900 dark:text-zinc-100">
                         {project.name}
                         {project.id === currentProjectId && (
                           <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
@@ -2778,13 +2773,13 @@ function ProjectManager({ onClose }) {
 
                   <div className="flex items-center gap-2">
                     <div className="flex flex-col items-end">
-                      <span className="text-sm text-slate-500 dark:text-slate-400">
+                      <span className="text-sm text-slate-500 dark:text-zinc-400">
                         {taskCount} tasks
                       </span>
                       {taskCount > 0 && (
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-slate-400">{completionRate}% done</span>
-                          <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                          <div className="w-12 h-1.5 bg-slate-200 dark:bg-zinc-800 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-green-500 transition-all duration-300"
                               style={{ width: `${completionRate}%` }}
@@ -2800,7 +2795,7 @@ function ProjectManager({ onClose }) {
                             setEditingId(project.id);
                             setEditingName(project.name);
                           }}
-                          className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded"
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-800 rounded transition-colors"
                           title="Rename"
                         >
                           <svg
@@ -2821,13 +2816,13 @@ function ProjectManager({ onClose }) {
                           <div className="flex gap-1">
                             <button
                               onClick={() => handleDelete(project.id)}
-                              className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                              className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
                             >
                               Delete {taskCount} tasks?
                             </button>
                             <button
                               onClick={() => setDeleteConfirmId(null)}
-                              className="px-2 py-1 text-xs bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-slate-500"
+                              className="px-2 py-1 text-xs bg-slate-200 dark:bg-zinc-800 rounded hover:bg-slate-300 dark:hover:bg-zinc-700 text-slate-900 dark:text-zinc-100 transition-colors"
                             >
                               Cancel
                             </button>
@@ -2835,7 +2830,7 @@ function ProjectManager({ onClose }) {
                         ) : (
                           <button
                             onClick={() => setDeleteConfirmId(project.id)}
-                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 dark:text-red-400"
+                            className="p-1 hover:bg-red-100 dark:hover:bg-red-950/40 rounded text-red-600 dark:text-red-400 transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -2965,7 +2960,7 @@ function WorkflowSettingsModal({ onClose }) {
 
   return ReactDOM.createPortal(
     <div
-      className="fixed inset-0 bg-black/60 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
+      className="fixed inset-0 bg-black/60 dark:bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
       onClick={onClose}
       onKeyDown={(e) => {
         if (e.key === 'Escape') onClose();
@@ -2975,22 +2970,22 @@ function WorkflowSettingsModal({ onClose }) {
       aria-label="Close workflow settings"
     >
       <div
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto relative z-[201]"
+        className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-auto relative z-[201]"
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-10">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-zinc-800 sticky top-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm z-10">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">
               Workflow Configuration
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
+            <p className="text-sm text-slate-600 dark:text-zinc-300">
               Customize your workflow statuses
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
+            className="p-1 text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -3006,16 +3001,16 @@ function WorkflowSettingsModal({ onClose }) {
           {/* Add New Status Form */}
           <form
             onSubmit={handleCreateStatus}
-            className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-lg"
+            className="mb-6 p-4 bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-800 rounded-lg"
           >
-            <h3 className="font-medium mb-3 text-slate-900 dark:text-slate-100">Add New Status</h3>
+            <h3 className="font-medium mb-3 text-slate-900 dark:text-zinc-100">Add New Status</h3>
             <div className="space-y-2">
               <input
                 type="text"
                 value={newStatusLabel}
                 onChange={(e) => setNewStatusLabel(e.target.value)}
                 placeholder="Status name (e.g., 'In Design')"
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-500 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
                 maxLength={30}
               />
               <input
@@ -3023,11 +3018,11 @@ function WorkflowSettingsModal({ onClose }) {
                 value={newStatusDesc}
                 onChange={(e) => setNewStatusDesc(e.target.value)}
                 placeholder="Description (e.g., 'Design work in progress')"
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-500 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
                 maxLength={50}
               />
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500 dark:text-slate-300">
+                <span className="text-xs text-slate-500 dark:text-zinc-300">
                   {statuses.length} / 15 statuses
                 </span>
                 <button
@@ -3043,10 +3038,8 @@ function WorkflowSettingsModal({ onClose }) {
 
           {/* Status List */}
           <div className="space-y-2 mb-6">
-            <h3 className="font-medium mb-2 text-slate-900 dark:text-slate-100">
-              Current Statuses
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-300 mb-3">
+            <h3 className="font-medium mb-2 text-slate-900 dark:text-zinc-100">Current Statuses</h3>
+            <p className="text-xs text-slate-500 dark:text-zinc-300 mb-3">
               Drag to reorder • Click to edit
             </p>
             {statuses.map((status, index) => {
@@ -3064,10 +3057,10 @@ function WorkflowSettingsModal({ onClose }) {
                   onDrop={(e) => handleDrop(e, index)}
                   onDragEnd={handleDragEnd}
                   className={clsx(
-                    'p-3 rounded-lg border transition-all bg-white dark:bg-slate-800/60',
+                    'p-3 rounded-lg border transition-all bg-white dark:bg-zinc-900/60',
                     dragOverIndex === index && draggedStatus
                       ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-200 dark:border-gray-700',
+                      : 'border-slate-200 dark:border-zinc-800',
                     isEditing && 'bg-blue-50 dark:bg-blue-900/20',
                   )}
                 >
@@ -3078,7 +3071,7 @@ function WorkflowSettingsModal({ onClose }) {
                         type="text"
                         value={editingLabel}
                         onChange={(e) => setEditingLabel(e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-500 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-zinc-800 rounded bg-white dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
                         maxLength={30}
                       />
                       <input
@@ -3086,13 +3079,13 @@ function WorkflowSettingsModal({ onClose }) {
                         value={editingDesc}
                         onChange={(e) => setEditingDesc(e.target.value)}
                         placeholder="Description"
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-500 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-zinc-800 rounded bg-white dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
                         maxLength={50}
                       />
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleUpdate(status.id)}
-                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
                         >
                           Save
                         </button>
@@ -3101,7 +3094,7 @@ function WorkflowSettingsModal({ onClose }) {
                             setEditingId(null);
                             setError('');
                           }}
-                          className="px-3 py-1 bg-slate-300 text-slate-700 dark:bg-slate-700 dark:text-slate-200 rounded text-sm hover:bg-slate-400 dark:hover:bg-slate-600 transition-colors"
+                          className="px-3 py-1 bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:text-zinc-200 rounded text-sm hover:bg-slate-300 dark:hover:bg-zinc-700 transition-colors"
                         >
                           Cancel
                         </button>
@@ -3112,13 +3105,13 @@ function WorkflowSettingsModal({ onClose }) {
                       <p className="text-sm font-medium text-red-600 dark:text-red-400">
                         Delete &ldquo;{status.label}&rdquo;? ({taskCount} tasks)
                       </p>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">
+                      <p className="text-xs text-slate-600 dark:text-zinc-400">
                         Move these tasks to:
                       </p>
                       <select
                         value={migrateToId}
                         onChange={(e) => setMigrateToId(e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-500 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-zinc-800 rounded bg-white dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
                       >
                         <option value="">Select status...</option>
                         {statuses
@@ -3132,7 +3125,7 @@ function WorkflowSettingsModal({ onClose }) {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleDelete(status.id)}
-                          className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                          className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
                         >
                           Delete & Move
                         </button>
@@ -3142,7 +3135,7 @@ function WorkflowSettingsModal({ onClose }) {
                             setMigrateToId('');
                             setError('');
                           }}
-                          className="px-3 py-1 bg-slate-300 text-slate-700 dark:bg-slate-700 dark:text-slate-200 rounded text-sm hover:bg-slate-400 dark:hover:bg-slate-600 transition-colors"
+                          className="px-3 py-1 bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:text-zinc-200 rounded text-sm hover:bg-slate-300 dark:hover:bg-zinc-700 transition-colors"
                         >
                           Cancel
                         </button>
@@ -3154,7 +3147,7 @@ function WorkflowSettingsModal({ onClose }) {
                         <GripVertical className="w-4 h-4 text-slate-400 cursor-grab" />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-slate-900 dark:text-slate-100">
+                            <span className="font-medium text-slate-900 dark:text-zinc-100">
                               {status.label}
                             </span>
                             {status.isDefault && (
@@ -3168,10 +3161,10 @@ function WorkflowSettingsModal({ onClose }) {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-slate-500 dark:text-slate-300">
+                          <p className="text-sm text-slate-500 dark:text-zinc-300">
                             {status.description}
                           </p>
-                          <p className="text-xs text-slate-400 dark:text-slate-400 mt-1">
+                          <p className="text-xs text-slate-400 dark:text-zinc-400 mt-1">
                             {taskCount} task{taskCount !== 1 ? 's' : ''} • Key:{' '}
                             {status.keyboardShortcut || 'none'}
                           </p>
@@ -3212,7 +3205,7 @@ function WorkflowSettingsModal({ onClose }) {
           </div>
 
           {/* Restore Defaults */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <div className="border-t border-slate-200 dark:border-zinc-800 pt-4">
             {restoreConfirm ? (
               <div className="p-3 bg-amber-50 dark:bg-amber-900/25 border border-amber-200 dark:border-amber-700/40 rounded-lg">
                 <p className="text-sm text-amber-800 dark:text-amber-300 mb-3">
@@ -3221,13 +3214,13 @@ function WorkflowSettingsModal({ onClose }) {
                 <div className="flex gap-2">
                   <button
                     onClick={handleRestoreDefaults}
-                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
                   >
                     Yes, Restore Defaults
                   </button>
                   <button
                     onClick={() => setRestoreConfirm(false)}
-                    className="px-4 py-2 bg-slate-300 text-slate-700 dark:bg-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-400 dark:hover:bg-slate-600 transition-colors"
+                    className="px-4 py-2 bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:text-zinc-200 rounded-lg hover:bg-slate-300 dark:hover:bg-zinc-700 transition-colors"
                   >
                     Cancel
                   </button>
@@ -3236,7 +3229,7 @@ function WorkflowSettingsModal({ onClose }) {
             ) : (
               <button
                 onClick={() => setRestoreConfirm(true)}
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                className="w-full px-4 py-2 border border-slate-300 dark:border-zinc-800 text-slate-700 dark:text-zinc-200 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors"
               >
                 Restore Default Statuses
               </button>
@@ -3275,9 +3268,9 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg shadow-xl w-96 max-w-full">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-zinc-950/80 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-zinc-100 rounded-lg shadow-xl w-96 max-w-full">
+        <div className="p-4 border-b border-slate-200 dark:border-zinc-800">
           <h3 className="text-lg font-semibold">Assign Owner to {taskIds.length} Tasks</h3>
         </div>
 
@@ -3285,7 +3278,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
           {!result ? (
             <>
               <div className="mb-4">
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                <p className="text-sm text-slate-600 dark:text-zinc-400 mb-3">
                   Select an existing owner or add a new one to assign to the selected tasks.
                 </p>
 
@@ -3303,7 +3296,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                           id="bulk-owner-select"
                           value={selectedOwner}
                           onChange={(e) => setSelectedOwner(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-zinc-800 rounded bg-white dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
                         >
                           <option value="">Choose an owner...</option>
                           {owners.map((owner) => (
@@ -3337,7 +3330,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                           onChange={(e) => setNewOwnerName(e.target.value)}
                           maxLength={30}
                           placeholder="Enter owner name"
-                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-zinc-800 rounded bg-white dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
                         />
                       </div>
 
@@ -3348,7 +3341,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                             setIsAddingNew(false);
                             setNewOwnerName('');
                           }}
-                          className="text-sm text-slate-600 dark:text-slate-400 hover:underline"
+                          className="text-sm text-slate-600 dark:text-zinc-400 hover:underline"
                         >
                           Back to existing owners
                         </button>
@@ -3384,7 +3377,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                     </svg>
                   </div>
                   <p className="font-medium">Owner assigned successfully!</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  <p className="text-sm text-slate-600 dark:text-zinc-400 mt-1">
                     Updated {result.tasksUpdated} task{result.tasksUpdated !== 1 ? 's' : ''}
                     {result.tasksFailed > 0 && (
                       <span className="block text-amber-600 dark:text-amber-400 mt-1">
@@ -3412,19 +3405,19 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                     </svg>
                   </div>
                   <p className="font-medium">Assignment failed</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{result.error}</p>
+                  <p className="text-sm text-slate-600 dark:text-zinc-400 mt-1">{result.error}</p>
                 </>
               )}
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+        <div className="p-4 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-2">
           {!result ? (
             <>
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+                className="px-4 py-2 text-sm text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded transition-colors"
               >
                 Cancel
               </button>
@@ -3433,7 +3426,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
                 disabled={!isAddingNew ? !selectedOwner : !newOwnerName.trim()}
                 className={`px-4 py-2 text-sm rounded transition-colors ${
                   (!isAddingNew ? !selectedOwner : !newOwnerName.trim())
-                    ? 'bg-gray-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                    ? 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 cursor-not-allowed'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
@@ -3443,7 +3436,7 @@ function BulkAssignOwnerDialog({ taskIds, onClose, onSuccess }) {
           ) : (
             <button
               onClick={result.success ? onSuccess : onClose}
-              className="px-4 py-2 text-sm bg-gray-600 text-white hover:bg-slate-700 rounded transition-colors"
+              className="px-4 py-2 text-sm bg-zinc-700 text-white hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded transition-colors"
             >
               Close
             </button>
@@ -3484,13 +3477,13 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
   const currentProject = projects.find((p) => p.id === currentProjectId);
 
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
-      <div className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+    <div className="fixed inset-0 bg-black/60 dark:bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-zinc-100 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-auto relative z-[201]">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-zinc-800">
           <h2 className="text-lg font-semibold">Move Tasks to Project</h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+            className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -3504,7 +3497,7 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
           )}
 
           <div className="mb-4">
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+            <p className="text-sm text-slate-600 dark:text-zinc-400 mb-2">
               Moving{' '}
               <span className="font-semibold">
                 {taskIds.length} task{taskIds.length > 1 ? 's' : ''}
@@ -3513,17 +3506,17 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
             </p>
 
             {selectedTasks.length > 0 && (
-              <div className="mb-4 p-2 bg-slate-50 dark:bg-gray-900/50 rounded max-h-32 overflow-y-auto">
-                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <div className="mb-4 p-2 bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-800 rounded max-h-32 overflow-y-auto">
+                <div className="text-xs text-slate-500 dark:text-zinc-400 mb-1">
                   Selected tasks:
                 </div>
                 {selectedTasks.slice(0, 5).map((task) => (
-                  <div key={task.id} className="text-sm truncate">
+                  <div key={task.id} className="text-sm truncate text-slate-700 dark:text-zinc-300">
                     • {task.title}
                   </div>
                 ))}
                 {selectedTasks.length > 5 && (
-                  <div className="text-sm text-slate-500 dark:text-slate-400">
+                  <div className="text-sm text-slate-500 dark:text-zinc-400">
                     ...and {selectedTasks.length - 5} more
                   </div>
                 )}
@@ -3539,7 +3532,7 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
               id="target-project"
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
             >
               <option value="">Choose a project...</option>
               {availableProjects.map((project) => (
@@ -3553,13 +3546,13 @@ function BulkMoveDialog({ taskIds, onClose, onSuccess }) {
           <div className="flex justify-end gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
+              className="px-4 py-2 border border-slate-300 dark:border-zinc-800 rounded-lg text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleMove}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Move Tasks
             </button>
@@ -3687,7 +3680,7 @@ function parseQuickAdd(input) {
 
 function Badge({ children, className, variant = 'default' }) {
   const variants = {
-    default: 'bg-slate-100 text-gray-700 dark:bg-slate-800 dark:text-slate-300',
+    default: 'bg-slate-100 text-gray-700 dark:bg-zinc-800 dark:text-zinc-300',
     primary: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
     success: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     warning: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
@@ -3705,6 +3698,210 @@ function Badge({ children, className, variant = 'default' }) {
     </span>
   );
 }
+
+const STATUS_STYLES = {
+  inbox: {
+    border: 'border-t-sky-500 dark:border-t-sky-400',
+    badge:
+      'bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-400 border border-sky-200/50 dark:border-sky-800/50',
+    title: 'text-sky-800 dark:text-sky-300',
+  },
+  ready: {
+    border: 'border-t-blue-500 dark:border-t-blue-400',
+    badge:
+      'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/50',
+    title: 'text-blue-800 dark:text-blue-300',
+  },
+  in_progress: {
+    border: 'border-t-amber-500 dark:border-t-amber-400',
+    badge:
+      'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800/50',
+    title: 'text-amber-800 dark:text-amber-300',
+  },
+  in_review: {
+    border: 'border-t-purple-500 dark:border-t-purple-400',
+    badge:
+      'bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400 border border-purple-200/50 dark:border-purple-800/50',
+    title: 'text-purple-800 dark:text-purple-300',
+  },
+  waiting: {
+    border: 'border-t-rose-500 dark:border-t-rose-400',
+    badge:
+      'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/50',
+    title: 'text-rose-800 dark:text-rose-300',
+  },
+  done: {
+    border: 'border-t-emerald-500 dark:border-t-emerald-400',
+    badge:
+      'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/50',
+    title: 'text-emerald-800 dark:text-emerald-300',
+  },
+  bin: {
+    border: 'border-t-zinc-400 dark:border-t-zinc-500',
+    badge:
+      'bg-zinc-50 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200/50 dark:border-zinc-700/50',
+    title: 'text-zinc-700 dark:text-zinc-300',
+  },
+  backlog: {
+    border: 'border-t-zinc-400 dark:border-t-zinc-600',
+    badge:
+      'bg-slate-50 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-200/50 dark:border-zinc-800/50',
+    title: 'text-slate-700 dark:text-zinc-300',
+  },
+};
+
+function getStatusStyle(status, columnName = '') {
+  const norm = (columnName || status || '').toLowerCase();
+  if (norm.includes('inbox')) return STATUS_STYLES.inbox;
+  if (norm.includes('next') || norm.includes('ready')) return STATUS_STYLES.ready;
+  if (norm.includes('progress')) return STATUS_STYLES.in_progress;
+  if (norm.includes('review')) return STATUS_STYLES.in_review;
+  if (norm.includes('wait')) return STATUS_STYLES.waiting;
+  if (norm.includes('done')) return STATUS_STYLES.done;
+  if (norm.includes('bin') || norm.includes('archive')) return STATUS_STYLES.bin;
+  if (norm.includes('backlog')) return STATUS_STYLES.backlog;
+  return STATUS_STYLES.ready;
+}
+
+const EmptyColumnSvg = React.memo(({ columnName }) => {
+  const norm = columnName.toLowerCase();
+  if (norm.includes('inbox')) {
+    return (
+      <svg
+        className="w-7 h-7 text-sky-400/80 dark:text-sky-500/80"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M2.25 13.5h3.86a2.25 2.25 0 012.008 1.24l.885 1.77a2.25 2.25 0 002.007 1.24h1.98a2.25 2.25 0 002.007-1.24l.885-1.77a2.25 2.25 0 012.007-1.24h3.86m-18 0h18a2.25 2.25 0 012.25 2.25v4.5A2.25 2.25 0 0119.5 21h-15A2.25 2.25 0 012 18.75v-4.5A2.25 2.25 0 012.25 13.5zm7.5-6h4.5M12 3v4.5m0 0l-1.5-1.5M12 7.5l1.5-1.5"
+        />
+      </svg>
+    );
+  }
+  if (norm.includes('next') || norm.includes('ready')) {
+    return (
+      <svg
+        className="w-7 h-7 text-blue-400/80 dark:text-blue-500/80"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+        />
+      </svg>
+    );
+  }
+  if (norm.includes('progress')) {
+    return (
+      <svg
+        className="w-7 h-7 text-amber-400/80 dark:text-amber-500/80 animate-[spin_6s_linear_infinite]"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M4.5 12a7.5 7.5 0 0015 0m-15 0a7.5 7.5 0 1115 0m-15 0H3m16.5 0H21m-1.5 0a5.978 5.978 0 01-1.076 3.428M19.5 12a5.978 5.978 0 00-1.076-3.428m-12 0A5.978 5.978 0 004.5 12m4.846-5.328a6 6 0 016.308 0"
+        />
+      </svg>
+    );
+  }
+  if (norm.includes('review')) {
+    return (
+      <svg
+        className="w-7 h-7 text-purple-400/80 dark:text-purple-500/80"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+        />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    );
+  }
+  if (norm.includes('wait')) {
+    return (
+      <svg
+        className="w-7 h-7 text-rose-400/80 dark:text-rose-500/80"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+    );
+  }
+  if (norm.includes('done')) {
+    return (
+      <svg
+        className="w-7 h-7 text-emerald-400/80 dark:text-emerald-500/80"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.746 3.746 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"
+        />
+      </svg>
+    );
+  }
+  if (norm.includes('bin') || norm.includes('trash') || norm.includes('archive')) {
+    return (
+      <svg
+        className="w-7 h-7 text-zinc-400/80 dark:text-zinc-500/80"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg
+      className="w-7 h-7 text-slate-400/80 dark:text-zinc-500/80"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+      />
+    </svg>
+  );
+});
+EmptyColumnSvg.displayName = 'EmptyColumnSvg';
 
 const Column = React.memo(function Column({
   status,
@@ -3725,46 +3922,85 @@ const Column = React.memo(function Column({
   const hint = hintOverride || meta.hint;
   const isSecondary = tone === 'secondary';
 
+  const style = getStatusStyle(status, label);
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        data-col={effectiveDropStatus}
+        className="w-12 rounded-2xl p-2.5 border transition-all flex flex-col items-center bg-slate-50/50 dark:bg-zinc-900/20 border-slate-200 dark:border-zinc-800/80 shadow-sm shrink-0 select-none cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800/40"
+        onClick={() => setCollapsed(false)}
+        title={`Expand ${label}`}
+      >
+        <span
+          className={clsx(
+            'text-[10px] font-bold px-1.5 py-0.5 rounded-full mb-4 shrink-0',
+            style.badge,
+          )}
+        >
+          {tasks.length}
+        </span>
+        <div className="flex-1 flex items-center justify-center">
+          <h3
+            className="font-bold text-slate-500 dark:text-zinc-400 text-xs tracking-wider uppercase whitespace-nowrap"
+            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+          >
+            {label}
+          </h3>
+        </div>
+        <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 mt-4 -rotate-90" />
+      </button>
+    );
+  }
+
   return (
     <div
       data-col={effectiveDropStatus}
       className={clsx(
-        'flex-1 min-w-[280px] max-w-[520px] rounded-lg p-3 border transition-all',
+        'flex-1 min-w-[280px] max-w-[520px] rounded-2xl p-4 border transition-all flex flex-col',
         isSecondary
-          ? 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-700/80'
-          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700',
+          ? 'bg-slate-50/70 dark:bg-zinc-950/20 border-slate-200/80 dark:border-zinc-800/85'
+          : 'bg-white dark:bg-zinc-900 border-slate-200/80 dark:border-zinc-800/80',
         highlight && 'ring-2 ring-blue-400 border-blue-300 shadow-lg',
         !highlight && 'shadow-sm',
       )}
     >
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-4 shrink-0">
         <button
           type="button"
           onClick={() => setCollapsed((prev) => !prev)}
-          className="flex items-center gap-2 min-w-0 text-left"
+          className="flex items-center gap-2 min-w-0 text-left hover:opacity-80 transition-opacity"
         >
           <ChevronDown
             className={clsx(
-              'w-4 h-4 text-slate-400 transition-transform',
+              'w-4 h-4 text-slate-400 transition-transform duration-200',
               collapsed && '-rotate-90',
             )}
           />
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{label}</h3>
+          <h3 className={clsx('font-bold text-sm tracking-wide', style.title)}>{label}</h3>
         </button>
-        <span className="text-xs text-slate-500 dark:text-slate-400">{hint}</span>
-        <span className="ml-auto text-xs font-medium text-slate-400 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full">
+        {hint && (
+          <span
+            className="text-[11px] text-slate-400 dark:text-zinc-500 truncate max-w-[120px] sm:max-w-none"
+            title={hint}
+          >
+            {hint}
+          </span>
+        )}
+        <span
+          className={clsx('ml-auto text-xs font-semibold px-2 py-0.5 rounded-full', style.badge)}
+        >
           {tasks.length}
         </span>
       </div>
-      {!collapsed && (
-        <div className="space-y-2 min-h-24">
-          {tasks.length === 0 ? (
-            <EmptyColumnState columnName={label} />
-          ) : (
-            tasks.map((t) => <TaskCard key={t.id} task={t} />)
-          )}
-        </div>
-      )}
+      <div className="column-tasklist space-y-2.5 min-h-[150px] flex-1 overflow-y-auto pr-0.5 custom-scrollbar">
+        {tasks.length === 0 ? (
+          <EmptyColumnState columnName={label} />
+        ) : (
+          tasks.map((t) => <TaskCard key={t.id} task={t} />)
+        )}
+      </div>
     </div>
   );
 });
@@ -3772,7 +4008,7 @@ const Column = React.memo(function Column({
 // Owner display components
 function OwnerBadge({ owner }) {
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
       {owner}
     </span>
   );
@@ -3791,7 +4027,7 @@ function OwnersList({ owners }) {
         <OwnerBadge key={owner} owner={owner} />
       ))}
       {remainingCount > 0 && (
-        <span className="text-xs text-slate-500 dark:text-slate-400">+{remainingCount} more</span>
+        <span className="text-xs text-slate-500 dark:text-zinc-400">+{remainingCount} more</span>
       )}
     </div>
   );
@@ -3830,55 +4066,55 @@ function TokenHelpTooltip({ visible, onDismiss }) {
   return (
     <div
       ref={tooltipRef}
-      className="absolute z-50 mt-2 w-96 p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl"
+      className="absolute z-50 mt-2 w-96 p-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-xl"
       role="dialog"
       aria-label="Token syntax help"
     >
       <div className="flex justify-between items-start mb-3">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Token Syntax</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Token Syntax</h3>
         <button
           onClick={onDismiss}
-          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+          className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300"
           aria-label="Close help"
         >
           <X size={20} />
         </button>
       </div>
 
-      <div className="space-y-3 text-sm text-gray-700 dark:text-slate-300">
+      <div className="space-y-3 text-sm text-gray-700 dark:text-zinc-300">
         <div>
-          <strong className="text-slate-900 dark:text-slate-100">!p0..p4</strong> - Set priority
-          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+          <strong className="text-slate-900 dark:text-zinc-100">!p0..p4</strong> - Set priority
+          <div className="text-xs text-slate-500 dark:text-zinc-400 ml-2">
             Example: !p0 (highest), !p4 (lowest)
           </div>
         </div>
 
         <div>
-          <strong className="text-slate-900 dark:text-slate-100">@owner</strong> - Assign owner
-          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+          <strong className="text-slate-900 dark:text-zinc-100">@owner</strong> - Assign owner
+          <div className="text-xs text-slate-500 dark:text-zinc-400 ml-2">
             Example: @ai, @me, @john
           </div>
         </div>
 
         <div>
-          <strong className="text-slate-900 dark:text-slate-100">+tag</strong> - Add tag
-          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+          <strong className="text-slate-900 dark:text-zinc-100">+tag</strong> - Add tag
+          <div className="text-xs text-slate-500 dark:text-zinc-400 ml-2">
             Example: +bug, +feature
           </div>
         </div>
 
         <div>
-          <strong className="text-slate-900 dark:text-slate-100">due:</strong> - Set due date
-          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+          <strong className="text-slate-900 dark:text-zinc-100">due:</strong> - Set due date
+          <div className="text-xs text-slate-500 dark:text-zinc-400 ml-2">
             Example: due:today, due:tomorrow, due:
             {format(addDays(new Date(), 7), 'yyyy-MM-dd')}, due:16:00
           </div>
         </div>
 
         <div>
-          <strong className="text-slate-900 dark:text-slate-100">expect:</strong> - Expected
+          <strong className="text-slate-900 dark:text-zinc-100">expect:</strong> - Expected
           completion
-          <div className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+          <div className="text-xs text-slate-500 dark:text-zinc-400 ml-2">
             Example: expect:today, expect:
             {format(addDays(new Date(), 7), 'yyyy-MM-dd')}
           </div>
@@ -3891,11 +4127,11 @@ function TokenHelpTooltip({ visible, onDismiss }) {
 // getPriorityBorderClass - Returns Tailwind classes for priority color (FR-006 to FR-012)
 function getPriorityBorderClass(priority) {
   const colors = {
-    P0: 'border-l-red-500 dark:border-l-red-400 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
-    P1: 'border-l-orange-500 dark:border-l-orange-400 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
-    P2: 'border-l-yellow-500 dark:border-l-yellow-400 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
-    P3: 'border-l-slate-300 dark:border-l-slate-600 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
-    P4: 'border-l-slate-400 dark:border-l-slate-500 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700',
+    P0: 'border-l-rose-500 dark:border-l-rose-500 border-t-slate-200/80 dark:border-t-zinc-800 border-r-slate-200/80 dark:border-r-zinc-800 border-b-slate-200/80 dark:border-b-zinc-800',
+    P1: 'border-l-orange-500 dark:border-l-orange-500 border-t-slate-200/80 dark:border-t-zinc-800 border-r-slate-200/80 dark:border-r-zinc-800 border-b-slate-200/80 dark:border-b-zinc-800',
+    P2: 'border-l-amber-500 dark:border-l-amber-500 border-t-slate-200/80 dark:border-t-zinc-800 border-r-slate-200/80 dark:border-r-zinc-800 border-b-slate-200/80 dark:border-b-zinc-800',
+    P3: 'border-l-slate-300 dark:border-l-zinc-700 border-t-slate-200/80 dark:border-t-zinc-800 border-r-slate-200/80 dark:border-r-zinc-800 border-b-slate-200/80 dark:border-b-zinc-800',
+    P4: 'border-l-slate-200 dark:border-l-zinc-800 border-t-slate-200/80 dark:border-t-zinc-800 border-r-slate-200/80 dark:border-r-zinc-800 border-b-slate-200/80 dark:border-b-zinc-800',
   };
   return colors[priority] || colors.P3;
 }
@@ -3903,33 +4139,111 @@ function getPriorityBorderClass(priority) {
 // EmptyColumnState - Contextual empty state messages (FR-013 to FR-019)
 const EmptyColumnState = React.memo(({ columnName }) => {
   const messages = {
-    Inbox: { text: 'Capture ideas and requests here', emoji: '📥' },
-    Backlog: { text: 'Park lower-priority work here', emoji: '🗃️' },
-    'Next Up': { text: 'Pull your next task from here', emoji: '✅' },
-    'In Progress': { text: 'Start working on a task', emoji: '🚀' },
-    Review: { text: 'Tasks waiting for PR/review/QA', emoji: '👀' },
-    Waiting: { text: 'Pending AI, people, or external dependencies', emoji: '⏳' },
-    'Waiting on AI': { text: 'Delegate to AI agents', emoji: '🤖' },
-    'Waiting on Others': { text: 'Waiting on teammate or external input', emoji: '🤝' },
-    Blocked: { text: 'Needs decision or unblock to continue', emoji: '🧱' },
-    Done: { text: 'Ready to ship!', emoji: '🎯' },
-    Bin: { text: 'Dump older completed tasks here', emoji: '🗂️' },
+    Inbox: { text: 'Capture ideas and requests here' },
+    Backlog: { text: 'Park lower-priority work here' },
+    'Next Up': { text: 'Pull your next task from here' },
+    'In Progress': { text: 'Start working on a task' },
+    Review: { text: 'Tasks waiting for PR/review/QA' },
+    Waiting: { text: 'Pending AI, people, or external dependencies' },
+    'Waiting on AI': { text: 'Delegate to AI agents' },
+    'Waiting on Others': { text: 'Waiting on teammate or external input' },
+    Blocked: { text: 'Needs decision or unblock to continue' },
+    Done: { text: 'Ready to ship!' },
+    Bin: { text: 'Dump older completed tasks here' },
   };
 
-  const message = messages[columnName] || { text: 'No tasks', emoji: '' };
+  const message = messages[columnName] || { text: 'No tasks' };
 
   return (
-    <div className="flex flex-col items-center justify-center py-8 text-center">
-      <div className="text-4xl mb-3 p-3 rounded-full bg-slate-100 dark:bg-slate-700/50">
-        {message.emoji}
+    <div className="flex flex-col items-center justify-center text-center border border-dashed border-slate-200 dark:border-zinc-800/80 rounded-2xl px-4 py-8 bg-slate-50/30 dark:bg-zinc-950/10">
+      <div className="mb-3 p-3 rounded-full bg-slate-100 dark:bg-zinc-800/40">
+        <EmptyColumnSvg columnName={columnName} />
       </div>
-      <p className="text-sm text-slate-500 dark:text-slate-400">{message.text}</p>
+      <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium leading-relaxed max-w-[200px]">
+        {message.text}
+      </p>
     </div>
   );
 });
 EmptyColumnState.displayName = 'EmptyColumnState';
 
 // ===== END NEW COMPONENTS =====
+
+function TaskPriorityBadge({ priority }) {
+  const styles = {
+    P0: 'bg-rose-50 text-rose-600 border border-rose-200/60 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-800/40 text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5 shadow-sm shadow-rose-100/10',
+    P1: 'bg-orange-50 text-orange-600 border border-orange-200/60 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-800/40 text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5 shadow-sm shadow-orange-100/10',
+    P2: 'bg-amber-50 text-amber-600 border border-amber-200/60 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/40 text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5 shadow-sm shadow-amber-100/10',
+    P3: 'bg-slate-50 text-slate-600 border border-slate-200/50 dark:bg-zinc-800/40 dark:text-zinc-400 dark:border-zinc-700/40 text-[10px] font-semibold px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5',
+    P4: 'bg-slate-100 text-slate-500 border border-slate-200/40 dark:bg-zinc-800/30 dark:text-zinc-500 dark:border-zinc-700/30 text-[10px] font-medium px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5',
+  };
+
+  const icons = {
+    P0: (
+      <svg
+        className="w-2.5 h-2.5 fill-current animate-pulse text-rose-500 dark:text-rose-400"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+      </svg>
+    ),
+    P1: (
+      <svg
+        className="w-2.5 h-2.5 fill-current text-orange-500 dark:text-orange-400"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+      </svg>
+    ),
+    P2: (
+      <svg
+        className="w-2.5 h-2.5 fill-current text-amber-500 dark:text-amber-400"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+      </svg>
+    ),
+  };
+
+  return (
+    <span className={styles[priority] || styles.P3}>
+      {icons[priority]}
+      {priority}
+    </span>
+  );
+}
+
+function getTagStyle(tag) {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const colors = [
+    {
+      bg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30',
+    },
+    {
+      bg: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30',
+    },
+    {
+      bg: 'bg-purple-50 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400 border border-purple-100 dark:border-purple-900/30',
+    },
+    {
+      bg: 'bg-pink-50 text-pink-600 dark:bg-pink-950/20 dark:text-pink-400 border border-pink-100 dark:border-pink-900/30',
+    },
+    {
+      bg: 'bg-teal-50 text-teal-600 dark:bg-teal-950/20 dark:text-teal-400 border border-teal-100 dark:border-teal-900/30',
+    },
+    {
+      bg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30',
+    },
+    {
+      bg: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-950/20 dark:text-cyan-400 border border-cyan-100 dark:border-cyan-900/30',
+    },
+  ];
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+}
 
 function TaskCard({ task }) {
   const move = useStore((s) => s.moveTask);
@@ -3980,7 +4294,11 @@ function TaskCard({ task }) {
       initial={isNewlyAdded ? { scale: 0.95, opacity: 0.7 } : false}
       animate={isNewlyAdded ? { scale: 1, opacity: 1 } : undefined}
       transition={isNewlyAdded ? { duration: 0.3 } : undefined}
+      whileDrag={{ scale: 1.03, zIndex: 60, cursor: 'grabbing' }}
       onDragStart={() => {
+        // Body class (not React state) so drag start causes no re-render,
+        // which would reset the in-flight drag transform on layout cards.
+        document.body.classList.add('board-dragging');
         useStore.getState().setDraggingId(task.id);
       }}
       onDrag={(e, info) => {
@@ -3992,6 +4310,7 @@ function TaskCard({ task }) {
         }
       }}
       onDragEnd={(e, info) => {
+        document.body.classList.remove('board-dragging');
         const status = getStatusFromPoint(info.point.x, info.point.y);
         if (status) {
           const targetIndex = getTaskDropTargetIndex(status, info.point.x, info.point.y, task.id);
@@ -4000,10 +4319,16 @@ function TaskCard({ task }) {
         useStore.getState().clearDrag();
       }}
       className={clsx(
-        'cursor-grab active:cursor-grabbing rounded-lg border-l-4 border-t border-r border-b p-3 relative',
-        'bg-white dark:bg-slate-800',
-        'shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden',
-        isSelected && 'ring-2 ring-blue-400 shadow-md',
+        // transition must NOT include transform: framer-motion drives drag via
+        // transform each frame, and a CSS transition on it makes the card lag
+        // behind the pointer instead of following it.
+        'cursor-grab active:cursor-grabbing rounded-2xl border-l-4 border-t border-r border-b p-3.5 relative transition-[background-color,border-color,box-shadow,opacity] duration-300 group',
+        'bg-white dark:bg-zinc-900',
+        isSelected
+          ? 'ring-2 ring-blue-400 shadow-md'
+          : isRunning
+            ? 'ring-2 ring-emerald-500/85 dark:ring-emerald-400/85 shadow-md shadow-emerald-100 dark:shadow-none animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]'
+            : 'shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_8px_16px_rgba(0,0,0,0.08)] dark:hover:bg-zinc-800/60',
         isNewlyAdded && 'ring-2 ring-green-400',
         priorityBorderClasses, // only applied when no custom group color
       )}
@@ -4016,155 +4341,195 @@ function TaskCard({ task }) {
           : undefined
       }
     >
-      <div className="group">
-        <div className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            className="mt-1 cursor-pointer accent-blue-600 dark:accent-blue-400"
-            checked={isSelected}
-            onClick={(e) => e.stopPropagation()}
-            onChange={() => toggleSelected(task.id)}
-            title="Select task"
-          />
-          <div className="flex-1 min-w-0">
-            <button
-              className="text-left font-medium text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate block w-full"
-              title={task.title}
-              onClick={() => setOpen(true)}
+      <div className="flex items-start gap-3">
+        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+        <div className="mt-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <label className="relative flex items-center justify-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={isSelected}
+              onChange={() => toggleSelected(task.id)}
+            />
+            <div
+              className={clsx(
+                'w-4 h-4 rounded border flex items-center justify-center transition-all duration-200',
+                isSelected
+                  ? 'bg-blue-600 border-blue-600 text-white dark:bg-blue-500 dark:border-blue-500'
+                  : 'border-slate-300 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-slate-400 dark:hover:border-zinc-700',
+              )}
             >
-              {task.title}
-            </button>
-            <div className="flex flex-wrap items-center gap-1.5 mt-1">
-              <Badge
-                variant={
-                  task.priorityBucket === 'P0'
-                    ? 'danger'
-                    : task.priorityBucket === 'P1'
-                      ? 'warning'
-                      : 'default'
-                }
-                className="text-xs"
-              >
-                {task.priorityBucket}
-              </Badge>
-              {taskProject && task.projectId !== currentProjectId && (
-                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: taskProject.color }}
-                  />
-                  <span className="text-slate-600 dark:text-slate-400">{taskProject.name}</span>
-                </div>
-              )}
-              {task.ownerType === 'ai' && (
-                <Badge variant="primary" className="text-xs">
-                  <Bot className="w-3 h-3 mr-0.5" />
-                  AI
-                </Badge>
-              )}
-              {(elapsedSecs > 0 || isRunning) && (
-                <Badge variant={isRunning ? 'success' : 'default'} className="text-xs">
-                  <TimerIcon className="w-3 h-3 mr-0.5" />
-                  {elapsedLabel}
-                  {isRunning && ' •'}
-                </Badge>
-              )}
-              {(isSubtask || childTasks.length > 0) && accentColor && (
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accentColor }} />
-                  {isSubtask ? 'Subtask' : `${childTasks.length} subtasks`}
-                </div>
+              {isSelected && (
+                <svg
+                  className="w-2.5 h-2.5 stroke-white fill-none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               )}
             </div>
-            {isSubtask && parentTask && (
-              <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+          </label>
+        </div>
+
+        <div className="flex-1 min-w-0 pr-6">
+          <button
+            className="text-left font-semibold text-slate-900 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate block w-full text-sm"
+            title={task.title}
+            onClick={() => setOpen(true)}
+          >
+            {task.title}
+          </button>
+          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+            <TaskPriorityBadge priority={task.priorityBucket} />
+            {taskProject && task.projectId !== currentProjectId && (
+              <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-zinc-800">
                 <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ backgroundColor: accentColor || pickTaskGroupColor(parentTask.id) }}
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: taskProject.color }}
                 />
-                <span className="truncate">Subtask of {parentTask.title}</span>
+                <span className="text-slate-600 dark:text-zinc-400">{taskProject.name}</span>
               </div>
             )}
-            {task.owners && task.owners.length > 0 && (
-              <div className="mt-2">
-                <OwnersList owners={task.owners} />
-              </div>
+            {task.ownerType === 'ai' && (
+              <Badge variant="primary" className="text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                <Bot className="w-2.5 h-2.5 mr-0.5" />
+                AI
+              </Badge>
             )}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
-              {task.project && (
-                <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">
-                  #{task.project}
-                </span>
-              )}
-              {task.tags?.map((t) => (
-                <span key={t} className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">
-                  +{t}
-                </span>
-              ))}
-              {task.dueAt && (
+            {(elapsedSecs > 0 || isRunning) && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isRunning) {
+                    stopTimer(task.id);
+                  } else {
+                    startTimer(task.id);
+                  }
+                }}
+                className={clsx(
+                  'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold border transition-all select-none hover:scale-105 active:scale-95',
+                  isRunning
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800/40 shadow-sm shadow-emerald-100/10'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-zinc-800/50 dark:text-zinc-400 dark:border-zinc-800/50',
+                )}
+                title={isRunning ? 'Pause focus timer' : 'Start focus timer'}
+              >
+                {isRunning ? (
+                  <span className="relative flex h-1.5 w-1.5 mr-1">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                  </span>
+                ) : (
+                  <Play className="w-2 h-2 mr-1 fill-current text-slate-500 dark:text-zinc-400" />
+                )}
+                <span className="font-mono">{elapsedLabel}</span>
+              </button>
+            )}
+            {(isSubtask || childTasks.length > 0) && accentColor && (
+              <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-200">
                 <span
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: accentColor }}
+                />
+                {isSubtask ? 'Subtask' : `${childTasks.length} subtasks`}
+              </div>
+            )}
+          </div>
+          {isSubtask && parentTask && (
+            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
+              <span
+                className="h-1.5 w-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: accentColor || pickTaskGroupColor(parentTask.id) }}
+              />
+              <span className="truncate">Subtask of {parentTask.title}</span>
+            </div>
+          )}
+          {task.owners && task.owners.length > 0 && (
+            <div className="mt-2">
+              <OwnersList owners={task.owners} />
+            </div>
+          )}
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
+            {task.project && (
+              <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-zinc-800 rounded-full font-semibold">
+                #{task.project}
+              </span>
+            )}
+            {task.tags?.map((t) => {
+              const tStyle = getTagStyle(t);
+              return (
+                <span
+                  key={t}
                   className={clsx(
-                    'inline-flex items-center gap-0.5',
-                    overdue
-                      ? 'text-red-500 dark:text-red-400 font-medium'
-                      : 'text-blue-500 dark:text-blue-400',
+                    'text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center',
+                    tStyle.bg,
                   )}
                 >
-                  <Clock className="w-3 h-3" />
-                  {humanDue(task.dueAt)}
+                  #{t}
                 </span>
-              )}
-            </div>
+              );
+            })}
+            {task.dueAt && (
+              <span
+                className={clsx(
+                  'inline-flex items-center gap-0.5 font-medium',
+                  overdue ? 'text-red-500 dark:text-red-400' : 'text-blue-500 dark:text-blue-400',
+                )}
+              >
+                <Clock className="w-2.5 h-2.5" />
+                {humanDue(task.dueAt)}
+              </span>
+            )}
           </div>
         </div>
-        <div
-          className={clsx(
-            'absolute bottom-2 right-2 items-center gap-0.5 bg-slate-700 dark:bg-slate-600 rounded-lg p-1',
-            isRunning || task.status === 'in_progress' ? 'flex' : 'hidden group-hover:flex',
-          )}
+      </div>
+
+      {/* RHS hover slide-in action panel */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+      <div
+        className={clsx(
+          'absolute top-1/2 -translate-y-1/2 right-1.5 flex flex-col items-center gap-1 bg-white/95 dark:bg-zinc-900/95 shadow-lg border border-slate-200 dark:border-zinc-800 rounded-xl p-1 transition-all duration-200 ease-in-out',
+          'hidden group-hover:flex z-10',
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          title="Move left"
+          className="p-1 rounded-md text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+          onClick={() => {
+            const order = useStore.getState().getStatusOrder();
+            const idx = order.indexOf(task.status);
+            if (idx > 0)
+              useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx - 1]));
+          }}
         >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        {elapsedSecs === 0 && (
           <button
-            title="Move left"
-            className="p-1 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-600/30 transition-colors"
-            onClick={() => {
-              const order = useStore.getState().getStatusOrder();
-              const idx = order.indexOf(task.status);
-              if (idx > 0)
-                useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx - 1]));
-            }}
+            title="Start focus timer"
+            onClick={() => startTimer(task.id)}
+            className="p-1 rounded-md text-slate-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <Play className="w-4 h-4" />
           </button>
-          {isRunning ? (
-            <button
-              title="Pause"
-              onClick={() => stopTimer(task.id)}
-              className="p-1 rounded text-orange-400 hover:text-orange-300 hover:bg-orange-600/30 transition-colors"
-            >
-              <Pause className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              title="Start focus timer"
-              onClick={() => startTimer(task.id)}
-              className="p-1 rounded text-green-400 hover:text-green-300 hover:bg-green-600/30 transition-colors"
-            >
-              <Play className="w-4 h-4" />
-            </button>
-          )}
-          <button
-            title="Move right"
-            onClick={() => {
-              const order = useStore.getState().getStatusOrder();
-              const idx = order.indexOf(task.status);
-              if (idx < order.length - 1)
-                useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx + 1]));
-            }}
-            className="p-1 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-600/30 transition-colors"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+        )}
+        <button
+          title="Move right"
+          onClick={() => {
+            const order = useStore.getState().getStatusOrder();
+            const idx = order.indexOf(task.status);
+            if (idx < order.length - 1)
+              useStore.getState().moveTask(task.id, /** @type{Status} */ (order[idx + 1]));
+          }}
+          className="p-1 rounded-md text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
 
       <AnimatePresence>
@@ -4191,7 +4556,7 @@ function ChildTaskManager({ task }) {
 
   return (
     <section
-      className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40"
+      className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40"
       style={
         accentColor
           ? {
@@ -4203,7 +4568,7 @@ function ChildTaskManager({ task }) {
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">Subtasks</h4>
+          <h4 className="text-base font-semibold text-slate-950 dark:text-zinc-50">Subtasks</h4>
         </div>
       </div>
 
@@ -4221,37 +4586,37 @@ function ChildTaskManager({ task }) {
           name="add-subtask"
           aria-label="Add a new subtask title"
           placeholder="Add a subtask..."
-          className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+          className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
         />
         <button
           type="button"
           onClick={handleAdd}
           disabled={!draftTitle.trim()}
-          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 active:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
+          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 active:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-zinc-800"
         >
           <Plus className="h-4 w-4" /> Add subtask
         </button>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700 dark:bg-zinc-900 dark:text-zinc-200">
           <span
             className="h-2 w-2 rounded-full"
             style={{ backgroundColor: accentColor || pickTaskGroupColor(task.id) }}
           />
           {percent}% complete
         </span>
-        <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+        <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-zinc-900 dark:text-zinc-300">
           {completed} of {total} done
         </span>
         {remaining > 0 && (
-          <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+          <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-zinc-900 dark:text-zinc-300">
             {remaining} active
           </span>
         )}
       </div>
 
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-zinc-800">
         <div
           className="h-full rounded-full transition-all"
           style={{
@@ -4263,24 +4628,24 @@ function ChildTaskManager({ task }) {
 
       <div className="mt-4 space-y-2">
         {childTasks.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+          <div className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-center text-sm text-slate-500 dark:border-zinc-800 dark:text-zinc-400">
             No subtasks yet
           </div>
         ) : (
           childTasks.map((subtask) => (
             <div
               key={subtask.id}
-              className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-slate-700"
+              className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 transition-colors hover:border-slate-300 dark:border-zinc-800 dark:bg-zinc-900/70 dark:hover:border-zinc-700"
             >
               <span
                 className="h-2.5 w-2.5 rounded-full flex-shrink-0"
                 style={{ backgroundColor: accentColor || pickTaskGroupColor(task.id) }}
               />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                <div className="truncate text-sm font-medium text-slate-900 dark:text-zinc-100">
                   {subtask.title}
                 </div>
-                <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                <div className="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
                   {subtask.status === 'done' || subtask.status === 'done_yesterday' ? (
                     <span className="text-emerald-600 dark:text-emerald-400">Completed</span>
                   ) : (
@@ -4449,8 +4814,8 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
             maxLength={30}
             className={`w-full px-3 py-1 text-sm rounded border ${
               isDisabled
-                ? 'border-gray-200 dark:border-gray-700 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed'
-                : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400'
+                ? 'border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-500 cursor-not-allowed'
+                : 'border-slate-300 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500'
             }`}
             role="combobox"
             aria-autocomplete="list"
@@ -4464,7 +4829,7 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
             <div
               ref={dropdownRef}
               id="owner-suggestions"
-              className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded shadow-lg"
+              className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded shadow-lg"
               role="listbox"
             >
               {suggestions.map((suggestion, index) => (
@@ -4483,15 +4848,15 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
                   className={`px-3 py-2 cursor-pointer flex justify-between items-center ${
                     index === selectedIndex
                       ? 'bg-blue-100 dark:bg-blue-900'
-                      : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                      : 'hover:bg-slate-100 dark:hover:bg-zinc-800'
                   }`}
                   role="option"
                   aria-selected={index === selectedIndex}
                 >
-                  <span className="text-sm text-slate-900 dark:text-slate-100">
+                  <span className="text-sm text-slate-900 dark:text-zinc-100">
                     {suggestion.name}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                  <span className="text-xs text-slate-500 dark:text-zinc-400">
                     {suggestion.taskCount} {suggestion.taskCount === 1 ? 'task' : 'tasks'}
                   </span>
                 </div>
@@ -4508,15 +4873,15 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
                     }}
                     onMouseEnter={() => setSelectedIndex(suggestions.length)}
                     tabIndex={0}
-                    className={`px-3 py-2 cursor-pointer border-t border-gray-200 dark:border-gray-700 ${
+                    className={`px-3 py-2 cursor-pointer border-t border-slate-200 dark:border-zinc-805 ${
                       selectedIndex === suggestions.length
                         ? 'bg-blue-100 dark:bg-blue-900'
-                        : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                        : 'hover:bg-slate-100 dark:hover:bg-zinc-800'
                     }`}
                     role="option"
                     aria-selected={selectedIndex === suggestions.length}
                   >
-                    <span className="text-sm text-slate-900 dark:text-slate-100">
+                    <span className="text-sm text-slate-900 dark:text-zinc-100">
                       Add &quot;<span className="font-medium">{value.trim()}</span>&quot; as new
                       owner
                     </span>
@@ -4531,7 +4896,7 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
           disabled={isDisabled || !value.trim()}
           className={`px-3 py-1 text-sm rounded transition-colors ${
             isDisabled || !value.trim()
-              ? 'bg-gray-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+              ? 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 cursor-not-allowed'
               : 'bg-blue-500 text-white hover:bg-blue-600'
           }`}
         >
@@ -4540,7 +4905,7 @@ function OwnerCombobox({ onAdd, currentOwners = [], maxOwners = 5 }) {
       </form>
 
       {currentOwners.length > 0 && (
-        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        <div className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
           {currentOwners.length}/{maxOwners} owners assigned
         </div>
       )}
@@ -4559,9 +4924,9 @@ function OwnerEditor({ taskId, owners = [] }) {
         {owners.map((owner) => (
           <div
             key={owner}
-            className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-800"
+            className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
           >
-            <span className="font-medium text-slate-900 dark:text-slate-100">{owner}</span>
+            <span className="font-medium text-slate-900 dark:text-zinc-100">{owner}</span>
             <button
               onClick={() => removeOwner(taskId, owner)}
               className="rounded p-1 text-red-500 transition-colors hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950"
@@ -4572,7 +4937,7 @@ function OwnerEditor({ taskId, owners = [] }) {
           </div>
         ))}
         {owners.length === 0 && (
-          <div className="rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+          <div className="rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs text-slate-500 dark:border-zinc-800 dark:text-zinc-400">
             No owners assigned
           </div>
         )}
@@ -4657,7 +5022,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       <div
-        className="absolute inset-0 bg-black bg-opacity-25"
+        className="absolute inset-0 bg-black/60 dark:bg-zinc-950/80 backdrop-blur-sm"
         onClick={onClose}
         onKeyDown={(e) => {
           if (e.key === 'Escape') onClose();
@@ -4666,14 +5031,14 @@ function OwnerManagerPanel({ isOpen, onClose }) {
         tabIndex={0}
         aria-label="Close panel"
       />
-      <div className="absolute right-0 top-0 bottom-0 w-96 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl overflow-hidden flex flex-col">
+      <div className="absolute right-0 top-0 bottom-0 w-96 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 border-l border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-b border-slate-200 dark:border-zinc-800">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Owner Management</h2>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+              className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -4687,11 +5052,11 @@ function OwnerManagerPanel({ isOpen, onClose }) {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search owners..."
-              className="w-full pl-10 pr-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-3 py-2 text-sm border border-slate-300 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500"
             />
           </div>
 
-          <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          <div className="mt-2 text-sm text-slate-500 dark:text-zinc-400">
             Total: {owners.length} owners
           </div>
         </div>
@@ -4699,16 +5064,16 @@ function OwnerManagerPanel({ isOpen, onClose }) {
         {/* Owner List */}
         <div className="flex-1 overflow-y-auto p-4">
           {filteredOwners.length === 0 && searchTerm && (
-            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+            <div className="text-center py-8 text-slate-500 dark:text-zinc-400">
               No owners found matching &quot;{searchTerm}&quot;
             </div>
           )}
 
           {filteredOwners.length === 0 && !searchTerm && (
             <div className="text-center py-8">
-              <Users className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-              <div className="text-slate-500 dark:text-slate-400">No owners yet</div>
-              <div className="text-sm text-slate-400 dark:text-slate-400 mt-1">
+              <Users className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-zinc-600" />
+              <div className="text-slate-500 dark:text-zinc-400">No owners yet</div>
+              <div className="text-sm text-slate-400 dark:text-zinc-400 mt-1">
                 Owners will appear here as you assign them to tasks
               </div>
             </div>
@@ -4718,12 +5083,12 @@ function OwnerManagerPanel({ isOpen, onClose }) {
             {filteredOwners.map((owner) => (
               <div
                 key={owner.name}
-                className="p-3 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg"
+                className="p-3 bg-slate-50 dark:bg-zinc-800/40 border border-transparent dark:border-zinc-800 text-slate-900 dark:text-zinc-100 rounded-lg"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="font-medium text-sm">{owner.name}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    <div className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
                       {owner.taskCount} {owner.taskCount === 1 ? 'task' : 'tasks'}
                       {owner.lastUsed && <span> • Last used {formatDate(owner.lastUsed)}</span>}
                     </div>
@@ -4737,7 +5102,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                           setTargetOwner('');
                           setRemoveAfterTransfer(false);
                         }}
-                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+                        className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-800 rounded transition-colors"
                         title="Cancel transfer"
                       >
                         <X className="w-4 h-4" />
@@ -4769,7 +5134,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                             setRemoveAfterTransfer(false);
                             setConfirmDelete(null);
                           }}
-                          className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900 rounded transition-colors"
+                          className="p-1 hover:bg-blue-100 dark:hover:bg-blue-950 rounded transition-colors"
                           title={`Transfer ${owner.name}'s tasks to another owner`}
                         >
                           <UserCheck className="w-4 h-4 text-blue-500" />
@@ -4780,7 +5145,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                           setConfirmDelete(owner.name);
                           setTransferMode(null);
                         }}
-                        className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors"
+                        className="p-1 hover:bg-red-100 dark:hover:bg-red-950 rounded transition-colors"
                         title={`Remove ${owner.name} from all tasks`}
                       >
                         <Trash2 className="w-4 h-4 text-red-500" />
@@ -4790,7 +5155,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                 </div>
 
                 {transferMode === owner.name && (
-                  <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/30 rounded space-y-2">
+                  <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/40 border border-blue-100/50 dark:border-blue-900/40 rounded space-y-2">
                     <div className="text-xs font-medium text-blue-800 dark:text-blue-200">
                       Transfer {owner.taskCount} task{owner.taskCount !== 1 ? 's' : ''} to:
                     </div>
@@ -4801,7 +5166,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                         onChange={(e) => setTargetOwner(e.target.value)}
                         placeholder="Enter target owner name"
                         list="transfer-owner-suggestions"
-                        className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <datalist id="transfer-owner-suggestions">
                         {owners
@@ -4821,7 +5186,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                           onChange={(e) => setRemoveAfterTransfer(e.target.checked)}
                           className="rounded"
                         />
-                        <span className="text-gray-700 dark:text-slate-300">
+                        <span className="text-gray-700 dark:text-zinc-300">
                           Remove {owner.name} after transfer
                         </span>
                       </label>
@@ -4840,7 +5205,7 @@ function OwnerManagerPanel({ isOpen, onClose }) {
                           setTargetOwner('');
                           setRemoveAfterTransfer(false);
                         }}
-                        className="px-3 py-1 text-xs bg-slate-500 text-white rounded hover:bg-gray-600"
+                        className="px-3 py-1 text-xs bg-slate-500 hover:bg-slate-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded transition-colors"
                       >
                         Cancel
                       </button>
@@ -4962,7 +5327,7 @@ function TaskDrawer({ task, onClose }) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-[300] bg-slate-950/60 backdrop-blur-md"
+        className="fixed inset-0 z-[300] bg-black/60 dark:bg-zinc-950/80 backdrop-blur-md"
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
       />
       <div className="pointer-events-none fixed inset-0 z-[301] flex items-center justify-center p-4">
@@ -4974,9 +5339,9 @@ function TaskDrawer({ task, onClose }) {
           initial={{ opacity: 0, y: 24, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 24, scale: 0.98 }}
-          className="pointer-events-auto flex max-h-[88vh] w-[min(1040px,100%)] flex-col overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.28)] dark:border-slate-700/80 dark:bg-slate-900 dark:shadow-[0_32px_90px_rgba(2,6,23,0.7)]"
+          className="pointer-events-auto flex max-h-[88vh] w-[min(1040px,100%)] flex-col overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.28)] dark:border-zinc-800/80 dark:bg-zinc-900 dark:shadow-[0_32px_90px_rgba(2,6,23,0.7)]"
         >
-          <div className="border-b border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_40%),linear-gradient(135deg,_rgba(248,250,252,0.98),_rgba(241,245,249,0.92))] px-6 py-5 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_34%),linear-gradient(135deg,_rgba(15,23,42,0.96),_rgba(2,6,23,0.98))]">
+          <div className="border-b border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_40%),linear-gradient(135deg,_rgba(248,250,252,0.98),_rgba(241,245,249,0.92))] px-6 py-5 dark:border-zinc-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.06),_transparent_34%),linear-gradient(135deg,_rgba(24,24,27,0.98),_rgba(9,9,11,0.98))]">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -5001,10 +5366,10 @@ function TaskDrawer({ task, onClose }) {
                           setLocal((prev) => ({ ...prev, groupColor: color }));
                         }}
                         className={clsx(
-                          'h-5 w-5 rounded-full border-2 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-slate-900',
+                          'h-5 w-5 rounded-full border-2 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-zinc-950',
                           accentColor === color
-                            ? 'border-white shadow-sm ring-1 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-slate-400'
-                            : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500',
+                            ? 'border-white shadow-sm ring-1 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950 ring-slate-400'
+                            : 'border-slate-300 dark:border-zinc-700 hover:border-slate-400 dark:hover:border-zinc-600',
                         )}
                         style={{ backgroundColor: color }}
                         aria-label={`Set color ${color}`}
@@ -5025,27 +5390,27 @@ function TaskDrawer({ task, onClose }) {
                   value={local.title}
                   onChange={(e) => setLocal({ ...local, title: e.target.value })}
                   onBlur={() => save({ title: local.title })}
-                  className="w-full bg-transparent text-2xl font-semibold tracking-tight text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50 dark:placeholder:text-slate-500"
+                  className="w-full bg-transparent text-2xl font-semibold tracking-tight text-slate-950 outline-none placeholder:text-slate-400 dark:text-zinc-50 dark:placeholder:text-slate-500"
                   placeholder="Task title"
                 />
               </div>
               <button
                 onClick={onClose}
                 aria-label="Close task details"
-                className="rounded-full border border-slate-200 bg-white/80 p-2 text-slate-500 transition-colors hover:bg-white hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                className="rounded-full border border-slate-200 bg-white/80 p-2 text-slate-500 transition-colors hover:bg-white hover:text-slate-900 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* PR #1: Compact Meta Strip — Due + Priority + Status in one dense row */}
-            <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-slate-700/80 dark:bg-slate-900/70">
+            <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-zinc-800/80 dark:bg-zinc-900/70">
               {/* Due */}
               <div className="flex items-center gap-2">
-                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-zinc-400">
                   Due
                 </div>
-                <div className="flex items-center gap-1.5 text-sm font-medium text-slate-900 dark:text-slate-100">
+                <div className="flex items-center gap-1.5 text-sm font-medium text-slate-900 dark:text-zinc-100">
                   <Clock className="h-4 w-4 text-slate-400" />
                   <span>{dueSummary}</span>
                 </div>
@@ -5058,14 +5423,14 @@ function TaskDrawer({ task, onClose }) {
                     setLocal({ ...local, dueAt: iso });
                     save({ dueAt: iso });
                   }}
-                  className="w-40 rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="w-40 rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                   aria-label="Due date and time"
                 />
               </div>
 
               {/* Priority */}
               <div className="flex items-center gap-2">
-                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-zinc-400">
                   Priority
                 </div>
                 <select
@@ -5076,7 +5441,7 @@ function TaskDrawer({ task, onClose }) {
                     setLocal({ ...local, priorityBucket: v });
                     save({ priorityBucket: v });
                   }}
-                  className="rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-sm font-medium text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
+                  className="rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-sm font-medium text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:ring-blue-400"
                 >
                   {PRIORITY_BUCKETS.map((priority) => (
                     <option key={priority} value={priority}>
@@ -5088,7 +5453,7 @@ function TaskDrawer({ task, onClose }) {
 
               {/* Status (moved into meta strip per design) */}
               <div className="flex items-center gap-2">
-                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-zinc-400">
                   Status
                 </div>
                 <select
@@ -5099,7 +5464,7 @@ function TaskDrawer({ task, onClose }) {
                     setLocal({ ...local, status: v });
                     save({ status: v });
                   }}
-                  className="rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-sm text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-sm text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                 >
                   {MODAL_STATUS_OPTIONS.map((k) => (
                     <option key={k} value={k}>
@@ -5115,12 +5480,12 @@ function TaskDrawer({ task, onClose }) {
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.9fr)_minmax(280px,1fr)] mb-4">
               <div>
                 {/* Notes - height matches the right Properties panel, user resizable */}
-                <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40 flex flex-col h-full">
+                <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40 flex flex-col h-full">
                   <div className="mb-1.5 flex items-center justify-between flex-shrink-0">
-                    <h4 className="text-base font-semibold text-slate-950 dark:text-slate-50">
+                    <h4 className="text-base font-semibold text-slate-950 dark:text-zinc-50">
                       Notes
                     </h4>
-                    <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                    <span className="text-[11px] text-slate-400 dark:text-zinc-500">
                       context, decisions, next steps
                     </span>
                   </div>
@@ -5133,7 +5498,7 @@ function TaskDrawer({ task, onClose }) {
                     onChange={(e) => setLocal({ ...local, description: e.target.value })}
                     onBlur={() => save({ description: local.description })}
                     placeholder="Add context, decisions, links, or the next useful action..."
-                    className="flex-1 min-h-[120px] max-h-[380px] overflow-auto resize-y rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-400"
+                    className="flex-1 min-h-[120px] max-h-[380px] overflow-auto resize-y rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:ring-blue-400"
                   />
                 </section>
 
@@ -5141,12 +5506,12 @@ function TaskDrawer({ task, onClose }) {
               </div>
 
               {/* Right sidebar: Tags + Owners + minimal delete */}
-              <div className="space-y-2.5 rounded-3xl border border-slate-200 bg-slate-100/70 p-4 min-h-[300px] flex flex-col dark:border-slate-800 dark:bg-slate-950/50">
+              <div className="space-y-2.5 rounded-3xl border border-slate-200 bg-slate-100/70 p-4 min-h-[300px] flex flex-col dark:border-zinc-800 dark:bg-zinc-950/50">
                 {/* Tags */}
                 <div>
                   <label
                     htmlFor={tagsInputId}
-                    className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                    className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-zinc-400"
                   >
                     Tags
                   </label>
@@ -5162,7 +5527,7 @@ function TaskDrawer({ task, onClose }) {
                       setLocal({ ...local, tags: arr });
                       save({ tags: arr });
                     }}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
                   />
                 </div>
 
@@ -5170,7 +5535,7 @@ function TaskDrawer({ task, onClose }) {
                 <div>
                   <label
                     htmlFor={ownersInputId}
-                    className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                    className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-zinc-400"
                   >
                     Owners
                   </label>
@@ -5184,7 +5549,7 @@ function TaskDrawer({ task, onClose }) {
                   <div>
                     <label
                       htmlFor={expectedByInputId}
-                      className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                      className="mb-1 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-zinc-400"
                     >
                       Expected by
                     </label>
@@ -5197,7 +5562,7 @@ function TaskDrawer({ task, onClose }) {
                         setLocal({ ...local, expectedBy: iso });
                         save({ expectedBy: iso });
                       }}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:ring-1 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                     />
                   </div>
                 )}
@@ -5246,7 +5611,7 @@ const WipBanner = React.memo(function WipBanner() {
   );
 });
 
-function Toolbar({ viewMode, onChangeView }) {
+function Toolbar() {
   const addTask = useStore((s) => s.addTask);
   const setFilters = useStore((s) => s.setFilters);
   const filters = useStore((s) => s.filters);
@@ -5259,6 +5624,7 @@ function Toolbar({ viewMode, onChangeView }) {
   const [input, setInput] = useState('');
   const inputRef = useRef(null);
   const [showOwnerDropdown, setShowOwnerDropdown] = useState(false);
+  const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [showTokenHelp, setShowTokenHelp] = useState(false);
 
   // Real-time token preview
@@ -5273,12 +5639,15 @@ function Toolbar({ viewMode, onChangeView }) {
       if (!e.target.closest('.owner-dropdown-container')) {
         setShowOwnerDropdown(false);
       }
+      if (!e.target.closest('.priority-dropdown-container')) {
+        setShowPriorityDropdown(false);
+      }
     };
-    if (showOwnerDropdown) {
+    if (showOwnerDropdown || showPriorityDropdown) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showOwnerDropdown]);
+  }, [showOwnerDropdown, showPriorityDropdown]);
 
   // Dictation (Chrome Web Speech API)
   const [isListening, setIsListening] = useState(false);
@@ -5394,12 +5763,17 @@ function Toolbar({ viewMode, onChangeView }) {
     setShowAssignOwnerDialog(true);
   };
 
+  const hasActiveFilters =
+    !!ownerFilter || !!filters.q || (!!filters.priority && filters.priority !== 'all');
+
   return (
-    <div className="sticky top-0 z-10 mb-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
-      <div className="px-4 py-3">
-        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
-          <div className="flex-1 flex items-center gap-2">
-            <div className="relative flex-1 max-w-2xl">
+    <div className="sticky top-0 z-10 -mx-6 px-6 py-4 bg-[#fafafa]/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-slate-200/80 dark:border-zinc-800/80 mb-6">
+      <div className="space-y-4">
+        {/* Main Controls Flex Row */}
+        <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
+          {/* Left: Quick Add Input */}
+          <div className="flex items-center gap-2 max-w-full lg:max-w-xl w-full lg:w-auto flex-1">
+            <div className="relative flex-1 min-w-[200px] sm:min-w-[280px] lg:w-[360px]">
               <input
                 ref={inputRef}
                 value={input}
@@ -5430,15 +5804,15 @@ function Toolbar({ viewMode, onChangeView }) {
                 id="quick-add-input"
                 name="quick-add"
                 aria-label="Quick add task"
-                placeholder="Add a task... (@owner, !p1, due:tomorrow)"
-                className="w-full px-4 pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                placeholder="Quick add task... (e.g. Fix login @john !p1)"
+                className="w-full px-3 pl-9 pr-9 py-2 text-sm rounded-lg border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-150 shadow-sm"
               />
               <Plus className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
               {/* Help button */}
               <button
                 type="button"
                 onClick={() => setShowTokenHelp(!showTokenHelp)}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-400 transition-colors"
                 title="Show token syntax help"
                 aria-label="Help"
               >
@@ -5453,49 +5827,6 @@ function Toolbar({ viewMode, onChangeView }) {
               </button>
               {/* Token help tooltip */}
               <TokenHelpTooltip visible={showTokenHelp} onDismiss={() => setShowTokenHelp(false)} />
-              {/* Token preview chips */}
-              {parsedTokens && input.trim() && (
-                <div className="absolute left-0 right-0 top-full mt-1 flex flex-wrap gap-1 z-20">
-                  {parsedTokens.priorityBucket && (
-                    <span
-                      className={clsx(
-                        'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-                        PRIORITY_COLORS[parsedTokens.priorityBucket],
-                      )}
-                    >
-                      {parsedTokens.priorityBucket}
-                    </span>
-                  )}
-                  {parsedTokens.ownerType === 'ai' && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                      <Bot className="w-3 h-3" /> AI
-                    </span>
-                  )}
-                  {parsedTokens.owners &&
-                    parsedTokens.owners.map((owner) => (
-                      <span
-                        key={owner}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-                      >
-                        @{owner}
-                      </span>
-                    ))}
-                  {parsedTokens.tags &&
-                    parsedTokens.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
-                      >
-                        +{tag}
-                      </span>
-                    ))}
-                  {parsedTokens.dueAt && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                      <Clock className="w-3 h-3" /> {humanDue(parsedTokens.dueAt)}
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
             {/* Mic toggle */}
             <button
@@ -5519,73 +5850,61 @@ function Toolbar({ viewMode, onChangeView }) {
               }}
               disabled={!speechSupported}
               className={clsx(
-                'p-2 rounded-lg transition-colors',
+                'p-2 rounded-lg transition-colors shadow-sm',
                 isListening
-                  ? 'bg-red-500 text-white hover:bg-red-600'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800',
+                  ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse'
+                  : 'bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800/50',
                 !speechSupported && 'opacity-50 cursor-not-allowed',
               )}
             >
-              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              {isListening ? <MicOff className="w-4.5 h-4.5" /> : <Mic className="w-4.5 h-4.5" />}
             </button>
             <button
               onClick={onAdd}
               disabled={!input.trim()}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
+              className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow active:scale-[0.98] shrink-0"
             >
               Add Task
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 justify-end">
-            <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-1">
-              <button
-                type="button"
-                onClick={() => onChangeView('board')}
-                aria-pressed={viewMode === 'board'}
-                className={clsx(
-                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-colors rounded-md',
-                  viewMode === 'board'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
-                )}
-              >
-                <Kanban className="w-4 h-4" /> Board
-              </button>
-              <button
-                type="button"
-                onClick={() => onChangeView('backlog')}
-                aria-pressed={viewMode === 'backlog'}
-                className={clsx(
-                  'px-3 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-colors rounded-md',
-                  viewMode === 'backlog'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200',
-                )}
-              >
-                <List className="w-4 h-4" /> List
-              </button>
+
+          {/* Right: Search & Filter Dropdowns */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Search Input */}
+            <div className="relative w-full sm:w-60 md:w-64">
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+              <input
+                value={filters.q}
+                onChange={(e) => setFilters({ q: e.target.value })}
+                placeholder="Search tasks..."
+                className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-150 shadow-sm"
+              />
             </div>
+
+            {/* Owner Dropdown */}
             <div className="relative owner-dropdown-container">
               <button
                 onClick={() => setShowOwnerDropdown(!showOwnerDropdown)}
                 className={clsx(
-                  'p-2 rounded-lg transition-colors',
+                  'px-3 py-2 rounded-lg border text-sm font-medium flex items-center gap-2 transition-all duration-150 shadow-sm',
                   ownerFilter
-                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800',
+                    ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400'
+                    : 'bg-white border-slate-200 text-slate-700 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50',
                 )}
                 title={ownerFilter ? `Filtering by: ${ownerFilter}` : 'Filter by Owner'}
               >
-                <Users className="w-5 h-5" />
+                <Users className="w-4 h-4 shrink-0 text-slate-500 dark:text-zinc-400" />
+                <span>{ownerFilter || 'All Owners'}</span>
+                <ChevronDown className="w-4 h-4 opacity-50 shrink-0" />
               </button>
               {showOwnerDropdown && (
-                <div className="absolute top-full mt-1 right-0 w-48 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                <div className="absolute top-full mt-1 left-0 w-48 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 border border-slate-200 dark:border-zinc-800/80 rounded-lg shadow-lg z-50 py-1">
                   <button
                     onClick={() => {
                       setOwnerFilter(null);
                       setShowOwnerDropdown(false);
                     }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-900 dark:text-slate-100"
+                    className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-zinc-800 text-sm text-slate-900 dark:text-zinc-100"
                   >
                     All Owners
                   </button>
@@ -5598,63 +5917,173 @@ function Toolbar({ viewMode, onChangeView }) {
                           setOwnerFilter(owner.name);
                           setShowOwnerDropdown(false);
                         }}
-                        className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-900 dark:text-slate-100 flex justify-between"
+                        className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-zinc-800 text-sm text-slate-900 dark:text-zinc-100 flex items-center justify-between"
                       >
-                        <span>{owner.name}</span>
-                        <span className="text-slate-500 dark:text-slate-400">
+                        <span className="truncate">{owner.name}</span>
+                        <span className="text-slate-500 dark:text-zinc-400 text-xs ml-2 shrink-0">
                           ({owner.taskCount})
                         </span>
+                        {ownerFilter === owner.name && (
+                          <Check className="w-3.5 h-3.5 ml-2 text-blue-600 dark:text-blue-400 shrink-0" />
+                        )}
                       </button>
                     ))}
                 </div>
               )}
             </div>
-            <input
-              value={filters.q}
-              onChange={(e) => setFilters({ q: e.target.value })}
-              placeholder="Filter text"
-              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-shadow"
-            />
-            {(ownerFilter || filters.q) && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium">
-                Filtered
-                <button
-                  onClick={() => {
-                    setFilters({ q: '' });
-                    setOwnerFilter(null);
-                  }}
-                  className="ml-0.5 hover:text-blue-900 dark:hover:text-blue-100"
-                  aria-label="Clear all filters"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
+
+            {/* Priority Dropdown */}
+            <div className="relative priority-dropdown-container">
+              <button
+                onClick={() => setShowPriorityDropdown(!showPriorityDropdown)}
+                className={clsx(
+                  'px-3 py-2 rounded-lg border text-sm font-medium flex items-center gap-2 transition-all duration-150 shadow-sm',
+                  filters.priority !== 'all'
+                    ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400'
+                    : 'bg-white border-slate-200 text-slate-700 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/50',
+                )}
+                title={
+                  filters.priority !== 'all'
+                    ? `Filtering priority: ${filters.priority}`
+                    : 'Filter by Priority'
+                }
+              >
+                <SlidersHorizontal className="w-4 h-4 shrink-0 text-slate-500 dark:text-zinc-400" />
+                <span>
+                  {filters.priority === 'all' ? 'All Priorities' : `Priority: ${filters.priority}`}
+                </span>
+                <ChevronDown className="w-4 h-4 opacity-50 shrink-0" />
+              </button>
+              {showPriorityDropdown && (
+                <div className="absolute top-full mt-1 left-0 w-48 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 border border-slate-200 dark:border-zinc-800/85 rounded-lg shadow-lg z-50 py-1">
+                  <button
+                    onClick={() => {
+                      setFilters({ priority: 'all' });
+                      setShowPriorityDropdown(false);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-zinc-800 text-sm text-slate-900 dark:text-zinc-100"
+                  >
+                    All Priorities
+                  </button>
+                  {[
+                    { id: 'P0', label: 'P0 - Critical', colorClass: 'bg-red-500' },
+                    { id: 'P1', label: 'P1 - High', colorClass: 'bg-orange-500' },
+                    { id: 'P2', label: 'P2 - Medium', colorClass: 'bg-amber-500' },
+                    { id: 'P3', label: 'P3 - Low', colorClass: 'bg-slate-400' },
+                    { id: 'P4', label: 'P4 - None', colorClass: 'bg-slate-300 dark:bg-zinc-700' },
+                  ].map((prio) => (
+                    <button
+                      key={prio.id}
+                      onClick={() => {
+                        setFilters({ priority: prio.id });
+                        setShowPriorityDropdown(false);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-zinc-800 text-sm text-slate-900 dark:text-zinc-100 flex items-center"
+                    >
+                      <span
+                        className={clsx(
+                          'w-2.5 h-2.5 rounded-full mr-2.5 shrink-0',
+                          prio.colorClass,
+                        )}
+                      />
+                      <span>{prio.label}</span>
+                      {filters.priority === prio.id && (
+                        <Check className="w-3.5 h-3.5 ml-auto text-blue-600 dark:text-blue-400 shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
+              <button
+                onClick={() => {
+                  setFilters({ q: '', priority: 'all' });
+                  setOwnerFilter(null);
+                }}
+                className="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 flex items-center gap-1.5 transition-colors"
+                title="Clear all active search and dropdown filters"
+              >
+                <X className="w-4 h-4" />
+                <span>Clear Filters</span>
+              </button>
             )}
           </div>
         </div>
+
+        {/* Token preview chips (renders inline below controls row to prevent overlapping separator) */}
+        {parsedTokens && input.trim() && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800/60 pl-1">
+            <span className="text-xs text-slate-400 mr-1 flex items-center">Token preview:</span>
+            {parsedTokens.priorityBucket && (
+              <span
+                className={clsx(
+                  'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+                  PRIORITY_COLORS[parsedTokens.priorityBucket],
+                )}
+              >
+                {parsedTokens.priorityBucket}
+              </span>
+            )}
+            {parsedTokens.ownerType === 'ai' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                <Bot className="w-3 h-3" /> AI
+              </span>
+            )}
+            {parsedTokens.owners &&
+              parsedTokens.owners.map((owner) => (
+                <span
+                  key={owner}
+                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                >
+                  @{owner}
+                </span>
+              ))}
+            {parsedTokens.tags &&
+              parsedTokens.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
+                >
+                  +{tag}
+                </span>
+              ))}
+            {parsedTokens.dueAt && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                <Clock className="w-3 h-3" /> {humanDue(parsedTokens.dueAt)}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Speech Dictation status */}
         {(isListening || speechErr) && (
-          <div className="mt-2 flex items-center justify-between rounded-xl border border-indigo-300 bg-indigo-50 text-indigo-900 px-3 py-2">
+          <div className="flex items-center justify-between rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-900/20 text-indigo-900 dark:text-indigo-300 px-3 py-2 text-sm">
             <div className="text-sm flex-1 min-w-0">
               <span className="font-medium">{isListening ? 'Listening…' : 'Dictation'}</span>
               {interim && (
-                <span className="ml-2 text-indigo-800 truncate inline-block max-w-full align-bottom">
+                <span className="ml-2 text-indigo-800 dark:text-indigo-400 truncate inline-block max-w-full align-bottom">
                   {interim}
                 </span>
               )}
-              {speechErr && !isListening && <span className="ml-2 text-rose-700">{speechErr}</span>}
+              {speechErr && !isListening && (
+                <span className="ml-2 text-rose-700 dark:text-rose-405">{speechErr}</span>
+              )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {isListening && (
                 <>
                   <button
                     onClick={() => stopDictation(true)}
-                    className="px-2 py-1.5 text-xs rounded-lg border border-slate-300 bg-white hover:bg-slate-50"
+                    className="px-2 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800/50 text-slate-800 dark:text-zinc-200"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={() => stopDictation(false)}
-                    className="px-2 py-1.5 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+                    className="px-2 py-1.5 text-xs rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-white/90"
                   >
                     Use
                   </button>
@@ -5663,7 +6092,7 @@ function Toolbar({ viewMode, onChangeView }) {
               {!isListening && speechErr && (
                 <button
                   onClick={() => startDictation()}
-                  className="px-2 py-1.5 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+                  className="px-2 py-1.5 text-xs rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-white/90"
                 >
                   Retry
                 </button>
@@ -5671,20 +6100,22 @@ function Toolbar({ viewMode, onChangeView }) {
             </div>
           </div>
         )}
+
+        {/* Bulk Action Controls */}
         {selectedIds.length > 0 && (
-          <div className="mt-2 flex items-center justify-between rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-900/20 text-rose-900 dark:text-rose-300 px-3 py-2">
-            <div className="text-sm">{selectedIds.length} selected</div>
+          <div className="flex items-center justify-between rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-900/20 text-rose-900 dark:text-rose-300 px-3 py-2 text-sm">
+            <div className="text-sm font-medium">{selectedIds.length} selected</div>
             <div className="flex items-center gap-2">
               <button
                 onClick={onBulkAssignOwner}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors"
               >
                 <Users className="w-4 h-4" />
-                Assign Owner
+                <span>Assign Owner</span>
               </button>
               <button
                 onClick={onBulkMove}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -5694,21 +6125,26 @@ function Toolbar({ viewMode, onChangeView }) {
                     d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
                   />
                 </svg>
-                Move to Project
+                <span>Move to Project</span>
               </button>
               <button
                 onClick={onBulkDelete}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
-                Delete
+                <span>Delete</span>
               </button>
-              <button onClick={clearSelection} className="text-sm underline">
+              <button
+                onClick={clearSelection}
+                className="text-sm hover:underline text-slate-500 dark:text-zinc-400"
+              >
                 Clear
               </button>
             </div>
           </div>
         )}
+
+        {/* Dialogs */}
         {showMoveDialog && (
           <BulkMoveDialog
             taskIds={selectedIds}
@@ -5729,9 +6165,6 @@ function Toolbar({ viewMode, onChangeView }) {
             }}
           />
         )}
-        <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          Quick tokens: @ai @me !p0..p4 due:today +tag. Open help for advanced syntax.
-        </div>
       </div>
     </div>
   );
@@ -5754,6 +6187,13 @@ function useFilteredTasks() {
       .filter((t) => {
         if (filters.project !== 'all' && (t.project || '') !== filters.project) return false;
         if (ownerFilter && !t.owners.includes(ownerFilter)) return false;
+        if (
+          filters.priority &&
+          filters.priority !== 'all' &&
+          (t.priorityBucket || 'P4') !== filters.priority
+        ) {
+          return false;
+        }
         if (
           filters.q &&
           !`${t.title} ${t.description || ''} ${t.tags.join(' ')}`
@@ -5798,6 +6238,8 @@ const Board = React.memo(function Board() {
   const ownerFilter = useStore((s) => s.ownerFilter);
   const setFilters = useStore((s) => s.setFilters);
   const setOwnerFilter = useStore((s) => s.setOwnerFilter);
+  const laneRowClass =
+    'board-lane-row flex flex-col xl:flex-row gap-3 items-stretch w-full overflow-x-auto pb-2';
   const statusOrder = useStore((s) => s.getStatusOrder());
   const grouped = useMemo(() => groupTasksByStatus(filtered, statusOrder), [filtered, statusOrder]);
   const standardStatuses = useMemo(() => new Set(STANDARD_STATUS_ORDER), []);
@@ -5846,10 +6288,10 @@ const Board = React.memo(function Board() {
           <div className="mb-4">
             <Search className="w-16 h-16 mx-auto text-slate-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100 mb-2">
             No tasks match your filters
           </h3>
-          <div className="text-sm text-slate-600 dark:text-slate-400 mb-4 space-y-1">
+          <div className="text-sm text-slate-600 dark:text-zinc-400 mb-4 space-y-1">
             {ownerFilter && <p>Owner: {ownerFilter}</p>}
             {filters.q && <p>Search: &quot;{filters.q}&quot;</p>}
           </div>
@@ -5886,31 +6328,29 @@ const Board = React.memo(function Board() {
               />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100 mb-2">
             No tasks in {currentProject?.name || 'this project'}
           </h3>
-          <p className="text-slate-600 dark:text-slate-400 mb-4">
+          <p className="text-slate-600 dark:text-zinc-400 mb-4">
             Get started by adding your first task using the quick-add bar above.
           </p>
-          <div className="text-sm text-slate-500 dark:text-slate-400">
+          <div className="text-sm text-slate-500 dark:text-zinc-400">
             <p className="mb-2">Quick tips:</p>
             <ul className="text-left inline-block">
               <li>
-                • Use{' '}
-                <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">!p0</code> for
-                high priority
+                • Use <code className="px-1 py-0.5 bg-slate-100 dark:bg-zinc-800 rounded">!p0</code>{' '}
+                for high priority
               </li>
               <li>
                 • Use{' '}
-                <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
+                <code className="px-1 py-0.5 bg-slate-100 dark:bg-zinc-800 rounded">
                   due:tomorrow
                 </code>{' '}
                 for deadlines
               </li>
               <li>
-                • Use{' '}
-                <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">@ai</code> to
-                delegate to AI
+                • Use <code className="px-1 py-0.5 bg-slate-100 dark:bg-zinc-800 rounded">@ai</code>{' '}
+                to delegate to AI
               </li>
             </ul>
           </div>
@@ -5922,10 +6362,9 @@ const Board = React.memo(function Board() {
   const showWaitingLane = waitingStatuses.length > 0;
   const hasSecondary = secondaryStatuses.length > 0;
   const hasBacklogLane = !!backlogStatus;
-
   return (
-    <div className="space-y-4" style={{ position: 'relative', zIndex: 1 }}>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+    <div className="space-y-6" style={{ position: 'relative', zIndex: 1 }}>
+      <div className={laneRowClass}>
         {primaryStatuses.map((status) => (
           <Column key={status} status={status} tasks={grouped[status] || []} />
         ))}
@@ -5941,16 +6380,16 @@ const Board = React.memo(function Board() {
       </div>
 
       {hasSecondary && (
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-zinc-800 pb-2 mt-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
               Secondary Lanes
             </h4>
-            <span className="text-xs text-slate-400 dark:text-slate-500">
+            <span className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">
               Inbox and completed work
             </span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className={laneRowClass}>
             {secondaryStatuses.map((status) => (
               <Column
                 key={status}
@@ -5969,16 +6408,16 @@ const Board = React.memo(function Board() {
       )}
 
       {hasBacklogLane && (
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-zinc-800 pb-2 mt-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
               Backlog
             </h4>
-            <span className="text-xs text-slate-400 dark:text-slate-500">
+            <span className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">
               Longer-horizon work queue
             </span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className={laneRowClass}>
             <Column status={backlogStatus} tasks={grouped[backlogStatus] || []} tone="secondary" />
           </div>
         </div>
@@ -5986,389 +6425,6 @@ const Board = React.memo(function Board() {
     </div>
   );
 });
-
-function BacklogView() {
-  const filtered = useFilteredTasks();
-  const allTasks = useStore((s) => s.tasks);
-  const currentProjectId = useStore((s) => s.currentProjectId);
-  const filters = useStore((s) => s.filters);
-  const ownerFilter = useStore((s) => s.ownerFilter);
-  const setFilters = useStore((s) => s.setFilters);
-  const setOwnerFilter = useStore((s) => s.setOwnerFilter);
-  const projectTasks = useMemo(
-    () => allTasks.filter((t) => t.projectId === currentProjectId),
-    [allTasks, currentProjectId],
-  );
-  const hasFiltersActive = !!(ownerFilter || filters.q);
-  const isFilteredEmpty = filtered.length === 0 && hasFiltersActive && projectTasks.length > 0;
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      const saved = localStorage.getItem('flowtrackr-list-collapsed');
-      if (saved) {
-        return new Set(JSON.parse(saved));
-      }
-    } catch (e) {
-      // ignore storage errors
-    }
-    return new Set([
-      'done',
-      'done_yesterday',
-      'inbox',
-      'review',
-      'waiting_others',
-      'blocked',
-      'bin',
-      'backlog',
-    ]);
-  });
-
-  // Persist collapsed sections in List view
-  useEffect(() => {
-    try {
-      localStorage.setItem('flowtrackr-list-collapsed', JSON.stringify(Array.from(collapsed)));
-    } catch (e) {
-      // ignore storage errors
-    }
-  }, [collapsed]);
-  const [draggingTask, setDraggingTask] = useState(null);
-  const [dropTarget, setDropTarget] = useState(null);
-  const updateTask = useStore((s) => s.updateTask);
-  const statusOrder = useStore((s) => s.getStatusOrder());
-  const statusMeta = useStore((s) => s.getStatusMetaMap());
-  const grouped = useMemo(() => groupTasksByStatus(filtered, statusOrder), [filtered, statusOrder]);
-
-  const handleDragStart = (e, task) => {
-    setDraggingTask(task);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const finishDrop = (targetStatus = null) => {
-    const resolvedStatus = targetStatus || dropTarget?.status;
-    if (draggingTask && resolvedStatus) {
-      updateTask(draggingTask.id, { status: resolvedStatus });
-    }
-    setDraggingTask(null);
-    setDropTarget(null);
-  };
-
-  const handleDragEnd = (e) => {
-    const targetStatus = getStatusFromPoint(e.clientX, e.clientY);
-    finishDrop(targetStatus);
-  };
-
-  const handleDragOver = (e, status, index) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (draggingTask) {
-      setDropTarget({ status, index });
-    }
-  };
-
-  const handleDragLeave = (e) => {
-    // Only clear if we're leaving the drop zone entirely
-    if (!e.currentTarget.contains(e.relatedTarget)) {
-      setDropTarget(null);
-    }
-  };
-
-  const toggle = (status) => {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(status)) next.delete(status);
-      else next.add(status);
-      return next;
-    });
-  };
-
-  if (isFilteredEmpty) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center max-w-md">
-          <div className="mb-4">
-            <Search className="w-16 h-16 mx-auto text-slate-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
-            No tasks match your filters
-          </h3>
-          <div className="text-sm text-slate-600 dark:text-slate-400 mb-4 space-y-1">
-            {ownerFilter && <p>Owner: {ownerFilter}</p>}
-            {filters.q && <p>Search: &quot;{filters.q}&quot;</p>}
-          </div>
-          <button
-            onClick={() => {
-              setFilters({ q: '' });
-              setOwnerFilter(null);
-            }}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
-          >
-            Clear All Filters
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-0">
-      {statusOrder.map((status) => (
-        <div
-          key={status}
-          className="border-b border-slate-200 dark:border-slate-700 last:border-b-0"
-        >
-          <BacklogHeader
-            statusLabel={statusMeta[status]?.label}
-            statusHint={statusMeta[status]?.hint}
-            count={grouped[status]?.length || 0}
-            collapsed={collapsed.has(status)}
-            onToggle={() => toggle(status)}
-          />
-          {!collapsed.has(status) && (
-            <div
-              data-col={status}
-              className={clsx(
-                'min-h-[40px] transition-colors rounded-lg bg-slate-50/40 dark:bg-slate-900/20 p-2',
-                dropTarget?.status === status && draggingTask && 'bg-blue-50 dark:bg-blue-900/20',
-              )}
-              onDragOver={(e) => handleDragOver(e, status, 0)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => {
-                e.preventDefault();
-                finishDrop(status);
-              }}
-            >
-              {(grouped[status]?.length || 0) === 0 ? (
-                <div
-                  className={clsx(
-                    'px-4 py-4 text-center text-sm border border-dashed border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900/50',
-                    dropTarget?.status === status &&
-                      draggingTask &&
-                      'text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-800',
-                  )}
-                >
-                  {dropTarget?.status === status && draggingTask ? (
-                    'Drop here'
-                  ) : (
-                    <EmptyColumnState columnName={statusMeta[status]?.label || status} />
-                  )}
-                </div>
-              ) : (
-                grouped[status].map((task) => (
-                  <BacklogRow
-                    key={task.id}
-                    task={task}
-                    status={status}
-                    isDragging={draggingTask?.id === task.id}
-                    onDragStart={(e) => handleDragStart(e, task)}
-                    onDragEnd={handleDragEnd}
-                  />
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function BacklogHeader({ statusLabel, statusHint, count, collapsed, onToggle }) {
-  return (
-    <div className="bg-slate-50 dark:bg-slate-900/80 overflow-hidden transition-all sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <ChevronDown
-            className={clsx(
-              'w-4 h-4 transition-transform text-slate-500 dark:text-slate-400',
-              collapsed ? '-rotate-90' : 'rotate-0',
-            )}
-          />
-          <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
-            {statusLabel}
-          </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">{statusHint}</span>
-        </div>
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-400">
-          {count} task{count === 1 ? '' : 's'}
-        </span>
-      </button>
-    </div>
-  );
-}
-
-function BacklogRow({ task, isDragging, onDragStart, onDragEnd }) {
-  const toggleSelected = useStore((s) => s.toggleSelected);
-  const selectedIds = useStore((s) => s.selectedIds);
-  const tasks = useStore((s) => s.tasks);
-  const startTimer = useStore((s) => s.startTimer);
-  const stopTimer = useStore((s) => s.stopTimer);
-  const moveTask = useStore((s) => s.moveTask);
-  const statusOrder = useStore((s) => s.getStatusOrder());
-  const statusMeta = useStore((s) => s.getStatusMetaMap());
-  const [open, setOpen] = useState(false);
-  const isSelected = selectedIds.includes(task.id);
-  const isRunning = !!task.timerStartedAt;
-  const elapsedSecs = computeElapsedSecs(task);
-  const overdue = task.dueAt ? isBefore(new Date(task.dueAt), new Date()) : false;
-  const childTasks = getChildTasks(tasks, task.id);
-  const parentTask = getParentTask(tasks, task);
-  const accentColor =
-    task.groupColor ||
-    parentTask?.groupColor ||
-    (childTasks.length > 0 ? pickTaskGroupColor(task.id) : null);
-  const isSubtask = !!task.parentTaskId;
-
-  return (
-    <div
-      draggable
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      className={clsx(
-        'mt-2 first:mt-0 px-4 py-3 rounded-lg bg-white dark:bg-slate-900 transition-all cursor-grab active:cursor-grabbing relative border border-slate-200 dark:border-slate-700 hover:shadow-md',
-        isSelected &&
-          'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 shadow-sm',
-        isDragging && 'opacity-60 ring-2 ring-blue-300 dark:ring-blue-900/40',
-      )}
-      style={
-        accentColor
-          ? {
-              backgroundImage: `linear-gradient(135deg, ${colorWithAlpha(accentColor, 0.14)}, transparent 42%)`,
-              boxShadow: `inset 0 0 0 1px ${colorWithAlpha(accentColor, 0.2)}, inset 4px 0 0 0 ${colorWithAlpha(accentColor, 0.98)}, -8px 0 16px -12px ${colorWithAlpha(accentColor, 0.9)}`,
-            }
-          : undefined
-      }
-    >
-      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start gap-2 min-w-0">
-            <input
-              type="checkbox"
-              className="mt-1 cursor-pointer accent-blue-600 dark:accent-blue-400"
-              checked={isSelected}
-              onChange={() => toggleSelected(task.id)}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2 min-w-0">
-                <button
-                  className="text-left font-medium text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate min-w-0 max-w-full"
-                  title={task.title}
-                  onClick={() => setOpen(true)}
-                >
-                  {task.title}
-                </button>
-                <Badge className={PRIORITY_COLORS[task.priorityBucket]}>
-                  {task.priorityBucket}
-                </Badge>
-                {task.ownerType === 'ai' && (
-                  <Badge variant="primary">
-                    <Bot className="w-3.5 h-3.5 mr-1" /> AI
-                  </Badge>
-                )}
-                {task.ownerType === 'other' && <Badge variant="default">Shared</Badge>}
-                {task.status === 'blocked' && (
-                  <Badge variant="danger">
-                    <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Blocked
-                  </Badge>
-                )}
-                {(isSubtask || childTasks.length > 0) && accentColor && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-200">
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: accentColor }}
-                    />
-                    {isSubtask ? 'Subtask' : `${childTasks.length} subtasks`}
-                  </span>
-                )}
-              </div>
-              {isSubtask && parentTask && (
-                <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: accentColor || pickTaskGroupColor(parentTask.id) }}
-                  />
-                  <span className="truncate">Subtask of {parentTask.title}</span>
-                </div>
-              )}
-              <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-400">
-                {task.project && (
-                  <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                    #{task.project}
-                  </span>
-                )}
-                {task.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-                {task.dueAt && (
-                  <span
-                    className={clsx(
-                      'inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
-                      overdue && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-                    )}
-                  >
-                    <Clock className="w-3 h-3" />
-                    {humanDue(task.dueAt)}
-                  </span>
-                )}
-                {task.expectedBy && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                    <Clock className="w-3 h-3" /> Expect {humanDue(task.expectedBy)}
-                  </span>
-                )}
-                {(elapsedSecs > 0 || isRunning) && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                    <TimerIcon className="w-3 h-3" /> {formatDurationShort(elapsedSecs)}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={task.status}
-            onChange={(e) => moveTask(task.id, /** @type{Status} */ (e.target.value))}
-            className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-shadow"
-          >
-            {statusOrder.map((status) => (
-              <option key={status} value={status}>
-                {statusMeta[status]?.label || status}
-              </option>
-            ))}
-          </select>
-          {isRunning ? (
-            <button
-              onClick={() => stopTimer(task.id)}
-              className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              title="Pause timer"
-            >
-              <Pause className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              onClick={() => startTimer(task.id)}
-              className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              title="Start focus timer"
-            >
-              <Play className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-      <AnimatePresence>
-        {open && <TaskDrawer task={task} onClose={() => setOpen(false)} />}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 // ----- Tiny Self-Test Harness (non-blocking) -----
 // Commented out since self-tests were modifying the actual store
@@ -6630,7 +6686,7 @@ function KeyboardShortcutsModal({ onClose }) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-[400]"
+        className="fixed inset-0 bg-black/60 dark:bg-zinc-950/80 backdrop-blur-sm z-[400]"
       />
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -6638,15 +6694,15 @@ function KeyboardShortcutsModal({ onClose }) {
         exit={{ opacity: 0, scale: 0.95 }}
         className="fixed inset-0 flex items-center justify-center z-[401] pointer-events-none"
       >
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl shadow-xl dark:shadow-2xl p-6 w-[420px] max-w-[90vw] pointer-events-auto">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-xl dark:shadow-2xl p-6 w-[420px] max-w-[90vw] pointer-events-auto">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
               <Keyboard className="w-5 h-5" /> Keyboard Shortcuts
             </h2>
             <button
               onClick={onClose}
               aria-label="Close shortcuts modal"
-              className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
+              className="p-1 rounded hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -6654,7 +6710,7 @@ function KeyboardShortcutsModal({ onClose }) {
           <div className="space-y-3">
             {shortcuts.map((shortcut, idx) => (
               <div key={idx} className="flex items-center justify-between">
-                <span className="text-sm text-slate-700 dark:text-slate-300">
+                <span className="text-sm text-slate-700 dark:text-zinc-300">
                   {shortcut.description}
                 </span>
                 <div className="flex items-center gap-1">
@@ -6663,7 +6719,7 @@ function KeyboardShortcutsModal({ onClose }) {
                       {key === '-' ? (
                         <span className="text-slate-400 text-xs mx-0.5">-</span>
                       ) : (
-                        <kbd className="inline-flex items-center px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded">
+                        <kbd className="inline-flex items-center px-2 py-1 text-xs font-medium text-slate-700 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 rounded">
                           {key}
                         </kbd>
                       )}
@@ -6673,10 +6729,10 @@ function KeyboardShortcutsModal({ onClose }) {
               </div>
             ))}
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
-            <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+          <div className="mt-4 pt-3 border-t border-slate-200 dark:border-zinc-800">
+            <p className="text-xs text-slate-500 dark:text-zinc-400 text-center">
               Press{' '}
-              <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-xs">
+              <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-zinc-800 rounded text-xs border dark:border-zinc-700">
                 Esc
               </kbd>{' '}
               to close
@@ -6711,7 +6767,7 @@ function OverflowMenu({ onDeleteAll }) {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setIsOpen((v) => !v)}
-        className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        className="p-2 rounded-lg text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
         aria-expanded={isOpen}
         aria-haspopup="menu"
         aria-label="More actions"
@@ -6727,7 +6783,7 @@ function OverflowMenu({ onDeleteAll }) {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.15 }}
             role="menu"
-            className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-50 py-1"
+            className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-xl z-50 py-1"
           >
             <button
               role="menuitem"
@@ -6756,7 +6812,8 @@ function UndoToast({ toast, onUndo, onDismiss }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 40 }}
           transition={{ duration: 0.25 }}
-          className="fixed bottom-16 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-3 px-4 py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-lg shadow-xl"
+          className="fixed bottom-16 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-3 px-4 py-3 bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-white rounded-lg shadow-xl"
+          style={{ backdropFilter: 'blur(8px)' }}
         >
           <span className="text-sm">{toast.message}</span>
           <button
@@ -6877,11 +6934,6 @@ export default function WorkdayTaskBoardApp() {
     // Fall back to system preference
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
-  const [viewMode, setViewMode] = useState(() => {
-    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return 'board';
-    const stored = window.localStorage.getItem(VIEW_MODE_KEY);
-    return stored === 'backlog' ? 'backlog' : 'board';
-  });
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.classList.toggle('dark', dark);
@@ -6893,51 +6945,44 @@ export default function WorkdayTaskBoardApp() {
       }
     }
   }, [dark]);
-  useEffect(() => {
-    try {
-      if (typeof localStorage !== 'undefined') localStorage.setItem(VIEW_MODE_KEY, viewMode);
-    } catch (e) {
-      /* ignore storage errors */
-    }
-  }, [viewMode]);
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-black">
+      <div className="min-h-screen bg-[#fafafa] dark:bg-zinc-950 text-slate-900 dark:text-zinc-100">
         <div className="max-w-[1400px] mx-auto">
-          <header className="relative z-30 px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/70 backdrop-blur-sm">
+          <header className="relative z-30 px-6 py-3 border-b border-slate-200/80 dark:border-zinc-800/80 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <div>
-                <img src={dark ? logoDark : logoLight} alt="FlowTrackr" className="h-20 w-auto" />
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                <img src={dark ? logoDark : logoLight} alt="FlowTrackr" className="h-11 w-auto" />
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                   Streamline your workflow with intelligent task management
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <ProjectSelector />
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
+                <div className="w-px h-6 bg-slate-200 dark:bg-zinc-800" />
                 <button
                   onClick={() => setShowOwnerManager(true)}
-                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-lg text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-900/50 transition-colors"
                   title="Manage Owners"
                   aria-label="Manage Owners"
                 >
                   <Users className="w-5 h-5" />
                 </button>
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
+                <div className="w-px h-6 bg-slate-200 dark:bg-zinc-800" />
                 {/* Visible keyboard shortcuts button for discoverability */}
                 <button
                   onClick={() => setShowShortcuts(true)}
-                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-lg text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-900/50 transition-colors"
                   title="Keyboard shortcuts (?)"
                   aria-label="Show keyboard shortcuts"
                 >
                   <Keyboard className="w-5 h-5" />
                 </button>
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
+                <div className="w-px h-6 bg-slate-200 dark:bg-zinc-800" />
                 <button
                   onClick={() => setDark((v) => !v)}
-                  className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-lg text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-900/50 transition-colors"
                   title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
                 >
                   {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -6958,10 +7003,10 @@ export default function WorkdayTaskBoardApp() {
             </div>
           </header>
 
-          <Toolbar viewMode={viewMode} onChangeView={setViewMode} />
-          <main className="px-6 py-4">
+          <main className="px-6 py-4 space-y-4">
             <WipBanner />
-            {viewMode === 'board' ? <Board /> : <BacklogView />}
+            <Toolbar />
+            <Board />
           </main>
         </div>
 

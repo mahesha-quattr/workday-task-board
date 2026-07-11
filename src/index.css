@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme is toggled via the .dark class on <html> (not the OS preference),
+   so color-scheme and the canvas/overscroll background must follow it too. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
+}
+body {
+  background-color: #fafafa;
+}
+:root.dark body {
+  background-color: #09090b; /* zinc-950, matches the app root */
+}
+
+/* While a card drag is in flight, lane rows and column task lists must not
+   clip the transformed card. Toggled via document.body (not React state) so
+   drag start does not trigger a re-render that resets the drag transform. */
+body.board-dragging .board-lane-row,
+body.board-dragging .column-tasklist {
+  overflow: visible !important;
 }
