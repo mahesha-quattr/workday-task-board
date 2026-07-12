@@ -4159,13 +4159,16 @@ function TokenHelpTooltip({ visible, onDismiss }) {
 }
 
 // getPriorityBorderClass - Returns Tailwind classes for priority color (FR-006 to FR-012)
-function getPriorityBorderClass(priority) {
+// Priority accent is a rounded inset bar, NOT a border-left: a 4px left
+// border sweeps around the 16px card radius and paints a thick crescent
+// that pokes outside selection/timer rings at the corners.
+function getPriorityAccentClass(priority) {
   const colors = {
-    P0: 'border-l-rose-500 dark:border-l-rose-500 border-t-slate-200/80 dark:border-t-zinc-800 border-r-slate-200/80 dark:border-r-zinc-800 border-b-slate-200/80 dark:border-b-zinc-800',
-    P1: 'border-l-orange-500 dark:border-l-orange-500 border-t-slate-200/80 dark:border-t-zinc-800 border-r-slate-200/80 dark:border-r-zinc-800 border-b-slate-200/80 dark:border-b-zinc-800',
-    P2: 'border-l-amber-500 dark:border-l-amber-500 border-t-slate-200/80 dark:border-t-zinc-800 border-r-slate-200/80 dark:border-r-zinc-800 border-b-slate-200/80 dark:border-b-zinc-800',
-    P3: 'border-l-slate-300 dark:border-l-zinc-700 border-t-slate-200/80 dark:border-t-zinc-800 border-r-slate-200/80 dark:border-r-zinc-800 border-b-slate-200/80 dark:border-b-zinc-800',
-    P4: 'border-l-slate-200 dark:border-l-zinc-800 border-t-slate-200/80 dark:border-t-zinc-800 border-r-slate-200/80 dark:border-r-zinc-800 border-b-slate-200/80 dark:border-b-zinc-800',
+    P0: 'bg-rose-500',
+    P1: 'bg-orange-500',
+    P2: 'bg-amber-500',
+    P3: 'bg-slate-300 dark:bg-zinc-700',
+    P4: 'bg-slate-200 dark:bg-zinc-800',
   };
   return colors[priority] || colors.P3;
 }
@@ -4315,9 +4318,9 @@ function TaskCard({ task }) {
     (childTasks.length > 0 ? pickTaskGroupColor(task.id) : null);
   const isSubtask = !!task.parentTaskId;
 
-  // Only apply priority color border when there's no group/accent color
+  // Only show the priority accent bar when there's no group/accent color
   const hasGroupColor = !!accentColor;
-  const priorityBorderClasses = hasGroupColor ? '' : getPriorityBorderClass(task.priorityBucket);
+  const priorityAccentClass = hasGroupColor ? null : getPriorityAccentClass(task.priorityBucket);
 
   return (
     <motion.div
@@ -4356,7 +4359,9 @@ function TaskCard({ task }) {
         // transition must NOT include transform: framer-motion drives drag via
         // transform each frame, and a CSS transition on it makes the card lag
         // behind the pointer instead of following it.
-        'cursor-grab active:cursor-grabbing rounded-2xl border-l-4 border-t border-r border-b p-3.5 relative transition-[background-color,border-color,box-shadow,opacity] duration-300 group',
+        // overflow-hidden clips the straight accent bar to the rounded corners;
+        // without it the bar's square ends poke out through the corner radius.
+        'cursor-grab active:cursor-grabbing rounded-2xl overflow-hidden border border-slate-200/80 dark:border-zinc-800 p-3.5 relative transition-[background-color,border-color,box-shadow,opacity] duration-300 group',
         'bg-white dark:bg-zinc-900',
         isSelected
           ? 'ring-2 ring-blue-400 shadow-md'
@@ -4364,7 +4369,6 @@ function TaskCard({ task }) {
             ? 'ring-2 ring-emerald-500/85 dark:ring-emerald-400/85 shadow-md shadow-emerald-100 dark:shadow-none animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]'
             : 'shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_8px_16px_rgba(0,0,0,0.08)] dark:hover:bg-zinc-800/60',
         isNewlyAdded && 'ring-2 ring-green-400',
-        priorityBorderClasses, // only applied when no custom group color
       )}
       style={
         accentColor
@@ -4375,6 +4379,12 @@ function TaskCard({ task }) {
           : undefined
       }
     >
+      {priorityAccentClass && (
+        <span
+          aria-hidden
+          className={clsx('pointer-events-none absolute inset-y-0 left-0 w-1', priorityAccentClass)}
+        />
+      )}
       <div className="flex items-start gap-3">
         {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
         <div className="mt-1 shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -4408,7 +4418,7 @@ function TaskCard({ task }) {
           </label>
         </div>
 
-        <div className="flex-1 min-w-0 pr-6">
+        <div className="flex-1 min-w-0">
           <button
             className="text-left font-semibold text-slate-900 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate block w-full text-sm"
             title={task.title}
@@ -4526,7 +4536,7 @@ function TaskCard({ task }) {
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
         className={clsx(
-          'absolute top-1/2 -translate-y-1/2 right-1.5 flex flex-col items-center gap-1 bg-white/95 dark:bg-zinc-900/95 shadow-lg border border-slate-200 dark:border-zinc-800 rounded-xl p-1 transition-all duration-200 ease-in-out',
+          'absolute bottom-1.5 right-1.5 flex items-center gap-0.5 bg-white/95 dark:bg-zinc-900/95 shadow-lg border border-slate-200 dark:border-zinc-800 rounded-lg p-0.5 transition-all duration-200 ease-in-out',
           'hidden group-hover:flex z-10',
         )}
         onClick={(e) => e.stopPropagation()}
